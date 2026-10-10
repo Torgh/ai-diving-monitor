@@ -21,9 +21,11 @@ and how you're progressing over time, for example whether your gas consumption i
   - oxygen exposure: ppO2 (per gas, following gas switches), CNS % and OTU
   - END for trimix, hypoxic-mix detection, sawtooth profiles, NDL margin and computer alarms
   - a 0–100 dive quality score
-- **AI coach (Claude).** An agent that uses tools to read your dive, its profile and your whole history,
+- **AI coach.** An agent that uses tools to read your dive, its profile and your whole history,
   then writes a summary: *dive summary → what went well → what to watch → compared with your history →
-  focus for your next dive*. You can also chat with it about your log.
+  focus for your next dive*. You can also chat with it about your log. Choose the AI provider and
+  model on the **Settings** page: Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google), DeepSeek or
+  GitHub Copilot (GitHub Models).
 - **Progress dashboard.** Interactive charts of RMV, peak ascent rate, safety stop time and dive score
   across your dives, each with a trend line, plus plain-language progress insights such as
   "Gas consumption: improving, 23.5 → 16.2 L/min".
@@ -39,11 +41,23 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 pip install -e .
 
-# Optional: enables the AI coach
-export ANTHROPIC_API_KEY=sk-ant-...       # PowerShell: $env:ANTHROPIC_API_KEY="sk-ant-..."
-
 ai-diving-monitor            # opens the web UI at http://localhost:8501
 ```
+
+To enable the AI coach, open **Settings** in the web UI, pick a provider and a model, and paste your
+API key. You can also set the key as an environment variable instead (see [Configuration](#configuration)).
+
+| Provider | API key | Example models |
+|---|---|---|
+| Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `claude-opus-5-5`, `claude-sonnet-5-5` |
+| ChatGPT (OpenAI) | [platform.openai.com](https://platform.openai.com/api-keys) | `gpt-5`, `gpt-5-mini` |
+| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/apikey) | `gemini-2.5-pro`, `gemini-2.5-flash` |
+| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | `deepseek-chat`, `deepseek-reasoner` |
+| GitHub Copilot (GitHub Models) | [GitHub token](https://github.com/settings/personal-access-tokens) with `models:read` | `openai/gpt-4.1` |
+
+Pick **Other model…** to type any model id, or click **Load available models from the API** to list
+the models your key can use. Keys entered in the web UI are stored in plain text in
+`~/.ai-diving-monitor/config.json` on your computer, outside the repository.
 
 No dive computer at hand? On the **Import dives** page, click **Load sample dives** to load nine
 fictional dives that show a diver's progression from spring to autumn, including a trimix deco dive.
@@ -99,10 +113,19 @@ app and the MCP server share the same database, so dives imported in one show up
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | – | Enables the AI coach |
+| `ANTHROPIC_API_KEY` | – | Claude API key |
+| `OPENAI_API_KEY` | – | ChatGPT API key |
+| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | – | Gemini API key |
+| `DEEPSEEK_API_KEY` | – | DeepSeek API key |
+| `GITHUB_TOKEN` | – | GitHub Models token (`models:read`) |
+| `AI_DIVING_MONITOR_PROVIDER` | `anthropic` | Provider when none is chosen in Settings (`anthropic`, `openai`, `gemini`, `deepseek`, `copilot`) |
+| `AI_DIVING_MONITOR_MODEL` | first model of the provider | Model when none is chosen in Settings |
+| `AI_DIVING_MONITOR_EFFORT` | `medium` | Claude reasoning effort (`low` … `max`) |
 | `AI_DIVING_MONITOR_DB` | `~/.ai-diving-monitor/dives.db` | Database location |
-| `AI_DIVING_MONITOR_MODEL` | `claude-opus-5-5` | Claude model used by the coach |
-| `AI_DIVING_MONITOR_EFFORT` | `medium` | Reasoning effort (`low` … `max`) |
+| `AI_DIVING_MONITOR_CONFIG` | `~/.ai-diving-monitor/config.json` | Settings file (provider, model, API keys) |
+
+Keys saved in Settings take precedence over environment variables. On the command line, choose the
+provider for one run with `ai-diving-monitor summary 3 --provider gemini --model gemini-2.5-flash`.
 
 ## How it works
 
@@ -113,12 +136,12 @@ UDDF file ──► uddf.py (parse, SI → m/bar/°C/L) ──► storage.py (SQ
                                                          │
              ┌───────────────────────────────────────────┴──────────────────┐
          app.py / charts.py (Streamlit + Plotly UI)        tools.py (shared dive-log tools)
-                                                              ├─ agent.py      (Claude API tool runner)
+                                                              ├─ agent.py      (Claude / OpenAI-compatible tool loop)
                                                               └─ mcp_server.py (Claude Code / MCP clients)
 ```
 
 The AI coach never receives raw files. It calls tools that return the parsed numbers, so its advice
-is based on your actual data. The same tools back both the in-app coach (Claude API) and the MCP
+is based on your actual data. The same tools back both the in-app coach (any provider) and the MCP
 server (Claude Code).
 
 ## Development
