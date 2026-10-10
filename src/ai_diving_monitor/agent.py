@@ -1,4 +1,5 @@
-"""AI dive coach built on Claude with tool use.
+"""AI dive coach with tool use, on Claude or on an OpenAI-compatible provider
+(ChatGPT, Gemini, DeepSeek, GitHub Copilot).
 
 The agent never sees raw files directly. Instead it calls tools that expose
 the parsed dive log and the deterministic analytics, so its advice is grounded
@@ -7,17 +8,21 @@ in your actual numbers and your history.
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Optional
 
 import anthropic
+import openai
 from anthropic import beta_tool
 
+from . import providers
+from .providers import Provider
 from .storage import DiveStore
-from .tools import SUMMARY_REQUEST, SYSTEM_PROMPT, DiveTools
+from .tools import COACH_TOOL_PARAMETERS, DESCRIPTIONS, SUMMARY_REQUEST, SYSTEM_PROMPT, DiveTools, call_coach_tool
 
-MODEL = os.environ.get("AI_DIVING_MONITOR_MODEL", "claude-opus-5-5")
 EFFORT = os.environ.get("AI_DIVING_MONITOR_EFFORT", "medium")
+MAX_TOOL_ROUNDS = 25
 
 
 class AgentUnavailable(RuntimeError):
@@ -26,11 +31,30 @@ class AgentUnavailable(RuntimeError):
 
 def _client() -> anthropic.Anthropic:
     try:
-        return anthropic.Anthropic()
+        return anthropic.Anthropic(api_key=providers.saved_key("anthropic"))
     except anthropic.AnthropicError as exc:  # missing credentials
         raise AgentUnavailable(
-            "No Anthropic credentials found. Set ANTHROPIC_API_KEY (or run `ant auth login`) to enable the AI coach."
+            "No Anthropic credentials found. Add an API key in Settings or set ANTHROPIC_API_KEY "
+            "to enable the AI coach."
         ) from exc
+
+
+def _openai_client(provider: Provider) -> openai.OpenAI:
+    key = providers.api_key(provider.id)
+    if not key:
+        raise AgentUnavailable(
+            f"No API key for {provider.name}. Add one in Settings or set {' / '.join(provider.env_vars)}."
+        )
+    return openai.OpenAI(api_key=key, base_url=provider.base_url)
+
+
+def list_models(provider_id: str) -> list[str]:
+    """Model ids the provider's API offers to this key (raises on API errors)."""
+    provider = providers.PROVIDERS[provider_id]
+    if provider.base_url is None:
+        return sorted(m.id for m in _client().models.list())
+    ids = sorted(m.id for m in _openai_client(provider).models.list())
+    return [i.removeprefix("models/") for i in ids]  # Gemini prefixes ids with "models/"
 
 
 def build_tools(store: DiveStore) -> list:
@@ -76,11 +100,23 @@ def build_tools(store: DiveStore) -> list:
     return [list_dives, get_dive_analysis, get_dive_profile, get_progress_trend]
 
 
-def run_agent(store: DiveStore, messages: list[dict]) -> str:
-    """Run the tool-use loop and return the final Markdown answer."""
+def run_agent(store: DiveStore, messages: list[dict], provider_id: Optional[str] = None,
+              model: Optional[str] = None) -> str:
+    """Run the tool-use loop on the selected provider and return the final Markdown answer."""
+    provider, default_model = providers.selected()
+    if provider_id and provider_id != provider.id:
+        provider = providers.PROVIDERS[provider_id]
+        default_model = provider.models[0]
+    model = model or default_model
+    if provider.base_url is None:
+        return _run_claude(store, messages, model)
+    return _run_openai_compatible(store, messages, provider, model)
+
+
+def _run_claude(store: DiveStore, messages: list[dict], model: str) -> str:
     client = _client()
     runner = client.beta.messages.tool_runner(
-        model=MODEL,
+        model=model,
         max_tokens=16000,
         system=SYSTEM_PROMPT,
         tools=build_tools(store),
@@ -103,8 +139,44 @@ def run_agent(store: DiveStore, messages: list[dict]) -> str:
     return text or "The coach did not return any text."
 
 
-def summarize_dive(store: DiveStore, dive_id: int) -> str:
-    text = run_agent(store, [{"role": "user", "content": SUMMARY_REQUEST.format(dive_id=dive_id)}])
+def openai_tool_definitions() -> list[dict]:
+    return [{"type": "function", "function": {"name": name, "description": DESCRIPTIONS[name], "parameters": params}}
+            for name, params in COACH_TOOL_PARAMETERS.items()]
+
+
+def _run_openai_compatible(store: DiveStore, messages: list[dict], provider: Provider, model: str,
+                           client: Optional[openai.OpenAI] = None) -> str:
+    client = client or _openai_client(provider)
+    tools = DiveTools(store)
+    convo: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}] + list(messages)
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = client.chat.completions.create(model=model, messages=convo, tools=openai_tool_definitions())
+        choice = response.choices[0]
+        message = choice.message
+        if not message.tool_calls:
+            if choice.finish_reason == "content_filter":
+                return "The AI coach declined to answer this request."
+            text = (message.content or "").strip()
+            if choice.finish_reason == "length":
+                text += "\n\n_(Answer truncated.)_"
+            return text or "The coach did not return any text."
+        # Keep provider-specific fields (e.g. DeepSeek reasoning, Gemini thought signatures) in the history.
+        convo.append(message.model_dump(exclude_none=True))
+        for call in message.tool_calls:
+            try:
+                args = json.loads(call.function.arguments or "{}")
+            except ValueError:
+                args = None
+            result = (call_coach_tool(tools, call.function.name, args) if isinstance(args, dict)
+                      else json.dumps({"error": "Tool arguments were not valid JSON"}))
+            convo.append({"role": "tool", "tool_call_id": call.id, "content": result})
+    return "The coach used too many tool calls without finishing its answer. Please try again."
+
+
+def summarize_dive(store: DiveStore, dive_id: int, provider_id: Optional[str] = None,
+                   model: Optional[str] = None) -> str:
+    text = run_agent(store, [{"role": "user", "content": SUMMARY_REQUEST.format(dive_id=dive_id)}],
+                     provider_id, model)
     store.save_summary(dive_id, text)
     return text
 
@@ -119,12 +191,16 @@ def ask_coach(store: DiveStore, question: str, history: Optional[list[dict]] = N
 def describe_api_error(exc: Exception) -> str:
     if isinstance(exc, AgentUnavailable):
         return str(exc)
-    if isinstance(exc, anthropic.AuthenticationError):
-        return "Your Anthropic API key was rejected. Check ANTHROPIC_API_KEY."
-    if isinstance(exc, anthropic.RateLimitError):
-        return "Rate limited by the Anthropic API. Please try again in a minute."
-    if isinstance(exc, anthropic.APIStatusError):
-        return f"Anthropic API error ({exc.status_code}): {exc.message}"
-    if isinstance(exc, anthropic.APIConnectionError):
-        return "Could not reach the Anthropic API. Check your internet connection."
+    name = providers.selected()[0].name
+    for sdk in (anthropic, openai):
+        if isinstance(exc, sdk.AuthenticationError):
+            return f"Your {name} API key was rejected. Check it in Settings."
+        if isinstance(exc, sdk.RateLimitError):
+            return f"Rate limited by the {name} API. Please try again in a minute."
+        if isinstance(exc, sdk.NotFoundError):
+            return f"{name} could not find this model ({exc.message}). Pick another model in Settings."
+        if isinstance(exc, sdk.APIStatusError):
+            return f"{name} API error ({exc.status_code}): {exc.message}"
+        if isinstance(exc, sdk.APIConnectionError):
+            return f"Could not reach the {name} API. Check your internet connection."
     return f"Unexpected error: {exc}"

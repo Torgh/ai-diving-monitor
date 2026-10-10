@@ -1,0 +1,97 @@
+import json
+from types import SimpleNamespace
+
+import pytest
+
+from ai_diving_monitor import providers
+from ai_diving_monitor.agent import _run_openai_compatible, openai_tool_definitions
+from ai_diving_monitor.storage import DiveStore
+
+
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("AI_DIVING_MONITOR_CONFIG", str(tmp_path / "config.json"))
+    for p in providers.PROVIDERS.values():
+        for var in p.env_vars:
+            monkeypatch.delenv(var, raising=False)
+    monkeypatch.delenv("AI_DIVING_MONITOR_PROVIDER", raising=False)
+    monkeypatch.delenv("AI_DIVING_MONITOR_MODEL", raising=False)
+
+
+def test_defaults_and_selection_roundtrip():
+    provider, model = providers.selected()
+    assert provider.id == "anthropic" and model == provider.models[0]
+    providers.select("gemini", "gemini-2.5-flash")
+    assert providers.selected() == (providers.PROVIDERS["gemini"], "gemini-2.5-flash")
+    providers.select("deepseek", "deepseek-chat")
+    providers.select("gemini", "gemini-2.5-flash")
+    assert json.loads(providers.config_path().read_text())["models"]["deepseek"] == "deepseek-chat"
+
+
+def test_env_vars_used_until_settings_are_saved(monkeypatch):
+    monkeypatch.setenv("AI_DIVING_MONITOR_PROVIDER", "openai")
+    monkeypatch.setenv("AI_DIVING_MONITOR_MODEL", "gpt-5-mini")
+    assert providers.selected() == (providers.PROVIDERS["openai"], "gpt-5-mini")
+    providers.select("copilot", "openai/gpt-4.1")
+    assert providers.selected()[0].id == "copilot"
+
+
+def test_saved_key_wins_over_env(monkeypatch):
+    assert not providers.is_configured("deepseek")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "env-key")
+    assert providers.api_key("deepseek") == "env-key"
+    assert providers.key_source("deepseek") == "DEEPSEEK_API_KEY"
+    providers.set_key("deepseek", "  saved-key-1234 ")
+    assert providers.api_key("deepseek") == "saved-key-1234"
+    assert providers.key_source("deepseek") == "saved"
+    assert providers.mask("saved-key-1234") == "…1234"
+    providers.set_key("deepseek", None)
+    assert providers.api_key("deepseek") == "env-key"
+
+
+def test_gemini_accepts_google_api_key(monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "g-key")
+    assert providers.api_key("gemini") == "g-key"
+
+
+def _completion(message: dict, finish_reason: str):
+    from openai.types.chat import ChatCompletionMessage
+
+    return SimpleNamespace(choices=[SimpleNamespace(message=ChatCompletionMessage(role="assistant", **message),
+                                                    finish_reason=finish_reason)])
+
+
+class FakeClient:
+    """Answers with one list_dives tool call, then a text answer built from the tool result."""
+
+    def __init__(self):
+        self.requests = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self.create))
+
+    def create(self, model, messages, tools):
+        self.requests.append(json.loads(json.dumps(messages)))
+        if messages[-1]["role"] == "tool":
+            dives = json.loads(messages[-1]["content"])
+            return _completion({"content": f"You have {len(dives)} dives."}, "stop")
+        return _completion({"content": None, "tool_calls": [
+            {"id": "call_1", "type": "function", "function": {"name": "list_dives", "arguments": "{}"}}]},
+            "tool_calls")
+
+
+def test_openai_compatible_tool_loop(tmp_path):
+    from pathlib import Path
+
+    store = DiveStore(tmp_path / "d.db")
+    for p in (Path(__file__).resolve().parents[1] / "examples").glob("*.uddf"):
+        store.import_file(p.name, p.read_bytes())
+    client = FakeClient()
+    answer = _run_openai_compatible(store, [{"role": "user", "content": "How many dives?"}],
+                                    providers.PROVIDERS["deepseek"], "deepseek-chat", client=client)
+    assert answer == "You have 9 dives."
+    assert client.requests[0][0]["role"] == "system"
+    assert client.requests[1][-2]["tool_calls"][0]["id"] == "call_1"
+
+
+def test_tool_definitions_cover_coach_tools():
+    names = {t["function"]["name"] for t in openai_tool_definitions()}
+    assert names == {"list_dives", "get_dive_analysis", "get_dive_profile", "get_progress_trend"}

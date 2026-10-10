@@ -141,3 +141,37 @@ DESCRIPTIONS = {
                    "Duplicate dives are skipped.",
     "save_dive_summary": "Save a coaching summary (Markdown) for a dive so it shows up in the web app.",
 }
+
+# JSON Schemas for the read-only coach tools, for providers that take raw function definitions
+# (the OpenAI-compatible Chat Completions API).
+COACH_TOOL_PARAMETERS = {
+    "list_dives": {"type": "object", "properties": {}},
+    "get_dive_analysis": {
+        "type": "object",
+        "properties": {"dive_id": {"type": "integer", "description": "The dive id from list_dives."}},
+        "required": ["dive_id"],
+    },
+    "get_dive_profile": {
+        "type": "object",
+        "properties": {
+            "dive_id": {"type": "integer", "description": "The dive id from list_dives."},
+            "interval_s": {"type": "integer", "description": "Seconds between returned points (minimum 10).",
+                           "default": 30},
+        },
+        "required": ["dive_id"],
+    },
+    "get_progress_trend": {
+        "type": "object",
+        "properties": {"metric": {"type": "string", "enum": list(PROGRESS_METRICS)}},
+        "required": ["metric"],
+    },
+}
+
+
+def call_coach_tool(tools: DiveTools, name: str, args: dict) -> str:
+    if name not in COACH_TOOL_PARAMETERS:
+        return json.dumps({"error": f"Unknown tool {name}"})
+    try:
+        return getattr(tools, name)(**args)
+    except TypeError as exc:  # wrong or missing arguments from the model
+        return json.dumps({"error": f"Invalid arguments for {name}: {exc}"})

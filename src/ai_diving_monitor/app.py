@@ -5,21 +5,20 @@ Run with:  ai-diving-monitor   (or)   streamlit run src/ai_diving_monitor/app.py
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from statistics import mean
 
 import pandas as pd
 import streamlit as st
 
-from ai_diving_monitor import charts
+from ai_diving_monitor import charts, providers
 from ai_diving_monitor.analysis import progress_insights
 from ai_diving_monitor.storage import DiveStore
 from ai_diving_monitor.uddf import UDDFParseError
 
 st.set_page_config(page_title="AI Diving Monitor", page_icon="🤿", layout="wide")
 
-PAGES = ["Dashboard", "Import dives", "Dive log", "Dive details", "AI coach", "Stored files"]
+PAGES = ["Dashboard", "Import dives", "Dive log", "Dive details", "AI coach", "Stored files", "Settings"]
 SEVERITY_ICON = {"critical": "⛔", "warning": "⚠️", "info": "ℹ️", "good": "✅"}
 EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
 
@@ -33,9 +32,7 @@ store = get_store()
 
 
 def ai_configured() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-                or os.environ.get("ANTHROPIC_PROFILE")
-                or (Path.home() / ".config" / "anthropic").exists())
+    return providers.is_configured(providers.selected()[0].id)
 
 
 def go_to(page: str, dive_id: int | None = None) -> None:
@@ -70,11 +67,12 @@ with st.sidebar:
     st.caption("Your dive computer data, turned into coaching.")
     page = st.radio("Navigate", PAGES, key="nav", label_visibility="collapsed")
     st.divider()
+    active_provider, active_model = providers.selected()
     if ai_configured():
-        st.success("AI coach ready", icon="🧠")
+        st.success(f"AI coach ready  \n{active_provider.name} · `{active_model}`", icon="🧠")
     else:
-        st.info("AI coach offline — set `ANTHROPIC_API_KEY` to enable AI summaries. "
-                "Rule-based analysis works without it.", icon="🔑")
+        st.info(f"AI coach offline — add a {active_provider.name} API key in **Settings** to enable AI "
+                "summaries. Rule-based analysis works without it.", icon="🔑")
     st.caption(f"Database: `{store.path}`")
 
 dives = store.list_dives()
@@ -252,7 +250,8 @@ def page_details() -> None:
         if summary:
             st.markdown(summary)
         elif not ai_configured():
-            st.info("Set `ANTHROPIC_API_KEY` to get a coaching summary. Meanwhile, here is the rule-based review:")
+            st.info("Add an API key in **Settings** to get a coaching summary. "
+                    "Meanwhile, here is the rule-based review:")
             render_findings(analysis["findings"])
 
 
@@ -261,7 +260,7 @@ def page_coach() -> None:
     st.caption("Ask anything about your dives — e.g. *“Is my air consumption improving?”*, "
                "*“What should I practise before my next deco dive?”*")
     if not ai_configured():
-        st.warning("Set `ANTHROPIC_API_KEY` in your environment and restart the app to chat with the coach.")
+        st.warning("Add an API key for your AI provider in **Settings** to chat with the coach.")
         return
     history = st.session_state.setdefault("chat", [])
     for msg in history:
@@ -307,6 +306,65 @@ def page_files() -> None:
                 st.rerun()
 
 
+CUSTOM_MODEL = "Other model…"
+
+
+def page_settings() -> None:
+    st.header("Settings")
+    st.subheader("AI coach")
+    current, current_model = providers.selected()
+    ids = list(providers.PROVIDERS)
+    pid = st.selectbox("AI provider", ids, index=ids.index(current.id),
+                       format_func=lambda i: providers.PROVIDERS[i].name)
+    provider = providers.PROVIDERS[pid]
+    if provider.note:
+        st.caption(provider.note)
+
+    # API key
+    source = providers.key_source(pid)
+    saved = providers.saved_key(pid)
+    if saved:
+        st.success(f"API key saved ({providers.mask(saved)}).", icon="🔑")
+    elif source:
+        st.info(f"Using credentials from `{source}`.", icon="🔑")
+    else:
+        st.warning(f"No API key yet. Create one at {provider.key_url}", icon="🔑")
+    with st.form(f"key_{pid}", clear_on_submit=True):
+        key = st.text_input("API key" if not saved else "Replace API key", type="password",
+                            placeholder="Paste your key here")
+        save_col, remove_col = st.columns([1, 1])
+        if save_col.form_submit_button("Save key", type="primary") and key.strip():
+            providers.set_key(pid, key)
+            st.rerun()
+        if saved and remove_col.form_submit_button("Remove saved key"):
+            providers.set_key(pid, None)
+            st.rerun()
+    st.caption(f"Keys are stored in plain text on this computer in `{providers.config_path()}`. "
+               f"Environment variables ({', '.join(f'`{v}`' for v in provider.env_vars)}) also work.")
+
+    # Model
+    fetched = st.session_state.get("fetched_models", {}).get(pid, [])
+    remembered = (providers.load_config().get("models") or {}).get(pid)
+    preferred = current_model if pid == current.id else remembered or provider.models[0]
+    options = list(dict.fromkeys([*provider.models, *fetched, preferred])) + [CUSTOM_MODEL]
+    choice = st.selectbox("Model", options, index=options.index(preferred))
+    model = st.text_input("Model id", placeholder="e.g. gpt-5") if choice == CUSTOM_MODEL else choice
+    if st.button("Load available models from the API", disabled=not providers.is_configured(pid)):
+        from ai_diving_monitor.agent import describe_api_error, list_models
+        try:
+            st.session_state.setdefault("fetched_models", {})[pid] = list_models(pid)
+            st.rerun()
+        except Exception as exc:
+            st.error(describe_api_error(exc))
+
+    active = pid == current.id and model == current_model
+    if st.button("Use this model", type="primary", disabled=active or not model):
+        providers.select(pid, model.strip())
+        st.rerun()
+    if active:
+        st.caption(f"The coach is using **{provider.name}** · `{current_model}`.")
+
+
 {
     "Dashboard": page_dashboard,
     "Import dives": page_import,
@@ -314,4 +372,5 @@ def page_files() -> None:
     "Dive details": page_details,
     "AI coach": page_coach,
     "Stored files": page_files,
+    "Settings": page_settings,
 }[page]()
