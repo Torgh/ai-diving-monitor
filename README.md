@@ -1,6 +1,6 @@
 # 🤿 AI Diving Monitor
 
-**An AI dive coach for technical divers.** Import the logs from your dive computer, keep them all in one
+**An AI dive coach for scuba divers.** Import the logs from your dive computer, keep them all in one
 local database, and get a clear, data-driven review of every dive: what went well, what to watch,
 and how you're progressing over time, for example whether your gas consumption is getting better.
 
