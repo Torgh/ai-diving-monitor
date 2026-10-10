@@ -4,6 +4,11 @@ Claude goes through the Anthropic SDK. ChatGPT, Gemini, DeepSeek and GitHub Copi
 all expose OpenAI-compatible Chat Completions endpoints, so they share the `openai` SDK with a
 different base URL.
 
+The "Claude Pro/Max plan" and "ChatGPT Plus/Pro plan" options make no API calls at all: the diver
+asks Claude Code or OpenAI's Codex CLI (each signed in with the diver's own subscription) for the
+review, the agent reads the dive log through the MCP server and saves the review into the same
+database, and the web app shows it.
+
 API keys entered in the web app are saved in plain text to a local JSON file next to the dive
 database (`~/.ai-diving-monitor/config.json`). Environment variables still work and are used when
 no key has been saved.
@@ -13,6 +18,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -29,6 +36,7 @@ class Provider:
     key_url: str
     base_url: Optional[str] = None  # None = Anthropic SDK
     note: str = ""
+    uses_api: bool = True  # False = the coach runs in Claude Code, outside the app
 
 
 PROVIDERS: dict[str, Provider] = {p.id: p for p in [
@@ -51,7 +59,17 @@ PROVIDERS: dict[str, Provider] = {p.id: p for p in [
              base_url="https://models.github.ai/inference",
              note="Uses a GitHub personal access token with the `models:read` permission. "
                   "Copilot subscribers get higher rate limits."),
+    Provider("claude-code", "Claude Pro/Max plan (via Claude Code)", (), (), "https://claude.com/claude-code",
+             note="No API key and no extra cost: ask for reviews in Claude Code, which uses your Claude "
+                  "subscription. Reviews are saved to your dive log and shown here.",
+             uses_api=False),
+    Provider("codex", "ChatGPT Plus/Pro plan (via Codex)", (), (), "https://developers.openai.com/codex/cli",
+             note="No API key and no extra cost: ask for reviews in OpenAI's Codex CLI, signed in with your "
+                  "ChatGPT account. Reviews are saved to your dive log and shown here.",
+             uses_api=False),
 ]}
+
+API_PROVIDERS = [p.id for p in PROVIDERS.values() if p.uses_api]
 
 DEFAULT_PROVIDER = "anthropic"
 
@@ -88,7 +106,7 @@ def selected() -> tuple[Provider, str]:
     else:
         provider = PROVIDERS.get(os.environ.get("AI_DIVING_MONITOR_PROVIDER", ""), PROVIDERS[DEFAULT_PROVIDER])
         model = os.environ.get("AI_DIVING_MONITOR_MODEL")
-    return provider, model or provider.models[0]
+    return provider, model or next(iter(provider.models), "")
 
 
 def select(provider_id: str, model: str) -> None:
@@ -135,6 +153,9 @@ def _anthropic_other_credentials() -> bool:
 
 
 def is_configured(provider_id: str) -> bool:
+    """True when the app itself can call this provider's API."""
+    if not PROVIDERS[provider_id].uses_api:
+        return False
     if provider_id == "anthropic" and _anthropic_other_credentials():
         return True
     return api_key(provider_id) is not None
@@ -142,3 +163,36 @@ def is_configured(provider_id: str) -> bool:
 
 def mask(key: str) -> str:
     return f"…{key[-4:]}" if len(key) > 8 else "…"
+
+
+@dataclass(frozen=True)
+class AgentAppStatus:
+    cli_installed: bool
+    mcp_registered: bool
+    review_command_installed: bool  # always False for Codex, which has no command to install
+
+
+def codex_home() -> Path:
+    env = os.environ.get("CODEX_HOME")
+    return Path(env) if env else Path.home() / ".codex"
+
+
+def agent_app_status(provider_id: str) -> AgentAppStatus:
+    """What is already set up for using the coach from Claude Code or Codex (best effort, read-only)."""
+    home = Path.home()
+    if provider_id == "codex":
+        try:
+            config = (codex_home() / "config.toml").read_text(encoding="utf-8")
+        except OSError:
+            config = ""
+        registered = re.search(r'^\s*\[mcp_servers\.("?)ai-diving-monitor\1\]', config, re.MULTILINE) is not None
+        return AgentAppStatus(shutil.which("codex") is not None, registered, False)
+    try:
+        servers = json.loads((home / ".claude.json").read_text(encoding="utf-8")).get("mcpServers") or {}
+    except (OSError, ValueError, AttributeError):
+        servers = {}
+    return AgentAppStatus(
+        cli_installed=shutil.which("claude") is not None,
+        mcp_registered="ai-diving-monitor" in servers,
+        review_command_installed=(home / ".claude" / "commands" / "dive-review.md").exists(),
+    )

@@ -59,6 +59,22 @@ Pick **Other model…** to type any model id, or click **Load available models f
 the models your key can use. Keys entered in the web UI are stored in plain text in
 `~/.ai-diving-monitor/config.json` on your computer, outside the repository.
 
+**Already paying for Claude Pro/Max or ChatGPT Plus/Pro?** Pick **Claude Pro/Max plan (via Claude
+Code)** or **ChatGPT Plus/Pro plan (via Codex)** in Settings. These options need no API key and cost
+nothing extra: you sign in to Claude Code (`/login`) or OpenAI's [Codex CLI](https://developers.openai.com/codex/cli)
+(`codex login` → *Sign in with ChatGPT*) with your own account, and the agent reads your dive log
+through the MCP server (see [Use it from Claude Code](#use-it-from-claude-code-mcp-no-api-key-needed)).
+The Settings page checks the setup for you and shows the command that connects the dive log. The web
+app then shows what to ask for each dive and displays the saved review. The app itself never signs
+in to your subscription or calls the model in these modes (Anthropic does not allow third-party apps
+to use claude.ai sign-in); the model runs in Claude Code or Codex.
+
+To connect the dive log to Codex:
+
+```bash
+codex mcp add ai-diving-monitor -- /path/to/ai-diving-monitor/.venv/bin/python -m ai_diving_monitor.mcp_server
+```
+
 No dive computer at hand? On the **Import dives** page, click **Load sample dives** to load nine
 fictional dives that show a diver's progression from spring to autumn, including a trimix deco dive.
 

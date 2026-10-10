@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .providers import PROVIDERS
+from .providers import API_PROVIDERS
 
 
 def main() -> None:
@@ -17,7 +17,7 @@ def main() -> None:
     imp.add_argument("files", nargs="+", type=Path)
     summ = sub.add_parser("summary", help="Print the AI coach summary for a dive")
     summ.add_argument("dive_id", type=int)
-    summ.add_argument("--provider", choices=sorted(PROVIDERS), help="AI provider (default: the one chosen in Settings)")
+    summ.add_argument("--provider", choices=sorted(API_PROVIDERS), help="AI provider (default: the one chosen in Settings)")
     summ.add_argument("--model", help="Model id (default: the one chosen in Settings)")
     sub.add_parser("mcp", help="Run the MCP server (stdio) for Claude Code and other MCP clients")
     args = parser.parse_args()

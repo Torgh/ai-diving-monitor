@@ -108,6 +108,11 @@ def run_agent(store: DiveStore, messages: list[dict], provider_id: Optional[str]
         provider = providers.PROVIDERS[provider_id]
         default_model = provider.models[0]
     model = model or default_model
+    if not provider.uses_api:
+        raise AgentUnavailable(
+            f"{provider.name} runs outside this app: ask for the review there (see Settings), "
+            "or pick an API provider in Settings."
+        )
     if provider.base_url is None:
         return _run_claude(store, messages, model)
     return _run_openai_compatible(store, messages, provider, model)
