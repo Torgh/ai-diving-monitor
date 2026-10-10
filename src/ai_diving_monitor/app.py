@@ -5,6 +5,8 @@ Run with:  ai-diving-monitor   (or)   streamlit run src/ai_diving_monitor/app.py
 
 from __future__ import annotations
 
+import shutil
+import sys
 from pathlib import Path
 from statistics import mean
 
@@ -21,6 +23,7 @@ st.set_page_config(page_title="AI Diving Monitor", page_icon="🤿", layout="wid
 PAGES = ["Dashboard", "Import dives", "Dive log", "Dive details", "AI coach", "Stored files", "Settings"]
 SEVERITY_ICON = {"critical": "⛔", "warning": "⚠️", "info": "ℹ️", "good": "✅"}
 EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
+REVIEW_COMMAND_SRC = Path(__file__).resolve().parents[2] / ".claude" / "commands" / "dive-review.md"
 
 
 @st.cache_resource
@@ -33,6 +36,35 @@ store = get_store()
 
 def ai_configured() -> bool:
     return providers.is_configured(providers.selected()[0].id)
+
+
+# Subscription mode: the coach runs in the diver's own agent app (signed in with their plan) through the MCP server.
+AGENT_APPS = {
+    "claude-code": {
+        "app": "Claude Code", "plan": "Claude plan", "account": "Claude account",
+        "login": "run `claude`, then `/login`",
+        "mcp_add": 'claude mcp add --scope user ai-diving-monitor -- "{python}" -m ai_diving_monitor.mcp_server',
+    },
+    "codex": {
+        "app": "Codex", "plan": "ChatGPT plan", "account": "ChatGPT account",
+        "login": "run `codex login` and choose **Sign in with ChatGPT**",
+        "mcp_add": 'codex mcp add ai-diving-monitor -- "{python}" -m ai_diving_monitor.mcp_server',
+    },
+}
+
+
+def agent_app() -> dict | None:
+    """The agent app the diver uses with their subscription instead of an API key, if any."""
+    provider = providers.selected()[0]
+    return None if provider.uses_api else {"id": provider.id, **AGENT_APPS[provider.id]}
+
+
+def review_request(app_id: str, dive_id: int) -> str:
+    if app_id == "codex":
+        return f"Review dive #{dive_id} from my AI Diving Monitor log and save the review with save_dive_summary."
+    if providers.agent_app_status(app_id).review_command_installed:
+        return f"/dive-review {dive_id}"
+    return f"/mcp__ai-diving-monitor__dive-review {dive_id}"
 
 
 def go_to(page: str, dive_id: int | None = None) -> None:
@@ -68,7 +100,9 @@ with st.sidebar:
     page = st.radio("Navigate", PAGES, key="nav", label_visibility="collapsed")
     st.divider()
     active_provider, active_model = providers.selected()
-    if ai_configured():
+    if app := agent_app():
+        st.success(f"AI coach: your {app['plan']}  \nvia {app['app']}", icon="🧠")
+    elif ai_configured():
         st.success(f"AI coach ready  \n{active_provider.name} · `{active_model}`", icon="🧠")
     else:
         st.info(f"AI coach offline — add a {active_provider.name} API key in **Settings** to enable AI "
@@ -239,6 +273,18 @@ def page_details() -> None:
             st.json(m)
     with tab_summary:
         summary = store.get_summary(dive_id)
+        if app := agent_app():
+            if summary:
+                st.markdown(summary)
+            st.info(f"Get this review in **{app['app']}**: it uses your {app['plan']}, no API key needed. "
+                    f"Paste the line below into {app['app']}, then click **Refresh**.", icon="💬")
+            st.code(review_request(app["id"], dive_id), language=None)
+            if st.button("Refresh"):
+                st.rerun()
+            if not summary:
+                st.caption("Meanwhile, here is the rule-based review:")
+                render_findings(analysis["findings"])
+            return
         label = "Regenerate AI summary" if summary else "Generate AI summary"
         if st.button(label, type="primary", disabled=not ai_configured()):
             from ai_diving_monitor.agent import describe_api_error, summarize_dive
@@ -259,6 +305,12 @@ def page_coach() -> None:
     st.header("AI coach")
     st.caption("Ask anything about your dives — e.g. *“Is my air consumption improving?”*, "
                "*“What should I practise before my next deco dive?”*")
+    if app := agent_app():
+        st.info(f"You use the coach through **{app['app']}** with your {app['plan']}. Ask your questions "
+                "there; it reads the same dive log as this app.", icon="💬")
+        st.code("Is my gas consumption improving?\nWhat should I practise before my next deco dive?",
+                language=None)
+        return
     if not ai_configured():
         st.warning("Add an API key for your AI provider in **Settings** to chat with the coach.")
         return
@@ -319,6 +371,9 @@ def page_settings() -> None:
     provider = providers.PROVIDERS[pid]
     if provider.note:
         st.caption(provider.note)
+    if not provider.uses_api:
+        settings_agent_app(provider, current.id == pid)
+        return
 
     # API key
     source = providers.key_source(pid)
@@ -363,6 +418,42 @@ def page_settings() -> None:
         st.rerun()
     if active:
         st.caption(f"The coach is using **{provider.name}** · `{current_model}`.")
+
+
+def settings_agent_app(provider: providers.Provider, active: bool) -> None:
+    app = AGENT_APPS[provider.id]
+    status = providers.agent_app_status(provider.id)
+    st.markdown("**Setup**")
+    if status.cli_installed:
+        st.success(f"{app['app']} is installed. Sign in with your {app['account']}: {app['login']}.", icon="✅")
+    else:
+        st.warning(f"Install {app['app']} from {provider.key_url}, then sign in with your {app['account']}: "
+                   f"{app['login']}.", icon="⬇️")
+    if status.mcp_registered:
+        st.success(f"The dive log is connected to {app['app']} (MCP server `ai-diving-monitor`).", icon="✅")
+    else:
+        st.warning(f"Connect the dive log to {app['app']}. Run this in a terminal:", icon="🔌")
+        st.code(app["mcp_add"].format(python=sys.executable), language=None)
+    if provider.id == "claude-code":
+        if status.review_command_installed:
+            st.success("The `/dive-review` command is installed.", icon="✅")
+        elif REVIEW_COMMAND_SRC.exists():
+            st.info("Optional: install the `/dive-review` shortcut for Claude Code.", icon="⚡")
+            if st.button("Install /dive-review"):
+                target = Path.home() / ".claude" / "commands" / "dive-review.md"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(REVIEW_COMMAND_SRC, target)
+                st.rerun()
+        how = "run `/dive-review` or ask questions about your log"
+    else:
+        how = "ask *“Review my latest dive and save the review”* or any question about your log"
+    st.markdown(f"**How to use it:** in {app['app']}, import dives (*“Import my dives from D:\\\\export.uddf”*), "
+                f"{how}. Reviews are saved and shown on the **Dive details** page.")
+    if active:
+        st.caption(f"The coach is set to use your {app['plan']} via {app['app']}.")
+    elif st.button(f"Use my {app['plan']}", type="primary"):
+        providers.select(provider.id, "")
+        st.rerun()
 
 
 {

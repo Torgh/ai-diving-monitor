@@ -95,3 +95,37 @@ def test_openai_compatible_tool_loop(tmp_path):
 def test_tool_definitions_cover_coach_tools():
     names = {t["function"]["name"] for t in openai_tool_definitions()}
     assert names == {"list_dives", "get_dive_analysis", "get_dive_profile", "get_progress_trend"}
+
+
+def test_claude_code_mode_needs_no_key_and_never_calls_an_api(tmp_path):
+    from ai_diving_monitor.agent import AgentUnavailable, run_agent
+
+    providers.select("claude-code", "")
+    provider, model = providers.selected()
+    assert provider.id == "claude-code" and model == ""
+    assert not provider.uses_api and not providers.is_configured("claude-code")
+    assert "claude-code" not in providers.API_PROVIDERS
+    with pytest.raises(AgentUnavailable, match="Claude Code"):
+        run_agent(DiveStore(tmp_path / "d.db"), [{"role": "user", "content": "hi"}])
+
+
+def test_agent_app_status(tmp_path, monkeypatch):
+    monkeypatch.setattr(providers.Path, "home", lambda: tmp_path)
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    for app in ("claude-code", "codex"):
+        assert not providers.agent_app_status(app).mcp_registered
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"ai-diving-monitor": {}}}))
+    (tmp_path / ".claude" / "commands").mkdir(parents=True)
+    (tmp_path / ".claude" / "commands" / "dive-review.md").write_text("x")
+    status = providers.agent_app_status("claude-code")
+    assert status.mcp_registered and status.review_command_installed
+    (tmp_path / ".codex").mkdir()
+    (tmp_path / ".codex" / "config.toml").write_text('model = "x"\n\n[mcp_servers.ai-diving-monitor]\ncommand = "py"\n')
+    assert providers.agent_app_status("codex").mcp_registered
+
+
+def test_codex_mode_is_a_subscription_option():
+    providers.select("codex", "")
+    provider, model = providers.selected()
+    assert provider.id == "codex" and not provider.uses_api and model == ""
+    assert "codex" not in providers.API_PROVIDERS
