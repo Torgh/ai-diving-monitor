@@ -7,51 +7,17 @@ in your actual numbers and your history.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Optional
 
 import anthropic
 from anthropic import beta_tool
 
-from .analysis import PROGRESS_METRICS, analyze_dive, trend
 from .storage import DiveStore
+from .tools import SUMMARY_REQUEST, SYSTEM_PROMPT, DiveTools
 
 MODEL = os.environ.get("AI_DIVING_MONITOR_MODEL", "claude-opus-5-5")
 EFFORT = os.environ.get("AI_DIVING_MONITOR_EFFORT", "medium")
-
-SYSTEM_PROMPT = """You are an experienced technical diving instructor acting as a personal dive coach.
-You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
-become a safer, more efficient diver.
-
-Ground every statement in data from your tools. Fetch the dive analysis first, look at the depth
-profile when the shape of the dive matters (ascents, stops, sawtooth patterns), and compare against
-the diver's history and progress trends before giving advice. Quote concrete numbers with units
-(m, min, bar, L/min, m/min). If data is missing (e.g. no tank pressure), say so instead of guessing.
-
-Safety matters more than flattery: clearly call out ascent-rate problems, missed stops, deco ceiling
-violations, ppO2/CNS issues and low gas reserves. Equally, recognise real improvements. Keep the tone
-supportive and practical, and give specific drills or habits the diver can work on. You are not a
-substitute for medical advice: if the data suggests a possible DCS-risk event, recommend that the
-diver watch for symptoms and contact DAN or a hyperbaric physician if any appear.
-
-Write in English, formatted in Markdown, concise enough to read on a phone."""
-
-SUMMARY_REQUEST = """Review dive #{dive_id} for me. Structure the answer as:
-
-### Dive summary
-2-3 sentences on what this dive was (depth, time, gases, conditions).
-
-### What went well
-
-### What to watch
-Ordered by safety impact.
-
-### Compared with your history
-How this dive compares with my earlier dives and where I am progressing or slipping.
-
-### Focus for your next dive
-1-3 concrete, actionable points."""
 
 
 class AgentUnavailable(RuntimeError):
@@ -68,14 +34,13 @@ def _client() -> anthropic.Anthropic:
 
 
 def build_tools(store: DiveStore) -> list:
+    t = DiveTools(store)
+
     @beta_tool
     def list_dives() -> str:
         """List every dive in the diver's log in chronological order with headline metrics
         (date, site, max depth, duration, RMV gas consumption, peak ascent rate, quality score, issues)."""
-        rows = store.list_dives()
-        keys = ("id", "seq", "start", "site", "max_depth_m", "duration_min", "rmv_l_min", "sac_bar_min",
-                "max_ascent_rate_m_min", "safety_stop_s", "had_deco", "gases", "score", "finding_titles")
-        return json.dumps([{k: r.get(k) for k in keys} for r in rows])
+        return t.list_dives()
 
     @beta_tool
     def get_dive_analysis(dive_id: int) -> str:
@@ -85,24 +50,7 @@ def build_tools(store: DiveStore) -> list:
         Args:
             dive_id: The dive id from list_dives.
         """
-        dive = store.get_dive(dive_id)
-        if dive is None:
-            return json.dumps({"error": f"Dive {dive_id} not found"})
-        analysis = store.get_analysis(dive_id) or analyze_dive(dive).to_dict()
-        info = {
-            "id": dive_id,
-            "start": dive.start.isoformat() if dive.start else None,
-            "site": dive.site,
-            "location": dive.location,
-            "computer": dive.computer,
-            "notes": dive.notes,
-            "tanks": [
-                {"volume_l": t.volume_l, "start_bar": t.start_bar, "end_bar": t.end_bar,
-                 "gas": dive.gas_mixes[t.mix_id].label if t.mix_id in dive.gas_mixes else None}
-                for t in dive.tanks
-            ],
-        }
-        return json.dumps({**info, **analysis})
+        return t.get_dive_analysis(dive_id)
 
     @beta_tool
     def get_dive_profile(dive_id: int, interval_s: int = 30) -> str:
@@ -113,25 +61,7 @@ def build_tools(store: DiveStore) -> list:
             dive_id: The dive id from list_dives.
             interval_s: Seconds between returned points (minimum 10).
         """
-        dive = store.get_dive(dive_id)
-        if dive is None:
-            return json.dumps({"error": f"Dive {dive_id} not found"})
-        interval_s = max(10, interval_s)
-        points, next_t = [], 0.0
-        for s in dive.samples:
-            if s.time_s >= next_t or s.mix_ref:
-                p = {"t_min": round(s.time_s / 60, 1), "depth_m": round(s.depth_m, 1)}
-                if s.temp_c is not None:
-                    p["temp_c"] = round(s.temp_c, 1)
-                if s.pressure_bar is not None:
-                    p["tank_bar"] = round(s.pressure_bar)
-                if s.deco_depth_m:
-                    p["deco_stop_m"] = s.deco_depth_m
-                if s.mix_ref and s.mix_ref in dive.gas_mixes:
-                    p["gas"] = dive.gas_mixes[s.mix_ref].label
-                points.append(p)
-                next_t = s.time_s + interval_s
-        return json.dumps(points)
+        return t.get_dive_profile(dive_id, interval_s)
 
     @beta_tool
     def get_progress_trend(metric: str) -> str:
@@ -141,10 +71,7 @@ def build_tools(store: DiveStore) -> list:
             metric: One of rmv_l_min, sac_bar_min, max_ascent_rate_m_min, fast_ascent_seconds, score,
                 safety_stop_s, max_depth_m, duration_min.
         """
-        if metric not in PROGRESS_METRICS:
-            return json.dumps({"error": f"Unknown metric. Use one of: {', '.join(PROGRESS_METRICS)}"})
-        result = trend(store.list_dives(), metric)
-        return json.dumps(result or {"error": "Need at least 3 dives with this metric"})
+        return t.get_progress_trend(metric)
 
     return [list_dives, get_dive_analysis, get_dive_profile, get_progress_trend]
 

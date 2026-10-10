@@ -15,7 +15,13 @@ def main() -> None:
     imp.add_argument("files", nargs="+", type=Path)
     summ = sub.add_parser("summary", help="Print the AI coach summary for a dive")
     summ.add_argument("dive_id", type=int)
+    sub.add_parser("mcp", help="Run the MCP server (stdio) for Claude Code and other MCP clients")
     args = parser.parse_args()
+
+    if args.cmd == "mcp":
+        from .mcp_server import main as mcp_main
+
+        return mcp_main()
 
     if args.cmd in (None, "ui"):
         from streamlit.web import cli as stcli

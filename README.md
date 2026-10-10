@@ -55,6 +55,46 @@ ai-diving-monitor import my-dives.uddf   # import without the UI
 ai-diving-monitor summary 3              # print the AI review of dive #3
 ```
 
+### Use it from Claude Code (MCP), no API key needed
+
+AI Diving Monitor ships an [MCP](https://modelcontextprotocol.io) server. When you connect it,
+Claude Code (or Claude Desktop, or any other MCP client) becomes your dive coach and uses your own
+Claude subscription. The server only exposes your dive log and the analytics.
+
+```bash
+# Windows (adjust the path to your clone)
+claude mcp add --scope user ai-diving-monitor -- C:\path\to\ai-diving-monitor\.venv\Scripts\python.exe -m ai_diving_monitor.mcp_server
+# macOS / Linux
+claude mcp add --scope user ai-diving-monitor -- /path/to/ai-diving-monitor/.venv/bin/python -m ai_diving_monitor.mcp_server
+```
+
+Optionally install the `/dive-review` slash command for all your Claude Code sessions:
+
+```bash
+cp .claude/commands/dive-review.md ~/.claude/commands/
+```
+
+Then, in any Claude Code session:
+
+```
+/dive-review                      # review of your latest dive, compared with your history
+/dive-review 7                    # review of dive id 7
+> Import my dives from D:\Shearwater\export.uddf
+> Is my gas consumption improving? What should I practise before my next deco dive?
+```
+
+| MCP tool | What it does |
+|---|---|
+| `list_dives` | Dive log with headline metrics |
+| `get_dive_analysis` | Full metrics and findings for one dive |
+| `get_dive_profile` | Downsampled depth/pressure/temperature profile |
+| `get_progress_trend` | Early vs recent comparison for a metric |
+| `import_uddf` | Import a `.uddf` file or a folder of them |
+| `save_dive_summary` | Store the coach's review so the web app shows it |
+
+The server also provides a `dive-review` MCP prompt (`/mcp__ai-diving-monitor__dive-review`). The web
+app and the MCP server share the same database, so dives imported in one show up in the other.
+
 ### Configuration
 
 | Variable | Default | Purpose |
@@ -72,13 +112,14 @@ UDDF file ──► uddf.py (parse, SI → m/bar/°C/L) ──► storage.py (SQ
                          analysis.py (metrics, findings, score, trends)
                                                          │
              ┌───────────────────────────────────────────┴──────────────────┐
-         app.py / charts.py (Streamlit + Plotly UI)          agent.py (Claude + tools)
-                                                              list_dives · get_dive_analysis
-                                                              get_dive_profile · get_progress_trend
+         app.py / charts.py (Streamlit + Plotly UI)        tools.py (shared dive-log tools)
+                                                              ├─ agent.py      (Claude API tool runner)
+                                                              └─ mcp_server.py (Claude Code / MCP clients)
 ```
 
 The AI coach never receives raw files. It calls tools that return the parsed numbers, so its advice
-is based on your actual data.
+is based on your actual data. The same tools back both the in-app coach (Claude API) and the MCP
+server (Claude Code).
 
 ## Development
 

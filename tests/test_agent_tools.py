@@ -24,3 +24,15 @@ def test_tools_return_grounded_json(tmp_path):
     rmv = json.loads(tools["get_progress_trend"].call({"metric": "rmv_l_min"}))
     assert rmv["verdict"] == "improving"
     assert "error" in json.loads(tools["get_dive_analysis"].call({"dive_id": 9999}))
+
+
+def test_import_and_save_summary_tools(tmp_path):
+    from ai_diving_monitor.tools import DiveTools
+
+    tools = DiveTools(DiveStore(tmp_path / "d.db"))
+    result = json.loads(tools.import_uddf(str(EXAMPLES)))
+    assert sum(r["added"] for r in result) == 9
+    assert json.loads(tools.import_uddf(str(EXAMPLES / "missing.uddf")))[0]["error"]
+    latest = tools.latest_dive_id()
+    assert json.loads(tools.save_dive_summary(latest, "Good dive"))["saved"]
+    assert tools.store.get_summary(latest) == "Good dive"
