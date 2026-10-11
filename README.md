@@ -4,7 +4,7 @@
 local database, and get a clear, data-driven review of every dive: what went well, what to watch,
 and how you're progressing over time, for example whether your gas consumption is getting better.
 
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 ## Features
@@ -179,4 +179,4 @@ decompression sickness, contact DAN or the nearest hyperbaric facility immediate
 
 ## License
 
-[MIT](LICENSE) © 2026 Torgh
+[GNU AGPLv3](LICENSE) © 2026 Torgh

@@ -7,14 +7,13 @@ name = "ai-diving-monitor"
 version = "0.1.0"
 description = "AI dive coach for technical divers: import UDDF dive computer logs, get dive summaries and track your progress."
 readme = "README.md"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Torgh" }]
 requires-python = ">=3.10"
 keywords = ["diving", "scuba", "technical diving", "uddf", "dive computer", "ai", "claude", "chatgpt", "gemini", "deepseek", "copilot"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
