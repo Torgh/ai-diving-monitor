@@ -26,10 +26,11 @@ import {
 import { analyzeRecord, chronological, parseGas } from "../lib/record";
 import { DiveStore } from "../lib/server/diveStore";
 import { migrateFromPython } from "../lib/server/migrate";
-import { dataDir, pythonDbPath } from "../lib/server/paths";
+import { pythonDbPath } from "../lib/server/paths";
 import { UddfParseError } from "../lib/uddf";
 
-const store = new DiveStore();
+/** The log where Settings say it is stored, looked up on every call so a change applies at once. */
+const store = () => new DiveStore();
 const server = new McpServer({ name: "ai-diving-monitor", title: "AI Diving Monitor", version: "0.2.0" }, { instructions: MCP_INSTRUCTIONS });
 
 const text = (value: unknown) => ({
@@ -54,19 +55,19 @@ const diveRef = z
   .describe("The dive's number in the log (1 = the oldest; `seq` in list_dives) or its id.");
 
 async function find(ref: string | number) {
-  return resolveDive(await store.list(), ref);
+  return resolveDive(await store().list(), ref);
 }
 
 server.registerTool(
   "list_dives",
   { title: "List dives", description: DESCRIPTIONS.list_dives, annotations: READ_ONLY },
-  tool(async () => listDives(await store.list())),
+  tool(async () => listDives(await store().list())),
 );
 
 server.registerTool(
   "get_overview",
   { title: "Dive log overview", description: DESCRIPTIONS.get_overview, annotations: READ_ONLY },
-  tool(async () => overview(await store.list(), dataDir())),
+  tool(async () => overview(await store().list(), store().backend.location)),
 );
 
 server.registerTool(
@@ -102,7 +103,7 @@ server.registerTool(
     inputSchema: { metric: z.string().describe("For example rmv_l_min, max_ascent_rate_m_min or score.") },
     annotations: READ_ONLY,
   },
-  tool(async ({ metric }: { metric: string }) => progressTrend(await store.list(), metric)),
+  tool(async ({ metric }: { metric: string }) => progressTrend(await store().list(), metric)),
 );
 
 server.registerTool(
@@ -124,7 +125,7 @@ server.registerTool(
     const results = [];
     for (const file of files) {
       try {
-        const r = await store.importFile(path.basename(file), new Uint8Array(await fs.readFile(file)));
+        const r = await store().importFile(path.basename(file), new Uint8Array(await fs.readFile(file)));
         results.push({ file, added: r.added.length, duplicates: r.duplicates.length });
       } catch (err) {
         if (!(err instanceof UddfParseError) && !(err as NodeJS.ErrnoException).code) throw err;
@@ -145,7 +146,7 @@ server.registerTool(
   },
   tool(async ({ dive_id, summary_markdown }: { dive_id: string | number; summary_markdown: string }) => {
     const { record, seq } = await find(dive_id);
-    await store.saveReview(record.id, summary_markdown);
+    await store().saveReview(record.id, summary_markdown);
     return { saved: true, dive_id: record.id, seq };
   }),
 );
@@ -183,7 +184,7 @@ server.registerTool(
       gas = parseGas(args.gas);
       if (!gas) throw new Error(`Can't read the gas "${args.gas}". Write it like air, EAN32, oxygen or Tx 18/45.`);
     }
-    const updated = await store.updateDetails(record.id, {
+    const updated = await store().updateDetails(record.id, {
       site: args.site,
       location: args.location,
       buddy: args.buddy,
@@ -221,7 +222,8 @@ server.registerTool(
   tool(async ({ db_path }: { db_path?: string }) => {
     const database = db_path?.trim() || pythonDbPath();
     if (!(await fs.stat(database).catch(() => undefined))) throw new Error(`No database at ${database}.`);
-    return { ...(await migrateFromPython(store, database)), data_folder: dataDir() };
+    const target = store();
+    return { ...(await migrateFromPython(target, database)), stored_in: target.backend.location };
   }),
 );
 
@@ -233,7 +235,7 @@ server.registerPrompt(
     argsSchema: { dive: z.string().optional().describe("The dive's number in the log or its id (default: the latest)") },
   },
   async ({ dive }) => {
-    const log = chronological(await store.list());
+    const log = chronological(await store().list());
     const target = dive?.trim() || (log.length ? String(log.length) : "");
     const request = target
       ? `${SUMMARY_REQUEST.replace("{dive}", `#${target}`)}\n\nUse the ai-diving-monitor tools (get_dive_analysis, get_dive_profile, list_dives, get_progress_trend), then save the review with save_dive_summary.`

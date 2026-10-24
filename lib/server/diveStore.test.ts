@@ -10,6 +10,7 @@ import { DiveNotFoundError, DiveStore } from "./diveStore";
 import { LockTimeoutError, withLock } from "./files";
 import { migrateFromPython } from "./migrate";
 import { dataDir, divesDir, pythonDbPath } from "./paths";
+import { restoreEnv } from "../../test-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const read = (...p: string[]) => new Uint8Array(fs.readFileSync(path.join(ROOT, ...p)));
@@ -27,7 +28,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env = { ...saved };
+  restoreEnv(saved);
   fs.rmSync(home, { recursive: true, force: true });
 });
 

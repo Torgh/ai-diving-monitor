@@ -8,6 +8,7 @@ import { POST as importFiles } from "./import/route";
 import { POST as importSamples } from "./import/samples/route";
 import { GET as migrateStatus, POST as migrate } from "./migrate/route";
 import { GET as getVersion } from "./version/route";
+import { restoreEnv } from "../../test-env";
 
 /** The route handlers, called as Next.js calls them, against a temporary data folder. */
 
@@ -30,7 +31,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env = { ...saved };
+  restoreEnv(saved);
   fs.rmSync(home, { recursive: true, force: true });
 });
 

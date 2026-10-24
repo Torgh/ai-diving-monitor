@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StorageSettings } from "@/components/StorageSettings";
 import { type ProviderView, useSettings } from "@/components/useSettings";
 import { api } from "@/components/useLive";
 import type { AppStatus } from "@/lib/server/agentApps";
@@ -163,12 +164,14 @@ export default function SettingsPage() {
         )}
       </div>
 
+      <StorageSettings />
+
       <div className="card">
-        <h2>Where things are</h2>
+        <h2>On this computer</h2>
         <p className="secondary">
-          Dive files: <code>{settings.dataFolder}</code>
+          Settings and API keys (plain text, never synced): <code>{settings.configPath}</code>
           <br />
-          Settings and API keys (plain text, on this computer only): <code>{settings.configPath}</code>
+          Data folder (settings, sign-in, locks): <code>{settings.dataFolder}</code>
         </p>
       </div>
     </div>

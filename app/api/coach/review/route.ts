@@ -4,7 +4,6 @@ import { describeApiError, runCoach } from "@/lib/server/coachAgent";
 import { selected } from "@/lib/server/config";
 import { DiveStore } from "@/lib/server/diveStore";
 import { assertLocal, handle, HttpError, readBody } from "@/lib/server/http";
-import { dataDir } from "@/lib/server/paths";
 
 /** Asks the in-app coach for a review of one dive and saves it with the dive. */
 export const POST = handle(async (req) => {
@@ -16,7 +15,7 @@ export const POST = handle(async (req) => {
   const request = `${SUMMARY_REQUEST.replace("{dive}", `#${seq} (id ${record.id})`)}\n\nUse your tools: the dive's analysis, its profile when the shape matters, and my history and progress trends.`;
   let answer;
   try {
-    answer = await runCoach(provider.id, model, [{ role: "user", content: request }], { records: () => store.list(), dataFolder: dataDir() });
+    answer = await runCoach(provider.id, model, [{ role: "user", content: request }], { records: () => store.list(), dataFolder: store.backend.location });
   } catch (err) {
     throw describeApiError(err) ?? err;
   }
