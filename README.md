@@ -3,6 +3,8 @@
 **An AI dive coach for scuba divers.** Import the logs from your dive computer, keep them all in one
 local database, and get a clear, data-driven review of every dive: what went well, what to watch,
 and how you're progressing over time, for example whether your gas consumption is getting better.
+Use the coach with the Claude or ChatGPT subscription you already have, **no API key needed**, or
+with an API key from one of five providers.
 
 ![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -11,10 +13,13 @@ and how you're progressing over time, for example whether your gas consumption i
 
 - **UDDF import.** Upload `.uddf` files exported from Subsurface, Shearwater Cloud, Garmin Dive,
   Suunto DM5, MacDive, DiveMate and other tools. Several dives per file are supported, and duplicates
-  are skipped automatically.
+  are skipped automatically. Exporter quirks are handled, such as Shearwater writing CNS in whole
+  percent and exporting every tank slot, used or not.
 - **Local storage.** The original files and the parsed dives are stored in a local SQLite database
-  (`~/.ai-diving-monitor/dives.db`). You can download or delete stored files at any time.
-- **Rule-based dive analysis** (works offline, no API key needed):
+  (`~/.ai-diving-monitor/dives.db`). You can download or delete stored files at any time. Because the
+  originals are kept, a newer version of the app parses your dives again with its improved parser,
+  keeping their ids and the reviews you saved.
+- **Rule-based dive analysis** (works offline, no AI needed):
   - gas consumption: surface RMV (L/min) and SAC (bar/min), plus the remaining gas reserve
   - ascent and descent rates, with fast ascents marked on the profile
   - safety stop and decompression stop compliance, including deco-ceiling violations
@@ -22,10 +27,10 @@ and how you're progressing over time, for example whether your gas consumption i
   - END for trimix, hypoxic-mix detection, sawtooth profiles, NDL margin and computer alarms
   - a 0–100 dive quality score
 - **AI coach.** An agent that uses tools to read your dive, its profile and your whole history,
-  then writes a summary: *dive summary → what went well → what to watch → compared with your history →
-  focus for your next dive*. You can also chat with it about your log. Choose the AI provider and
-  model on the **Settings** page: Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google), DeepSeek or
-  GitHub Copilot (GitHub Models).
+  then writes a review: *dive summary → what went well → what to watch → compared with your history →
+  focus for your next dive*. You can also chat with it about your log. It runs either in Claude Code
+  or Codex on your own subscription (through the MCP server), or in the app with an API key for
+  Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google), DeepSeek or GitHub Copilot (GitHub Models).
 - **Progress dashboard.** Interactive charts of RMV, peak ascent rate, safety stop time and dive score
   across your dives, each with a trend line, plus plain-language progress insights such as
   "Gas consumption: improving, 23.5 → 16.2 L/min".
@@ -41,79 +46,48 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 pip install -e .
 
-ai-diving-monitor            # opens the web UI at http://localhost:8501
-```
-
-The web UI only listens on `127.0.0.1`, so other devices on your network can't open your dive log.
-
-To enable the AI coach, open **Settings** in the web UI, pick a provider and a model, and paste your
-API key. You can also set the key as an environment variable instead (see [Configuration](#configuration)).
-
-| Provider | API key | Example models |
-|---|---|---|
-| Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `claude-opus-5-5`, `claude-sonnet-5-5` |
-| ChatGPT (OpenAI) | [platform.openai.com](https://platform.openai.com/api-keys) | `gpt-5`, `gpt-5-mini` |
-| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/apikey) | `gemini-2.5-pro`, `gemini-2.5-flash` |
-| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | `deepseek-chat`, `deepseek-reasoner` |
-| GitHub Copilot (GitHub Models) | [GitHub token](https://github.com/settings/personal-access-tokens) with `models:read` | `openai/gpt-4.1` |
-
-Pick **Other model…** to type any model id, or click **Load available models from the API** to list
-the models your key can use. Keys entered in the web UI are stored in plain text in
-`~/.ai-diving-monitor/config.json` on your computer, outside the repository.
-
-**Already paying for Claude Pro/Max or ChatGPT Plus/Pro?** Pick **Claude Pro/Max plan (via Claude
-Code)** or **ChatGPT Plus/Pro plan (via Codex)** in Settings. These options need no API key and cost
-nothing extra: you sign in to Claude Code (`/login`) or OpenAI's [Codex CLI](https://developers.openai.com/codex/cli)
-(`codex login` → *Sign in with ChatGPT*) with your own account, and the agent reads your dive log
-through the MCP server (see [Use it from Claude Code](#use-it-from-claude-code-mcp-no-api-key-needed)).
-The Settings page checks the setup for you and shows the command that connects the dive log. The web
-app then shows what to ask for each dive and displays the saved review. The app itself never signs
-in to your subscription or calls the model in these modes (Anthropic does not allow third-party apps
-to use claude.ai sign-in); the model runs in Claude Code or Codex.
-
-To connect the dive log to Codex:
-
-```bash
-codex mcp add ai-diving-monitor -- /path/to/ai-diving-monitor/.venv/bin/python -m ai_diving_monitor.mcp_server
+ai-diving-monitor            # starts the web UI and opens http://localhost:8501
 ```
 
 No dive computer at hand? On the **Import dives** page, click **Load sample dives** to load nine
 fictional dives that show a diver's progression from spring to autumn, including a trimix deco dive.
 
-### Command line
+To update later, run `git pull` and `pip install -e .` again. Your dives are parsed again on the next
+start if the parser has improved.
+
+### 1. Coach with your Claude or ChatGPT subscription (MCP, no API key)
+
+AI Diving Monitor ships an [MCP](https://modelcontextprotocol.io) server. Connect it to Claude Code,
+Claude Desktop or Codex and the agent becomes your dive coach, on your own Claude Pro/Max or
+ChatGPT Plus/Pro plan at no extra cost. The server only exposes your dive log and the analytics.
+
+In the web UI, pick **Claude Pro/Max plan (via Claude Code)** or **ChatGPT Plus/Pro plan (via Codex)**
+in **Settings**. The page checks the setup and shows the exact command for your machine. Typically:
 
 ```bash
-ai-diving-monitor import my-dives.uddf   # import without the UI
-ai-diving-monitor summary 3              # print the AI review of dive #3
-```
-
-### Use it from Claude Code (MCP), no API key needed
-
-AI Diving Monitor ships an [MCP](https://modelcontextprotocol.io) server. When you connect it,
-Claude Code (or Claude Desktop, or any other MCP client) becomes your dive coach and uses your own
-Claude subscription. The server only exposes your dive log and the analytics.
-
-```bash
-# Windows (adjust the path to your clone)
-claude mcp add --scope user ai-diving-monitor -- C:\path\to\ai-diving-monitor\.venv\Scripts\python.exe -m ai_diving_monitor.mcp_server
-# macOS / Linux
+# Claude Code (sign in with /login). Windows: use .venv\Scripts\python.exe
 claude mcp add --scope user ai-diving-monitor -- /path/to/ai-diving-monitor/.venv/bin/python -m ai_diving_monitor.mcp_server
+
+# Codex CLI (codex login → Sign in with ChatGPT)
+codex mcp add ai-diving-monitor -- /path/to/ai-diving-monitor/.venv/bin/python -m ai_diving_monitor.mcp_server
 ```
 
-Optionally install the `/dive-review` slash command for all your Claude Code sessions:
+For Claude Desktop, add the same command to `mcpServers` in its config. The web app then shows what
+to ask for each dive and displays the saved review. The app itself never signs in to your
+subscription or calls the model in these modes (Anthropic does not allow third-party apps to use
+claude.ai sign-in); the model runs in Claude Code or Codex.
 
-```bash
-cp .claude/commands/dive-review.md ~/.claude/commands/
+Then ask in plain language, or use the `dive-review` prompt (`/mcp__ai-diving-monitor__dive-review`):
+
 ```
-
-Then, in any Claude Code session:
-
-```
-/dive-review                      # review of your latest dive, compared with your history
-/dive-review 7                    # review of dive id 7
+/mcp__ai-diving-monitor__dive-review      # review of your latest dive, compared with your history
+/mcp__ai-diving-monitor__dive-review 7    # review of dive id 7
 > Import my dives from D:\Shearwater\export.uddf
 > Is my gas consumption improving? What should I practise before my next deco dive?
 ```
+
+For a shorter `/dive-review`, copy the slash command to your Claude Code commands:
+`cp .claude/commands/dive-review.md ~/.claude/commands/`.
 
 | MCP tool | What it does |
 |---|---|
@@ -124,8 +98,32 @@ Then, in any Claude Code session:
 | `import_uddf` | Import a `.uddf` file or a folder of them |
 | `save_dive_summary` | Store the coach's review so the web app shows it |
 
-The server also provides a `dive-review` MCP prompt (`/mcp__ai-diving-monitor__dive-review`). The web
-app and the MCP server share the same database, so dives imported in one show up in the other.
+The web app and the MCP server share the same database, so dives imported in one show up in the
+other, and a review the agent saves appears in the app.
+
+### 2. Coach in the app with an API key (optional)
+
+Open **Settings**, pick a provider and a model, and paste your API key (billed per use by the
+provider). You can also set the key as an environment variable instead (see [Configuration](#configuration)).
+
+| Provider | API key | Example models |
+|---|---|---|
+| Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `claude-opus-5-5`, `claude-sonnet-5-5` |
+| ChatGPT (OpenAI) | [platform.openai.com](https://platform.openai.com/api-keys) | `gpt-5`, `gpt-5-mini` |
+| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/apikey) | `gemini-2.5-pro`, `gemini-2.5-flash` |
+| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | `deepseek-chat`, `deepseek-reasoner` |
+| GitHub Copilot (GitHub Models) | [GitHub token](https://github.com/settings/personal-access-tokens) with `models:read` | `openai/gpt-4.1` |
+
+Pick **Other model…** to type any model id, or click **Load available models from the API** to list
+the models your key can use.
+
+### Command line
+
+```bash
+ai-diving-monitor import my-dives.uddf   # import without the UI
+ai-diving-monitor summary 3              # print the AI review of dive #3 (API key mode)
+ai-diving-monitor mcp                    # run the MCP server manually (normally the agent starts it)
+```
 
 ### Configuration
 
@@ -144,6 +142,20 @@ app and the MCP server share the same database, so dives imported in one show up
 
 Keys saved in Settings take precedence over environment variables. On the command line, choose the
 provider for one run with `ai-diving-monitor summary 3 --provider gemini --model gemini-2.5-flash`.
+If you move the database with `AI_DIVING_MONITOR_DB`, set the same variable for the MCP server
+(`claude mcp add … -e AI_DIVING_MONITOR_DB=…`), so the app and the agent see the same log.
+
+## Security model
+
+AI Diving Monitor is a **personal, local app**:
+
+- The web UI listens on `127.0.0.1` only, so other devices on your network can't open your dive log.
+- The MCP server talks to the agent over stdio on your computer; it opens no network port.
+- API keys entered in Settings are stored in plain text in `~/.ai-diving-monitor/config.json`,
+  outside the repository. In subscription mode no key is stored at all.
+- Usage statistics of the UI framework (Streamlit) are turned off.
+
+Do not expose the app to the internet as-is.
 
 ## How it works
 
@@ -155,12 +167,13 @@ UDDF file ──► uddf.py (parse, SI → m/bar/°C/L) ──► storage.py (SQ
              ┌───────────────────────────────────────────┴──────────────────┐
          app.py / charts.py (Streamlit + Plotly UI)        tools.py (shared dive-log tools)
                                                               ├─ agent.py      (Claude / OpenAI-compatible tool loop)
-                                                              └─ mcp_server.py (Claude Code / MCP clients)
+                                                              └─ mcp_server.py (Claude Code / Codex / MCP clients)
 ```
 
 The AI coach never receives raw files. It calls tools that return the parsed numbers, so its advice
 is based on your actual data. The same tools back both the in-app coach (any provider) and the MCP
-server (Claude Code).
+server. The database records the parser version (`PARSER_VERSION` in `uddf.py`); when it is older,
+the stored originals are parsed again on start.
 
 ## Development
 
@@ -170,8 +183,23 @@ pytest
 python scripts/generate_samples.py   # regenerate examples/*.uddf
 ```
 
-Planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis and
-team/buddy comparisons.
+Change parsing? Bump `PARSER_VERSION` in `uddf.py`, so existing databases are parsed again.
+
+## Roadmap
+
+AI Diving Monitor is heading towards working like [TripDeck](https://github.com/Torgh/tripdeck), the
+companion trip planner: the agent works on your log directly and the app shows its changes live.
+
+1. **The agent edits the log.** MCP tools to fill in what the computer doesn't record (site, buddy,
+   tank volume and gas, notes), a "to sort out" overview (dives without a tank volume or a review,
+   suspicious data) and an app that refreshes when the agent saves something.
+2. **Dives as files.** One file per dive, stored on this PC, in OneDrive or on Google Drive.
+3. **Prepare for trips.** Link the dive cards of a TripDeck trip to your logged dives, and let the
+   coach prepare you for each dive site from your own history.
+4. **On the road.** A logbook export (PDF, JSON) and a phone app.
+
+Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis
+and team/buddy comparisons.
 
 ## Disclaimer
 
