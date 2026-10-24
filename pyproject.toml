@@ -11,7 +11,7 @@ license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Torgh" }]
 requires-python = ">=3.10"
-keywords = ["diving", "scuba", "technical diving", "uddf", "dive computer", "ai", "claude", "chatgpt", "gemini", "deepseek", "copilot"]
+keywords = ["diving", "scuba", "technical diving", "uddf", "dive computer", "ai", "claude", "chatgpt"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",

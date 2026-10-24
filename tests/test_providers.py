@@ -21,37 +21,41 @@ def isolated_config(tmp_path, monkeypatch):
 def test_defaults_and_selection_roundtrip():
     provider, model = providers.selected()
     assert provider.id == "anthropic" and model == provider.models[0]
-    providers.select("gemini", "gemini-2.5-flash")
-    assert providers.selected() == (providers.PROVIDERS["gemini"], "gemini-2.5-flash")
-    providers.select("deepseek", "deepseek-chat")
-    providers.select("gemini", "gemini-2.5-flash")
-    assert json.loads(providers.config_path().read_text())["models"]["deepseek"] == "deepseek-chat"
+    providers.select("openai", "gpt-5-mini")
+    assert providers.selected() == (providers.PROVIDERS["openai"], "gpt-5-mini")
+    providers.select("anthropic", "claude-sonnet-5-5")
+    providers.select("openai", "gpt-5-mini")
+    assert json.loads(providers.config_path().read_text())["models"]["anthropic"] == "claude-sonnet-5-5"
+
+
+def test_only_claude_and_chatgpt_need_an_api_key():
+    assert providers.API_PROVIDERS == ["anthropic", "openai"]
+
+
+def test_a_removed_provider_in_old_settings_falls_back_to_claude():
+    providers.save_config({"provider": "gemini", "models": {"gemini": "gemini-2.5-flash"}})
+    assert providers.selected() == (providers.PROVIDERS["anthropic"], "claude-opus-5-5")
 
 
 def test_env_vars_used_until_settings_are_saved(monkeypatch):
     monkeypatch.setenv("AI_DIVING_MONITOR_PROVIDER", "openai")
     monkeypatch.setenv("AI_DIVING_MONITOR_MODEL", "gpt-5-mini")
     assert providers.selected() == (providers.PROVIDERS["openai"], "gpt-5-mini")
-    providers.select("copilot", "openai/gpt-4.1")
-    assert providers.selected()[0].id == "copilot"
+    providers.select("anthropic", "claude-haiku-5-5")
+    assert providers.selected()[0].id == "anthropic"
 
 
 def test_saved_key_wins_over_env(monkeypatch):
-    assert not providers.is_configured("deepseek")
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "env-key")
-    assert providers.api_key("deepseek") == "env-key"
-    assert providers.key_source("deepseek") == "DEEPSEEK_API_KEY"
-    providers.set_key("deepseek", "  saved-key-1234 ")
-    assert providers.api_key("deepseek") == "saved-key-1234"
-    assert providers.key_source("deepseek") == "saved"
+    assert not providers.is_configured("openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "env-key")
+    assert providers.api_key("openai") == "env-key"
+    assert providers.key_source("openai") == "OPENAI_API_KEY"
+    providers.set_key("openai", "  saved-key-1234 ")
+    assert providers.api_key("openai") == "saved-key-1234"
+    assert providers.key_source("openai") == "saved"
     assert providers.mask("saved-key-1234") == "…1234"
-    providers.set_key("deepseek", None)
-    assert providers.api_key("deepseek") == "env-key"
-
-
-def test_gemini_accepts_google_api_key(monkeypatch):
-    monkeypatch.setenv("GOOGLE_API_KEY", "g-key")
-    assert providers.api_key("gemini") == "g-key"
+    providers.set_key("openai", None)
+    assert providers.api_key("openai") == "env-key"
 
 
 def _completion(message: dict, finish_reason: str):
@@ -78,7 +82,7 @@ class FakeClient:
             "tool_calls")
 
 
-def test_openai_compatible_tool_loop(tmp_path):
+def test_chatgpt_tool_loop(tmp_path):
     from pathlib import Path
 
     store = DiveStore(tmp_path / "d.db")
@@ -86,7 +90,7 @@ def test_openai_compatible_tool_loop(tmp_path):
         store.import_file(p.name, p.read_bytes())
     client = FakeClient()
     answer = _run_openai_compatible(store, [{"role": "user", "content": "How many dives?"}],
-                                    providers.PROVIDERS["deepseek"], "deepseek-chat", client=client)
+                                    providers.PROVIDERS["openai"], "gpt-5-mini", client=client)
     assert answer == "You have 9 dives."
     assert client.requests[0][0]["role"] == "system"
     assert client.requests[1][-2]["tool_calls"][0]["id"] == "call_1"

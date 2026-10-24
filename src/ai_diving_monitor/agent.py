@@ -1,5 +1,5 @@
 """AI dive coach with tool use, on Claude or on an OpenAI-compatible provider
-(ChatGPT, Gemini, DeepSeek, GitHub Copilot).
+(ChatGPT).
 
 The agent never sees raw files directly. Instead it calls tools that expose
 the parsed dive log and the deterministic analytics, so its advice is grounded
@@ -53,8 +53,7 @@ def list_models(provider_id: str) -> list[str]:
     provider = providers.PROVIDERS[provider_id]
     if provider.base_url is None:
         return sorted(m.id for m in _client().models.list())
-    ids = sorted(m.id for m in _openai_client(provider).models.list())
-    return [i.removeprefix("models/") for i in ids]  # Gemini prefixes ids with "models/"
+    return sorted(m.id for m in _openai_client(provider).models.list())
 
 
 def build_tools(store: DiveStore) -> list:
@@ -165,7 +164,7 @@ def _run_openai_compatible(store: DiveStore, messages: list[dict], provider: Pro
             if choice.finish_reason == "length":
                 text += "\n\n_(Answer truncated.)_"
             return text or "The coach did not return any text."
-        # Keep provider-specific fields (e.g. DeepSeek reasoning, Gemini thought signatures) in the history.
+        # Keep every field the API returned (e.g. refusals) in the history.
         convo.append(message.model_dump(exclude_none=True))
         for call in message.tool_calls:
             try:
