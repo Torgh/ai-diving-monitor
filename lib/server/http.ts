@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { DiveRefError } from "../coach";
 import { UddfParseError } from "../uddf";
 import { DiveNotFoundError } from "./diveStore";
 import { LockTimeoutError } from "./files";
@@ -63,7 +64,7 @@ export function assertSameOrigin(req: Request) {
 
 function statusOf(err: unknown): number {
   if (err instanceof HttpError) return err.status;
-  if (err instanceof DiveNotFoundError) return 404;
+  if (err instanceof DiveNotFoundError || err instanceof DiveRefError) return 404;
   if (err instanceof UddfParseError) return 422;
   if (err instanceof LockTimeoutError) return 503;
   return 500;
