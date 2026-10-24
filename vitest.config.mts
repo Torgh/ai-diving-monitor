@@ -8,7 +8,7 @@ export default defineConfig({
     alias: { "@": root("./") },
   },
   test: {
-    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "mcp/**/*.test.ts", "*.test.ts"],
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "mcp/**/*.test.ts", "components/**/*.test.ts", "*.test.ts"],
     // The first date formatting loads ICU data, which can take over 5 s on a cold Windows CI runner.
     testTimeout: 20_000,
     coverage: {

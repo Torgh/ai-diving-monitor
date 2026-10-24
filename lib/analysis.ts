@@ -113,6 +113,12 @@ function windowedRates(times: number[], depths: number[], windowS = 30): [number
   return rates;
 }
 
+/** ppO2 at each sample: the computer's value, else the breathed gas's O2 fraction × ambient pressure. */
+export function ppo2Series(dive: Dive): (number | null)[] {
+  const mixes = mixTimeline(dive);
+  return dive.samples.map((sample, i) => sample.ppo2 ?? (mixes[i] ? mixes[i]!.o2 * ambientBar(sample.depthM) : null));
+}
+
 export function ascentRateSeries(dive: Dive): [number, number, number][] {
   return windowedRates(
     dive.samples.map((s) => s.timeS),
@@ -169,16 +175,14 @@ export function analyzeDive(dive: Dive): DiveAnalysis {
 
   // Oxygen exposure, END
   const mixes = mixTimeline(dive);
-  const ppo2s: (number | null)[] = [];
+  const ppo2s = ppo2Series(dive);
   let maxEnd: number | null = null;
   let cns = 0;
   let otu = 0;
   for (let i = 0; i < s.length; i++) {
     const sample = s[i];
     const mix = mixes[i];
-    let p = sample.ppo2;
-    if (p === null && mix) p = mix.o2 * ambientBar(sample.depthM);
-    ppo2s.push(p);
+    const p = ppo2s[i];
     if (mix) {
       const end = (sample.depthM + 10) * (1 - mix.he) - 10;
       maxEnd = maxEnd === null ? end : Math.max(maxEnd, end);
