@@ -42,6 +42,7 @@ for t, d in ramp(2720, 3600, 6, 3):
 a.append(wp(3620, 0))
 
 # B: rocket ascent after a sawtooth, a fast descent and a hypoxic gas; CNS written as fractions.
+# Its start has a fraction of a second with 3 digits: Python 3.10 reads only 3 or 6, newer versions any.
 b = []
 pts = (ramp(0, 40, 0, 26, 10) + [(60, 26), (80, 18), (100, 25), (120, 17), (140, 24), (160, 16), (180, 25)]
        + ramp(200, 900, 25, 25, 50) + ramp(910, 970, 25, 0, 10))
@@ -101,7 +102,7 @@ xml = f"""<?xml version="1.0" encoding="ISO-8859-1"?>
         </informationafterdive>
       </dive>
       <dive id="B">
-        <informationbeforedive><link ref="nameless"/><datetime>2026-07-01T08:30:00.25+02:00</datetime></informationbeforedive>
+        <informationbeforedive><link ref="nameless"/><datetime>2026-07-01T08:30:00.250+02:00</datetime></informationbeforedive>
         <tankdata><link ref="tx1070"/><tankvolume>0.012</tankvolume></tankdata>
         <samples>
 {nl.join(b)}
