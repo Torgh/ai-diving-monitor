@@ -1,0 +1,3 @@
+#!/bin/sh
+# Scan what is being committed (added lines and new files) for secrets from .env.local and the app settings.
+git diff --cached --no-color -U0 | grep '^+' | sh "$(dirname "$0")/secret-guard.sh" commit

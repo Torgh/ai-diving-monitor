@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<uddf xmlns="http://www.streit.cc/uddf/3.2/" version="3.2.0">
+  <generator><name>Fictional Shearwater-style export</name></generator>
+  <diver><owner id="owner"><equipment><divecomputer id="dc1"><name>Shearwater Peregrine TX</name></divecomputer></equipment></owner></diver>
+  <profiledata>
+    <repetitiongroup id="rg1">
+      <dive id="sw1">
+        <informationbeforedive><datetime>2026-09-12T10:15:00</datetime><divenumber>12</divenumber></informationbeforedive>
+      <tankdata>
+        <tankpressurebegin>20000000</tankpressurebegin>
+        <tankpressureend>6000000</tankpressureend>
+      </tankdata>
+      <tankdata>
+        <tankpressurebegin>0</tankpressurebegin>
+        <tankpressureend>0</tankpressureend>
+      </tankdata>
+      <tankdata>
+        <tankpressurebegin>0</tankpressurebegin>
+        <tankpressureend>0</tankpressureend>
+      </tankdata>
+      <tankdata>
+        <tankpressurebegin>0</tankpressurebegin>
+        <tankpressureend>0</tankpressureend>
+      </tankdata>
+      <tankdata>
+        <tankpressurebegin>0</tankpressurebegin>
+        <tankpressureend>0</tankpressureend>
+      </tankdata>
+      <tankdata>
+        <tankpressurebegin>0</tankpressurebegin>
+        <tankpressureend>0</tankpressureend>
+      </tankdata>
+      <samples>
+        <waypoint>
+          <cns>0</cns>
+          <depth>0</depth>
+          <divetime>0</divetime>
+          <tankpressure ref="T1">20000000.0</tankpressure>
+          <temperature>299.15</temperature>
+          <nodecotime>3000</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>0</cns>
+          <depth>12</depth>
+          <divetime>60</divetime>
+          <tankpressure ref="T1">19562500.0</tankpressure>
+          <temperature>297.95</temperature>
+          <nodecotime>2460</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>0</cns>
+          <depth>24</depth>
+          <divetime>120</divetime>
+          <tankpressure ref="T1">19125000.0</tankpressure>
+          <temperature>296.75</temperature>
+          <nodecotime>1920</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>0</cns>
+          <depth>30</depth>
+          <divetime>180</divetime>
+          <tankpressure ref="T1">18687500.0</tankpressure>
+          <temperature>296.15</temperature>
+          <nodecotime>1620</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>1</cns>
+          <depth>31</depth>
+          <divetime>300</divetime>
+          <tankpressure ref="T1">17812500.0</tankpressure>
+          <temperature>296.05</temperature>
+          <nodecotime>1460</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>1</cns>
+          <depth>30</depth>
+          <divetime>480</divetime>
+          <tankpressure ref="T1">16500000.0</tankpressure>
+          <temperature>296.15</temperature>
+          <nodecotime>1320</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>1</cns>
+          <depth>24</depth>
+          <divetime>600</divetime>
+          <tankpressure ref="T1">15625000.0</tankpressure>
+          <temperature>296.75</temperature>
+          <nodecotime>1440</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>2</cns>
+          <depth>18</depth>
+          <divetime>720</divetime>
+          <tankpressure ref="T1">14750000.0</tankpressure>
+          <temperature>297.35</temperature>
+          <nodecotime>1560</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>2</cns>
+          <depth>15</depth>
+          <divetime>900</divetime>
+          <tankpressure ref="T1">13437500.0</tankpressure>
+          <temperature>297.65</temperature>
+          <nodecotime>1500</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>2</cns>
+          <depth>12</depth>
+          <divetime>1080</divetime>
+          <tankpressure ref="T1">12125000.0</tankpressure>
+          <temperature>297.95</temperature>
+          <nodecotime>1440</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>2</cns>
+          <depth>9</depth>
+          <divetime>1200</divetime>
+          <tankpressure ref="T1">11250000.0</tankpressure>
+          <temperature>298.25</temperature>
+          <nodecotime>1440</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>3</cns>
+          <depth>6</depth>
+          <divetime>1320</divetime>
+          <tankpressure ref="T1">10375000.0</tankpressure>
+          <temperature>298.55</temperature>
+          <nodecotime>1440</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>3</cns>
+          <depth>5</depth>
+          <divetime>1440</divetime>
+          <tankpressure ref="T1">9500000.0</tankpressure>
+          <temperature>298.65</temperature>
+          <nodecotime>1360</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>3</cns>
+          <depth>5</depth>
+          <divetime>1560</divetime>
+          <tankpressure ref="T1">8625000.0</tankpressure>
+          <temperature>298.65</temperature>
+          <nodecotime>1240</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>4</cns>
+          <depth>5</depth>
+          <divetime>1680</divetime>
+          <tankpressure ref="T1">7750000.0</tankpressure>
+          <temperature>298.65</temperature>
+          <nodecotime>1120</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>4</cns>
+          <depth>4</depth>
+          <divetime>1800</divetime>
+          <tankpressure ref="T1">6875000.0</tankpressure>
+          <temperature>298.75</temperature>
+          <nodecotime>1040</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>4</cns>
+          <depth>2</depth>
+          <divetime>1860</divetime>
+          <tankpressure ref="T1">6437500.0</tankpressure>
+          <temperature>298.95</temperature>
+          <nodecotime>1060</nodecotime>
+        </waypoint>
+        <waypoint>
+          <cns>4</cns>
+          <depth>0</depth>
+          <divetime>1920</divetime>
+          <tankpressure ref="T1">6000000.0</tankpressure>
+          <temperature>299.15</temperature>
+          <nodecotime>1080</nodecotime>
+        </waypoint>
+      </samples>
+      <informationafterdive><greatestdepth>31</greatestdepth><diveduration>1920</diveduration></informationafterdive>
+      </dive>
+    </repetitiongroup>
+  </profiledata>
+</uddf>
