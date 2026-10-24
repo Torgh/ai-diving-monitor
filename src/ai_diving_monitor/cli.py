@@ -4,9 +4,28 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
+import time
+import urllib.request
+import webbrowser
 from pathlib import Path
 
 from .providers import API_PROVIDERS
+
+UI_URL = "http://localhost:8501"
+
+
+def _open_when_ready(url: str, timeout_s: float = 60) -> None:
+    """Open the web UI in the browser as soon as the server answers."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            urllib.request.urlopen(f"{url}/_stcore/health", timeout=2)
+        except OSError:
+            time.sleep(0.5)
+            continue
+        webbrowser.open(url)
+        return
 
 
 def main() -> None:
@@ -30,7 +49,16 @@ def main() -> None:
     if args.cmd in (None, "ui"):
         from streamlit.web import cli as stcli
 
-        sys.argv = ["streamlit", "run", str(Path(__file__).with_name("app.py"))]
+        sys.argv = [
+            "streamlit", "run", str(Path(__file__).with_name("app.py")),
+            # A personal app: reachable from this computer only, not from the network.
+            "--server.address", "127.0.0.1",
+            "--browser.gatherUsageStats", "false",
+            # Headless skips Streamlit's first-run email prompt, which hangs when started in the
+            # background; the browser is opened here instead.
+            "--server.headless", "true",
+        ]
+        threading.Thread(target=_open_when_ready, args=(UI_URL,), daemon=True).start()
         sys.exit(stcli.main())
 
     from .storage import DiveStore

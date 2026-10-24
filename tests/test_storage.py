@@ -26,3 +26,21 @@ def test_import_store_and_dedupe(tmp_path):
 
     store.delete_file(files[0]["id"])
     assert store.list_dives() == []
+
+
+def test_stored_dives_are_parsed_again_after_a_parser_upgrade(tmp_path):
+    db = tmp_path / "dives.db"
+    store = DiveStore(db)
+    f = EXAMPLES / "spring-2026.uddf"
+    store.import_file(f.name, f.read_bytes())
+    dive_id = store.list_dives()[0]["id"]
+    store.save_summary(dive_id, "Nice dive")
+    with store.conn:  # simulate a dive parsed by an older version
+        store.conn.execute("UPDATE dives SET data = '{}', analysis = '{}'")
+        store.conn.execute("PRAGMA user_version = 0")
+    store.conn.close()
+
+    store = DiveStore(db)
+    assert store.get_dive(dive_id).site == "Koparki"
+    assert store.list_dives()[0]["id"] == dive_id
+    assert store.get_summary(dive_id) == "Nice dive"

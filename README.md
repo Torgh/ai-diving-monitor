@@ -44,6 +44,8 @@ pip install -e .
 ai-diving-monitor            # opens the web UI at http://localhost:8501
 ```
 
+The web UI only listens on `127.0.0.1`, so other devices on your network can't open your dive log.
+
 To enable the AI coach, open **Settings** in the web UI, pick a provider and a model, and paste your
 API key. You can also set the key as an environment variable instead (see [Configuration](#configuration)).
 

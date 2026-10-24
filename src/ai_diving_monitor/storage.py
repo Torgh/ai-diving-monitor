@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from .analysis import analyze_dive
-from .uddf import Dive, parse_uddf
+from .uddf import PARSER_VERSION, Dive, UDDFParseError, parse_uddf
 
 
 def default_db_path() -> Path:
@@ -64,6 +64,9 @@ class DiveStore:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        if self.conn.execute("PRAGMA user_version").fetchone()[0] < PARSER_VERSION:
+            self.reparse_all()
+            self.conn.execute(f"PRAGMA user_version = {PARSER_VERSION}")
 
     # -- import -----------------------------------------------------------
     def import_file(self, filename: str, content: bytes) -> ImportResult:
@@ -159,6 +162,37 @@ class DiveStore:
     def delete_file(self, file_id: int) -> None:
         with self.conn:
             self.conn.execute("DELETE FROM files WHERE id = ?", (file_id,))
+
+    def reparse_all(self) -> int:
+        """Parse the stored original files again (after a parser fix) and refresh their dives.
+
+        Dives are matched by fingerprint, so ids and saved AI summaries are kept.
+        """
+        updated = 0
+        files = self.conn.execute("SELECT id, content FROM files").fetchall()
+        with self.conn:
+            for f in files:
+                try:
+                    dives = parse_uddf(f["content"])
+                except UDDFParseError:
+                    continue  # keep what was parsed before
+                for dive in dives:
+                    cur = self.conn.execute(
+                        "UPDATE dives SET start = ?, site = ?, max_depth_m = ?, duration_s = ?, data = ?, analysis = ? "
+                        "WHERE file_id = ? AND fingerprint = ?",
+                        (
+                            dive.start.isoformat() if dive.start else None,
+                            dive.site,
+                            dive.max_depth_m,
+                            dive.duration_s,
+                            json.dumps(dive.to_dict()),
+                            json.dumps(analyze_dive(dive).to_dict()),
+                            f["id"],
+                            dive.fingerprint,
+                        ),
+                    )
+                    updated += cur.rowcount
+        return updated
 
     def reanalyze_all(self) -> int:
         """Recompute stored analyses (e.g. after upgrading the app)."""
