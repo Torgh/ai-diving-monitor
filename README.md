@@ -4,7 +4,7 @@
 local database, and get a clear, data-driven review of every dive: what went well, what to watch,
 and how you're progressing over time, for example whether your gas consumption is getting better.
 Use the coach with the Claude or ChatGPT subscription you already have, **no API key needed**, or
-with an API key from one of five providers.
+with a Claude or ChatGPT API key.
 
 ![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -36,7 +36,7 @@ with an API key from one of five providers.
   then writes a review: *dive summary → what went well → what to watch → compared with your history →
   focus for your next dive*. You can also chat with it about your log. It runs either in Claude Code
   or Codex on your own subscription (through the MCP server), or in the app with an API key for
-  Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google), DeepSeek or GitHub Copilot (GitHub Models).
+  Claude (Anthropic) or ChatGPT (OpenAI).
 - **Progress dashboard.** Interactive charts of RMV, peak ascent rate, safety stop time and dive score
   across your dives, each with a trend line, plus plain-language progress insights such as
   "Gas consumption: improving, 23.5 → 16.2 L/min".
@@ -116,9 +116,6 @@ provider). You can also set the key as an environment variable instead (see [Con
 |---|---|---|
 | Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) | `claude-opus-5-5`, `claude-sonnet-5-5` |
 | ChatGPT (OpenAI) | [platform.openai.com](https://platform.openai.com/api-keys) | `gpt-5`, `gpt-5-mini` |
-| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/apikey) | `gemini-2.5-pro`, `gemini-2.5-flash` |
-| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | `deepseek-chat`, `deepseek-reasoner` |
-| GitHub Copilot (GitHub Models) | [GitHub token](https://github.com/settings/personal-access-tokens) with `models:read` | `openai/gpt-4.1` |
 
 Pick **Other model…** to type any model id, or click **Load available models from the API** to list
 the models your key can use.
@@ -137,17 +134,14 @@ ai-diving-monitor mcp                    # run the MCP server manually (normally
 |---|---|---|
 | `ANTHROPIC_API_KEY` | – | Claude API key |
 | `OPENAI_API_KEY` | – | ChatGPT API key |
-| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | – | Gemini API key |
-| `DEEPSEEK_API_KEY` | – | DeepSeek API key |
-| `GITHUB_TOKEN` | – | GitHub Models token (`models:read`) |
-| `AI_DIVING_MONITOR_PROVIDER` | `anthropic` | Provider when none is chosen in Settings (`anthropic`, `openai`, `gemini`, `deepseek`, `copilot`) |
+| `AI_DIVING_MONITOR_PROVIDER` | `anthropic` | Provider when none is chosen in Settings (`anthropic`, `openai`) |
 | `AI_DIVING_MONITOR_MODEL` | first model of the provider | Model when none is chosen in Settings |
 | `AI_DIVING_MONITOR_EFFORT` | `medium` | Claude reasoning effort (`low` … `max`) |
 | `AI_DIVING_MONITOR_DB` | `~/.ai-diving-monitor/dives.db` | Database location |
 | `AI_DIVING_MONITOR_CONFIG` | `~/.ai-diving-monitor/config.json` | Settings file (provider, model, API keys) |
 
 Keys saved in Settings take precedence over environment variables. On the command line, choose the
-provider for one run with `ai-diving-monitor summary 3 --provider gemini --model gemini-2.5-flash`.
+provider for one run with `ai-diving-monitor summary 3 --provider openai --model gpt-5-mini`.
 If you move the database with `AI_DIVING_MONITOR_DB`, set the same variable for the MCP server
 (`claude mcp add … -e AI_DIVING_MONITOR_DB=…`), so the app and the agent see the same log.
 
@@ -177,7 +171,7 @@ UDDF file ──► uddf.py (parse, SI → m/bar/°C/L) ──► storage.py (SQ
 ```
 
 The AI coach never receives raw files. It calls tools that return the parsed numbers, so its advice
-is based on your actual data. The same tools back both the in-app coach (any provider) and the MCP
+is based on your actual data. The same tools back both the in-app coach (Claude or ChatGPT) and the MCP
 server. The database records the parser version (`PARSER_VERSION` in `uddf.py`); when it is older,
 the stored originals are parsed again on start.
 
@@ -272,7 +266,8 @@ in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pu
    migration from the SQLite database, and an MCP server in TypeScript with new tools to fill in what
    the computer doesn't record (site, buddy, tank volume and gas, notes) and a "to sort out" overview.
 4. **Web app.** Dashboard, import, dive log, dive details, coach and settings, refreshing live when the
-   agent saves something.
+   agent saves something. The in-app coach takes a Claude or ChatGPT API key; your subscription keeps
+   working through the MCP server.
 5. **Python retired.** The TypeScript version replaces it.
 6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
    and let the coach prepare you for each site from your own history.

@@ -1,8 +1,6 @@
 """AI providers for the dive coach and the local settings file that stores the user's choice.
 
-Claude goes through the Anthropic SDK. ChatGPT, Gemini, DeepSeek and GitHub Copilot (GitHub Models)
-all expose OpenAI-compatible Chat Completions endpoints, so they share the `openai` SDK with a
-different base URL.
+Claude goes through the Anthropic SDK, ChatGPT through the `openai` SDK (Chat Completions).
 
 The "Claude Pro/Max plan" and "ChatGPT Plus/Pro plan" options make no API calls at all: the diver
 asks Claude Code or OpenAI's Codex CLI (each signed in with the diver's own subscription) for the
@@ -46,19 +44,6 @@ PROVIDERS: dict[str, Provider] = {p.id: p for p in [
     Provider("openai", "ChatGPT (OpenAI)", ("OPENAI_API_KEY",),
              ("gpt-5", "gpt-5-mini", "gpt-4.1"),
              "https://platform.openai.com/api-keys", base_url="https://api.openai.com/v1"),
-    Provider("gemini", "Gemini (Google)", ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
-             ("gemini-2.5-pro", "gemini-2.5-flash"),
-             "https://aistudio.google.com/apikey",
-             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"),
-    Provider("deepseek", "DeepSeek", ("DEEPSEEK_API_KEY",),
-             ("deepseek-chat", "deepseek-reasoner"),
-             "https://platform.deepseek.com/api_keys", base_url="https://api.deepseek.com"),
-    Provider("copilot", "GitHub Copilot (GitHub Models)", ("GITHUB_TOKEN",),
-             ("openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-5"),
-             "https://github.com/settings/personal-access-tokens",
-             base_url="https://models.github.ai/inference",
-             note="Uses a GitHub personal access token with the `models:read` permission. "
-                  "Copilot subscribers get higher rate limits."),
     Provider("claude-code", "Claude Pro/Max plan (via Claude Code)", (), (), "https://claude.com/claude-code",
              note="No API key and no extra cost: ask for reviews in Claude Code, which uses your Claude "
                   "subscription. Reviews are saved to your dive log and shown here.",
