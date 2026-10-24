@@ -56,3 +56,23 @@ def test_roundtrip_dict():
     from ai_diving_monitor.uddf import Dive
 
     assert Dive.from_dict(dive.to_dict()) == dive
+
+
+# Shaped like a Shearwater export: CNS in whole percent and unused tank slots at 0 bar.
+SHEARWATER = MINIMAL.replace(
+    b"<tankdata><link",
+    b"<tankdata><tankpressurebegin>0</tankpressurebegin><tankpressureend>0</tankpressureend></tankdata><tankdata><link",
+).replace(b"<depth>15</depth><temperature>", b"<depth>15</depth><cns>1</cns><temperature>").replace(
+    b"<divetime>600</divetime><depth>15</depth>", b"<divetime>600</divetime><depth>15</depth><cns>3</cns>"
+)
+
+
+def test_cns_in_whole_percent_and_unused_tank_slots():
+    (dive,) = parse_uddf(SHEARWATER)
+    assert [s.cns for s in dive.samples if s.cns is not None] == [1, 3]
+    assert len(dive.tanks) == 1 and dive.tanks[0].end_bar == pytest.approx(70)
+
+
+def test_cns_as_fraction():
+    (dive,) = parse_uddf(MINIMAL.replace(b"<depth>15</depth><temperature>", b"<depth>15</depth><cns>0.04</cns><temperature>"))
+    assert [s.cns for s in dive.samples if s.cns is not None] == [pytest.approx(4)]

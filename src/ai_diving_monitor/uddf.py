@@ -15,6 +15,8 @@ from typing import Optional
 
 PA_PER_BAR = 100_000.0
 KELVIN_OFFSET = 273.15
+# Bump when parsing changes, so stored dives are parsed again from their original files.
+PARSER_VERSION = 2
 
 
 @dataclass
@@ -269,13 +271,17 @@ def _parse_dive(dive_el: ET.Element, mixes: dict[str, GasMix], sites: dict, comp
                     tank_ref=tp.get("ref") if tp is not None else None,
                     mix_ref=mix_ref or (current_mix if not samples else None),
                     ppo2=_float(wp.find("calculatedpo2")),
-                    cns=_cns_percent(_float(wp.find("cns"))),
+                    cns=_float(wp.find("cns")),  # raw; scaled to percent below
                     ndl_s=_float(wp.find("nodecotime")),
                     deco_depth_m=float(deco.get("decodepth")) if deco is not None and deco.get("decodepth") else None,
                     alarms=[a.text.strip() for a in wp.findall("alarm") if a.text and a.text.strip()],
                 )
             )
     samples.sort(key=lambda s: s.time_s)
+    scale = _cns_scale([s.cns for s in samples if s.cns is not None])
+    for s in samples:
+        if s.cns is not None:
+            s.cns *= scale
 
     max_depth = _float(after.find("greatestdepth")) if after is not None else None
     duration = _float(after.find("diveduration")) if after is not None else None
@@ -295,6 +301,8 @@ def _parse_dive(dive_el: ET.Element, mixes: dict[str, GasMix], sites: dict, comp
         if own:
             tank.start_bar = tank.start_bar or own[0]
             tank.end_bar = tank.end_bar or own[-1]
+    # Dive computers export every tank slot; a slot with no pressure and no volume was not used.
+    tanks = [t for t in tanks if t.start_bar or t.end_bar or t.volume_l]
 
     return Dive(
         uddf_id=dive_el.get("id") or "",
@@ -313,8 +321,12 @@ def _parse_dive(dive_el: ET.Element, mixes: dict[str, GasMix], sites: dict, comp
     )
 
 
-def _cns_percent(value: Optional[float]) -> Optional[float]:
-    # UDDF stores CNS as a fraction (0..1); some tools write percent.
-    if value is None:
-        return None
-    return value * 100 if value <= 1.5 else value
+def _cns_scale(values: list[float]) -> float:
+    """Factor that turns a dive's raw CNS values into percent.
+
+    UDDF stores CNS as a fraction (0..1), but some computers (e.g. Shearwater) write whole
+    percent, so a 1 means 1 %, not 100 %. Decide once per dive: fractions have decimals.
+    """
+    if values and max(values) <= 1.5 and any(v != int(v) for v in values):
+        return 100.0
+    return 1.0

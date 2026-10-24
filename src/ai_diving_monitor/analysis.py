@@ -149,7 +149,7 @@ def analyze_dive(dive: Dive) -> DiveAnalysis:
     gas_used_l = None
     sac = None
     end_pressure = None
-    usable = [t for t in dive.tanks if t.start_bar is not None and t.end_bar is not None]
+    usable = [t for t in dive.tanks if t.start_bar and t.end_bar is not None]  # 0 bar at start: not used
     if usable:
         end_pressure = min(t.end_bar for t in usable)
         with_volume = [t for t in usable if t.volume_l]
