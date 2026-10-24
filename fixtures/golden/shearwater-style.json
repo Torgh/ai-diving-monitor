@@ -1,0 +1,308 @@
+{
+ "source": "fixtures/uddf/shearwater-style.uddf",
+ "parser_version": 2,
+ "dives": [
+  {
+   "fingerprint": "ad92ecd5ea3b3405a66ee6a8",
+   "dive": {
+    "uddf_id": "sw1",
+    "number": 12,
+    "start": "2026-09-12T10:15:00",
+    "site": null,
+    "location": null,
+    "max_depth_m": 31.0,
+    "duration_s": 1920.0,
+    "min_temp_c": 22.900000000000034,
+    "notes": null,
+    "gas_mixes": {},
+    "tanks": [
+     {
+      "id": "tank1",
+      "mix_id": null,
+      "volume_l": null,
+      "start_bar": 200.0,
+      "end_bar": 60.0
+     }
+    ],
+    "samples": [
+     {
+      "time_s": 0.0,
+      "depth_m": 0.0,
+      "temp_c": 26.0,
+      "pressure_bar": 200.0,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 0.0,
+      "ndl_s": 3000.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 60.0,
+      "depth_m": 12.0,
+      "temp_c": 24.80000000000001,
+      "pressure_bar": 195.625,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 0.0,
+      "ndl_s": 2460.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 120.0,
+      "depth_m": 24.0,
+      "temp_c": 23.600000000000023,
+      "pressure_bar": 191.25,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 0.0,
+      "ndl_s": 1920.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 180.0,
+      "depth_m": 30.0,
+      "temp_c": 23.0,
+      "pressure_bar": 186.875,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 0.0,
+      "ndl_s": 1620.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 300.0,
+      "depth_m": 31.0,
+      "temp_c": 22.900000000000034,
+      "pressure_bar": 178.125,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 1.0,
+      "ndl_s": 1460.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 480.0,
+      "depth_m": 30.0,
+      "temp_c": 23.0,
+      "pressure_bar": 165.0,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 1.0,
+      "ndl_s": 1320.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 600.0,
+      "depth_m": 24.0,
+      "temp_c": 23.600000000000023,
+      "pressure_bar": 156.25,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 1.0,
+      "ndl_s": 1440.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 720.0,
+      "depth_m": 18.0,
+      "temp_c": 24.200000000000045,
+      "pressure_bar": 147.5,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 2.0,
+      "ndl_s": 1560.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 900.0,
+      "depth_m": 15.0,
+      "temp_c": 24.5,
+      "pressure_bar": 134.375,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 2.0,
+      "ndl_s": 1500.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1080.0,
+      "depth_m": 12.0,
+      "temp_c": 24.80000000000001,
+      "pressure_bar": 121.25,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 2.0,
+      "ndl_s": 1440.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1200.0,
+      "depth_m": 9.0,
+      "temp_c": 25.100000000000023,
+      "pressure_bar": 112.5,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 2.0,
+      "ndl_s": 1440.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1320.0,
+      "depth_m": 6.0,
+      "temp_c": 25.400000000000034,
+      "pressure_bar": 103.75,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 3.0,
+      "ndl_s": 1440.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1440.0,
+      "depth_m": 5.0,
+      "temp_c": 25.5,
+      "pressure_bar": 95.0,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 3.0,
+      "ndl_s": 1360.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1560.0,
+      "depth_m": 5.0,
+      "temp_c": 25.5,
+      "pressure_bar": 86.25,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 3.0,
+      "ndl_s": 1240.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1680.0,
+      "depth_m": 5.0,
+      "temp_c": 25.5,
+      "pressure_bar": 77.5,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 4.0,
+      "ndl_s": 1120.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1800.0,
+      "depth_m": 4.0,
+      "temp_c": 25.600000000000023,
+      "pressure_bar": 68.75,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 4.0,
+      "ndl_s": 1040.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1860.0,
+      "depth_m": 2.0,
+      "temp_c": 25.80000000000001,
+      "pressure_bar": 64.375,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 4.0,
+      "ndl_s": 1060.0,
+      "deco_depth_m": null,
+      "alarms": []
+     },
+     {
+      "time_s": 1920.0,
+      "depth_m": 0.0,
+      "temp_c": 26.0,
+      "pressure_bar": 60.0,
+      "tank_ref": "T1",
+      "mix_ref": null,
+      "ppo2": null,
+      "cns": 4.0,
+      "ndl_s": 1080.0,
+      "deco_depth_m": null,
+      "alarms": []
+     }
+    ],
+    "computer": "Shearwater Peregrine TX"
+   },
+   "analysis": {
+    "metrics": {
+     "duration_min": 32.0,
+     "max_depth_m": 31.0,
+     "avg_depth_m": 14.7,
+     "min_temp_c": 22.9,
+     "gas_used_l": null,
+     "rmv_l_min": null,
+     "sac_bar_min": 1.79,
+     "end_pressure_bar": 60,
+     "max_ascent_rate_m_min": 3.0,
+     "avg_ascent_rate_m_min": 1.9,
+     "fast_ascent_seconds": 0,
+     "max_descent_rate_m_min": 12.0,
+     "max_ppo2": null,
+     "min_ppo2": null,
+     "max_end_m": null,
+     "cns_percent": 4.0,
+     "otu": 0.0,
+     "safety_stop_s": 600,
+     "had_deco": false,
+     "ceiling_violation_s": 0,
+     "min_ndl_min": 17.3,
+     "sawtooth_count": 0,
+     "gases": [],
+     "alarms": [],
+     "score": 100
+    },
+    "findings": [
+     {
+      "severity": "good",
+      "title": "Controlled ascent",
+      "detail": "Ascent rate stayed within limits (peak 3.0 m/min)."
+     },
+     {
+      "severity": "good",
+      "title": "Safety stop done",
+      "detail": "10 min 0s between 3-6 m."
+     }
+    ]
+   }
+  }
+ ]
+}

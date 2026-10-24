@@ -1,0 +1,2 @@
+# Golden fixtures are compared byte for byte by Python and TypeScript tests on every OS.
+fixtures/** text eol=lf

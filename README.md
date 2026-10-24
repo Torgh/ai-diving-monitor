@@ -9,6 +9,12 @@ with an API key from one of five providers.
 ![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
+> **Moving to TypeScript.** AI Diving Monitor is being rewritten on the stack of its companion trip
+> planner [TripDeck](https://github.com/Torgh/tripdeck) (Next.js, Bun, an MCP server in TypeScript and
+> later a phone app), so it can prepare you for the dives of a planned trip. The Python version below
+> keeps working until the new one replaces it, stage by stage (see [Roadmap](#roadmap)). The last
+> Python-only version is tagged [`v0.1-python`](https://github.com/Torgh/ai-diving-monitor/tree/v0.1-python).
+
 ## Features
 
 - **UDDF import.** Upload `.uddf` files exported from Subsurface, Shearwater Cloud, Garmin Dive,
@@ -185,18 +191,38 @@ python scripts/generate_samples.py   # regenerate examples/*.uddf
 
 Change parsing? Bump `PARSER_VERSION` in `uddf.py`, so existing databases are parsed again.
 
+### Golden fixtures
+
+`fixtures/golden/` holds what the Python version parses and computes for every test file: the parsed
+dive, its metrics, findings and score, and for the sample log the dive list, trends and progress
+insights. The TypeScript port is tested against these files, so it must produce the same numbers.
+The inputs are `examples/*.uddf` and `fixtures/uddf/*.uddf` (a fictional dive shaped like a
+Shearwater export: CNS in whole percent and unused tank slots).
+
+```bash
+python scripts/export_golden.py      # rewrite fixtures/golden/ after changing parsing or analysis
+```
+
+`pytest` fails when the golden files are out of date.
+
 ## Roadmap
 
-AI Diving Monitor is heading towards working like [TripDeck](https://github.com/Torgh/tripdeck), the
-companion trip planner: the agent works on your log directly and the app shows its changes live.
+AI Diving Monitor is heading towards working like [TripDeck](https://github.com/Torgh/tripdeck): the
+agent works on your log directly, the app shows its changes live, and your dives can live on this PC,
+in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pull request per stage:
 
-1. **The agent edits the log.** MCP tools to fill in what the computer doesn't record (site, buddy,
-   tank volume and gas, notes), a "to sort out" overview (dives without a tank volume or a review,
-   suspicious data) and an app that refreshes when the agent saves something.
-2. **Dives as files.** One file per dive, stored on this PC, in OneDrive or on Google Drive.
-3. **Prepare for trips.** Link the dive cards of a TripDeck trip to your logged dives, and let the
-   coach prepare you for each dive site from your own history.
-4. **On the road.** A logbook export (PDF, JSON) and a phone app.
+0. **Golden fixtures** from the Python version, so the port can be checked number by number. ✅
+1. **Scaffold and CI.** Next.js, Bun, Vitest and ESLint next to the Python code, with CI as in TripDeck.
+2. **Core logic in TypeScript.** UDDF parser, dive analysis and trends in `lib/`, tested against the golden fixtures.
+3. **Dive files and the MCP server.** One file per dive (this PC, OneDrive or Google Drive), a one-time
+   migration from the SQLite database, and an MCP server in TypeScript with new tools to fill in what
+   the computer doesn't record (site, buddy, tank volume and gas, notes) and a "to sort out" overview.
+4. **Web app.** Dashboard, import, dive log, dive details, coach and settings, refreshing live when the
+   agent saves something.
+5. **Python retired.** The TypeScript version replaces it.
+6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
+   and let the coach prepare you for each site from your own history.
+7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis
 and team/buddy comparisons.
