@@ -183,11 +183,42 @@ the stored originals are parsed again on start.
 
 ## Development
 
+The repository holds both versions while the TypeScript one is built.
+
+**Python version** (the app you use today):
+
 ```bash
 pip install -e ".[dev]"
 pytest
 python scripts/generate_samples.py   # regenerate examples/*.uddf
 ```
+
+**TypeScript version** (in progress) needs [Bun](https://bun.sh); Node.js 20.9+ also runs the web app:
+
+```bash
+bun install          # also points git at the hooks in .githooks/
+bun run dev          # development server on http://localhost:3001 (bound to 127.0.0.1)
+bun run typecheck    # TypeScript 7 (tsc)
+bun run lint         # ESLint, no warnings allowed
+bun run test         # Vitest
+bun run check        # everything CI runs: typecheck, lint, tests with coverage, build
+```
+
+The web app listens on port 3001, so it runs next to the Python UI (8501) and TripDeck (3000). It
+only answers requests addressed to `localhost`, which defeats DNS rebinding.
+
+### CI
+
+On every pull request and every commit to `main`, CI runs `bun run check` on Linux, the TypeScript
+tests on Windows, and `pytest` on Python 3.10 and 3.12 (Linux) and 3.12 (Windows). It fails when test
+coverage of the TypeScript code drops below the thresholds in `vitest.config.mts`. A new push to a
+pull request cancels the run for the previous one. CodeQL scans the Python, TypeScript and workflow
+code on every pull request, on `main` and weekly. Dependabot opens grouped update pull requests for
+Bun, pip and GitHub Actions every Monday, and security fixes as soon as they are published. Actions
+are pinned to a commit.
+
+`bun install` points git at the hooks in `.githooks/`: they refuse a commit or push that contains a
+secret from `.env.local` or an API key saved in Settings (`~/.ai-diving-monitor/config.json`).
 
 Change parsing? Bump `PARSER_VERSION` in `uddf.py`, so existing databases are parsed again.
 
@@ -212,7 +243,7 @@ agent works on your log directly, the app shows its changes live, and your dives
 in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pull request per stage:
 
 0. **Golden fixtures** from the Python version, so the port can be checked number by number. ✅
-1. **Scaffold and CI.** Next.js, Bun, Vitest and ESLint next to the Python code, with CI as in TripDeck.
+1. **Scaffold and CI.** Next.js, Bun, Vitest and ESLint next to the Python code, with CI as in TripDeck. ✅
 2. **Core logic in TypeScript.** UDDF parser, dive analysis and trends in `lib/`, tested against the golden fixtures.
 3. **Dive files and the MCP server.** One file per dive (this PC, OneDrive or Google Drive), a one-time
    migration from the SQLite database, and an MCP server in TypeScript with new tools to fill in what

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Scan every commit about to be pushed for secrets from .env.local and the app settings.
+zero=0000000000000000000000000000000000000000
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" = "$zero" ]; then range="$local_sha --not --remotes"; else range="$remote_sha..$local_sha"; fi
+  git log -p --no-color $range | sh "$(dirname "$0")/secret-guard.sh" push || status=1
+done
+exit $status
