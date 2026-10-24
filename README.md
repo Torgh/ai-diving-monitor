@@ -194,7 +194,12 @@ lib/
     files.ts     atomic writes, and a lock per dive shared by the MCP server and the web app
     migrate.ts   one-time copy of the Python version's SQLite log
     paths.ts     the data folder
+    http.ts      API guards: localhost only (Host and Origin), JSON bodies, errors as { error }
+    version.ts   a tag that changes with every dive file, polled by the browser
+  views.ts       what the pages show: the log, its totals, trends and to-do list; one dive and its profile
 mcp/server.ts    MCP server (stdio, run by Bun)
+app/             web app (Next.js): dashboard, dive log, dive details, import; api/ for the browser
+components/      LineChart (SVG, shared crosshair, keyboard, table view), profile charts, details form
 ```
 
 A dive file keeps what the dive computer recorded, parsed from the original UDDF file (kept in
@@ -226,6 +231,23 @@ bun run check        # everything CI runs: typecheck, lint, tests with coverage,
 bun run mcp          # run the MCP server manually (normally Claude Code or Codex starts it)
 bun run migrate      # copy the Python version's log into dive files (safe to run again)
 ```
+
+#### Trying the TypeScript web app
+
+`bun run dev` opens the new web app on http://localhost:3001. It works on the same dive files as
+the TypeScript MCP server and updates on its own within a few seconds when the coach changes
+something, for example a review saved in Claude Code or a tank volume filled in with `update_dive`.
+
+- **Dashboard:** dives logged, time underwater, deepest dive, the latest score, what is still missing
+  ("to sort out"), progress insights, and charts of gas consumption, peak ascent rate, safety stop
+  time and score over your dives, each with its trend line.
+- **Dive log:** every dive with its depth, time, RMV, peak ascent rate, gas, score, status and review.
+- **Dive details:** the metrics beside your average, the findings, the coach's review, and the
+  profile. The depth chart shows the computer's deco stops, gas switches and fast ascents, with tank
+  pressure, ppO2 (1.4 and 1.6 bar lines) and water temperature below it on the same time axis. Every
+  chart has a crosshair, works with the arrow keys, and has a table view. Fill in the site, buddy,
+  tank volume and gas there too.
+- **Import:** drop UDDF files, copy the Python version's log, or load the sample dives.
 
 #### Trying the TypeScript MCP server
 
@@ -305,10 +327,13 @@ in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pu
 3. **Dive files and the MCP server.** One file per dive on this PC, a one-time migration from the
    SQLite database, and an MCP server in TypeScript with new tools to fill in what the computer doesn't
    record (site, buddy, tank volume and gas, notes) and a "to sort out" overview. ✅
-4. **Web app.** Dashboard, import, dive log, dive details, coach and settings, refreshing live when the
-   agent saves something. Settings choose where the dives are stored: this PC, OneDrive or Google Drive
-   (Google needs the sign-in the web app provides). The in-app coach takes a Claude or ChatGPT API key;
-   your subscription keeps working through the MCP server.
+4. **Web app**, in three pull requests:
+   - 4a. Dashboard, dive log, dive details with profile charts, details form and import, refreshing
+     live when the agent saves something. ✅
+   - 4b. Settings and the coach: the in-app coach takes a Claude or ChatGPT API key, and the setup of
+     the subscription through Claude Code or Codex moves over. Then the TypeScript MCP server replaces
+     the Python one.
+   - 4c. Where the dives are stored: this PC, OneDrive or Google Drive (with the sign-in Google needs).
 5. **Python retired.** The TypeScript version replaces it.
 6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
    and let the coach prepare you for each site from your own history.
