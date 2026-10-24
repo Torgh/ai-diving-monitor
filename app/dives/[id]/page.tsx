@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { DetailsForm } from "@/components/DetailsForm";
 import { Findings } from "@/components/Findings";
 import { ProfileCharts } from "@/components/ProfileCharts";
-import { useLive } from "@/components/useLive";
+import { api, useLive } from "@/components/useLive";
+import { useSettings } from "@/components/useSettings";
 import type { DiveMetrics } from "@/lib/analysis";
 import { formatDate, formatNumber, formatSeconds } from "@/lib/format";
 import type { DiveView } from "@/lib/views";
@@ -24,6 +26,56 @@ const TILES: { key: keyof DiveMetrics; label: string; format: (v: number) => str
   { key: "cnsPercent", label: "CNS", format: (v) => formatNumber(v, 1, "%") },
   { key: "score", label: "Dive score", format: (v) => formatNumber(v, 0) },
 ];
+
+/** The coach's review, and a way to ask for one: here with an API key, or in Claude Code / Codex. */
+function CoachReview({ data, onSaved }: { data: Data; onSaved: () => void }) {
+  const { settings } = useSettings();
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const provider = settings?.providers.find((p) => p.id === settings.provider);
+
+  async function ask() {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await api("/api/coach/review", "POST", { diveId: data.id });
+      onSaved();
+    } catch (err) {
+      setFailure((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card review">
+      <h2>Coach review</h2>
+      {data.review ? (
+        <>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.review.markdown}</ReactMarkdown>
+          <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
+        </>
+      ) : (
+        <p className="muted">No review yet.</p>
+      )}
+      {provider?.usesApi ? (
+        <div className="row">
+          <button className="button" disabled={busy} onClick={ask}>
+            {busy ? "The coach is reviewing the dive…" : data.review ? "Ask for a new review" : "Ask the coach for a review"}
+          </button>
+          <span className="muted">
+            {provider.name}, billed per use
+          </span>
+        </div>
+      ) : provider ? (
+        <p className="muted">
+          Ask your coach in {provider.app}: <code>/mcp__ai-diving-monitor__dive-review {data.seq}</code>
+        </p>
+      ) : null}
+      {failure && <div className="error">{failure}</div>}
+    </div>
+  );
+}
 
 export default function DivePage() {
   const { id } = useParams<{ id: string }>();
@@ -85,19 +137,7 @@ export default function DivePage() {
           <h2>Findings</h2>
           <Findings findings={data.findings} />
         </div>
-        <div className="card review">
-          <h2>Coach review</h2>
-          {data.review ? (
-            <>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.review.markdown}</ReactMarkdown>
-              <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
-            </>
-          ) : (
-            <p className="muted">
-              No review yet. Ask your coach in Claude Code: <code>/mcp__ai-diving-monitor__dive-review {data.seq}</code>
-            </p>
-          )}
-        </div>
+        <CoachReview data={data} onSaved={reload} />
       </div>
 
       <div className="card">

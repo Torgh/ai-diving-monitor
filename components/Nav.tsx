@@ -7,6 +7,8 @@ const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/dives", label: "Dive log" },
   { href: "/import", label: "Import dives" },
+  { href: "/coach", label: "AI coach" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {

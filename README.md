@@ -196,7 +196,12 @@ lib/
     paths.ts     the data folder
     http.ts      API guards: localhost only (Host and Origin), JSON bodies, errors as { error }
     version.ts   a tag that changes with every dive file, polled by the browser
+    config.ts    settings and API keys, in the same config.json as the Python version
+    coachAgent.ts the in-app coach: Claude (tool runner) or ChatGPT (Chat Completions)
+    agentApps.ts is the MCP server connected to Claude Code / Codex, and the commands to (re)connect it
   views.ts       what the pages show: the log, its totals, trends and to-do list; one dive and its profile
+  providers.ts   how the coach runs: Claude Code, Codex, or a Claude or ChatGPT API key
+  coachTools.ts  the in-app coach's tools (the MCP server's read-only tools), with argument checks
 mcp/server.ts    MCP server (stdio, run by Bun)
 app/             web app (Next.js): dashboard, dive log, dive details, import; api/ for the browser
 components/      LineChart (SVG, shared crosshair, keyboard, table view), profile charts, details form
@@ -248,6 +253,21 @@ something, for example a review saved in Claude Code or a tank volume filled in 
   chart has a crosshair, works with the arrow keys, and has a table view. Fill in the site, buddy,
   tank volume and gas there too.
 - **Import:** drop UDDF files, copy the Python version's log, or load the sample dives.
+- **AI coach:** with a Claude or ChatGPT API key, chat with the coach here, or ask for a dive's review
+  on its page (saved with the dive). With your subscription, the page shows what to ask in Claude
+  Code or Codex.
+- **Settings:** how the coach runs (Claude Pro/Max via Claude Code, ChatGPT Plus/Pro via Codex, or a
+  Claude or ChatGPT API key), the key and the model (or *Load models from the API*), and for the
+  subscriptions whether the dive log's MCP server is connected. If Claude Code or Codex still runs the
+  Python version's server, Settings shows the exact commands for this computer to switch it over,
+  with the environment variables that point it at the same data folder. It also installs the
+  `/dive-review` command.
+
+The in-app coach uses the same read-only tools as the MCP server. On Claude it runs through the
+Anthropic SDK's tool runner: `claude-opus-5-5` by default, effort `high` (`AI_DIVING_MONITOR_EFFORT`),
+and on the models that support it a server-side fallback when a request is declined. On ChatGPT it
+runs through OpenAI's Chat Completions. A declined, cut-off or empty answer is shown, never saved as a
+dive's review. Settings and keys go to the same `config.json` as the Python version's.
 
 #### Trying the TypeScript MCP server
 
@@ -332,7 +352,7 @@ in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pu
      live when the agent saves something. ✅
    - 4b. Settings and the coach: the in-app coach takes a Claude or ChatGPT API key, and the setup of
      the subscription through Claude Code or Codex moves over. Then the TypeScript MCP server replaces
-     the Python one.
+     the Python one. ✅
    - 4c. Where the dives are stored: this PC, OneDrive or Google Drive (with the sign-in Google needs).
 5. **Python retired.** The TypeScript version replaces it.
 6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
