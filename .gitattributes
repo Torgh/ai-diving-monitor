@@ -1,2 +1,5 @@
 # Golden fixtures are compared byte for byte by Python and TypeScript tests on every OS.
 fixtures/** text eol=lf
+# Shell hooks must keep LF line endings, or sh fails on the carriage returns.
+.githooks/* text eol=lf
+*.sh text eol=lf
