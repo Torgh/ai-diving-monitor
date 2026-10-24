@@ -24,3 +24,6 @@ export const locksDir = () => path.join(dataDir(), "locks");
 export function pythonDbPath(): string {
   return process.env.AI_DIVING_MONITOR_DB?.trim() || path.join(os.homedir(), ".ai-diving-monitor", "dives.db");
 }
+
+/** The folder name people see in OneDrive and Google Drive. */
+export const CLOUD_FOLDER = "AI Diving Monitor";

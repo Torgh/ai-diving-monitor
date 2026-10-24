@@ -40,6 +40,12 @@ describe("parseUddf", () => {
     expect(parseUddf(utf8)[0].site).toBe("Récif");
   });
 
+  it("reads ISO-8859-1 byte for byte, like Python (not as windows-1252)", () => {
+    const bytes = new TextEncoder().encode('<?xml version="1.0" encoding="ISO-8859-1"?><uddf>x</uddf>');
+    const withC1 = Uint8Array.from([...bytes.subarray(0, -11), 0x85, 0x9c, ...bytes.subarray(-11)]);
+    expect(decodeXml(withC1)).toContain("");
+  });
+
   it("reads UTF-16 files with a byte order mark", () => {
     const le = [0xff, 0xfe, ...[...MINIMAL].flatMap((ch) => [ch.charCodeAt(0), 0])];
     const be = [0xfe, 0xff, ...[...MINIMAL].flatMap((ch) => [0, ch.charCodeAt(0)])];

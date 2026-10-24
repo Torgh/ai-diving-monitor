@@ -7,6 +7,7 @@ import { POST as review } from "./coach/review/route";
 import { POST as importSamples } from "./import/samples/route";
 import { POST as models } from "./settings/models/route";
 import { GET as getSettings, PUT as putSettings } from "./settings/route";
+import { restoreEnv } from "../../test-env";
 
 const URL_BASE = "http://localhost:3001";
 const saved = { ...process.env };
@@ -21,10 +22,13 @@ beforeEach(() => {
   for (const name of ["AI_DIVING_MONITOR_CONFIG", "AI_DIVING_MONITOR_PROVIDER", "AI_DIVING_MONITOR_MODEL", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"]) delete process.env[name];
   process.env.AI_DIVING_MONITOR_HOME = home;
   process.env.AI_DIVING_MONITOR_DB = path.join(home, "no-such.db");
+  // os.homedir() reads these: Settings look for ~/.claude.json there, not in the real home.
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
 });
 
 afterEach(() => {
-  process.env = { ...saved };
+  restoreEnv(saved);
   fs.rmSync(home, { recursive: true, force: true });
 });
 

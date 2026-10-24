@@ -29,6 +29,8 @@ export function decodeXml(data: Uint8Array): string {
   if (data[0] === 0xfe && data[1] === 0xff) return new TextDecoder("utf-16be").decode(data);
   const head = new TextDecoder("latin1").decode(data.subarray(0, 200));
   const label = /^\s*<\?xml[^>]*encoding=["']([A-Za-z0-9._-]+)["']/.exec(head)?.[1] ?? "utf-8";
+  // TextDecoder reads ISO-8859-1 as windows-1252 (the web's rule); Python reads it byte for byte.
+  if (/^(iso-?8859-1|latin-?1|l1)$/i.test(label)) return Array.from(data, (b) => String.fromCharCode(b)).join("");
   try {
     return new TextDecoder(label).decode(data);
   } catch {

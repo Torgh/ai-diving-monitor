@@ -13,6 +13,13 @@ export interface Settings {
   provider?: string;
   models?: Record<string, string>;
   api_keys?: Record<string, string>;
+  /** Where the dive log is stored: "local" (default), "onedrive" or "google". */
+  storage?: string;
+  /** The OneDrive folder on this PC, when it isn't found automatically. */
+  oneDriveFolder?: string;
+  /** The OAuth client for Google Drive (each diver creates their own; see the README). */
+  googleClientId?: string;
+  googleClientSecret?: string;
 }
 
 export function configPath(): string {
@@ -73,4 +80,15 @@ export async function setApiKey(id: ProviderId, key: string | null): Promise<voi
   else delete keys[id];
   settings.api_keys = keys;
   await writeSettings(settings);
+}
+
+/** Merges `patch` into the settings file; an empty string or null removes a setting. */
+export async function updateSettings(patch: Partial<Record<"storage" | "oneDriveFolder" | "googleClientId" | "googleClientSecret", string | null>>): Promise<void> {
+  const settings: Record<string, unknown> = { ...readSettings() };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+    if (value === null || !value.trim()) delete settings[key];
+    else settings[key] = value.trim();
+  }
+  await writeSettings(settings as Settings);
 }

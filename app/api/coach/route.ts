@@ -3,7 +3,6 @@ import { describeApiError, runCoach } from "@/lib/server/coachAgent";
 import { selected } from "@/lib/server/config";
 import { DiveStore } from "@/lib/server/diveStore";
 import { assertLocal, handle, readBody } from "@/lib/server/http";
-import { dataDir } from "@/lib/server/paths";
 
 const chat = z.object({
   messages: z
@@ -20,7 +19,7 @@ export const POST = handle(async (req) => {
   const { provider, model } = selected();
   const store = new DiveStore();
   try {
-    const { text } = await runCoach(provider.id, model, messages, { records: () => store.list(), dataFolder: dataDir() });
+    const { text } = await runCoach(provider.id, model, messages, { records: () => store.list(), dataFolder: store.backend.location });
     return { answer: text };
   } catch (err) {
     throw describeApiError(err) ?? err;

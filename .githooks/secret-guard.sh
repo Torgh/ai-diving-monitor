@@ -25,18 +25,35 @@ if [ -f "$env_file" ]; then
   done < "$env_file"
 fi
 
-config="${AI_DIVING_MONITOR_CONFIG:-$HOME/.ai-diving-monitor/config.json}"
-if [ -f "$config" ]; then
-  # The keys saved in Settings: every "provider": "key" pair inside "api_keys": { ... }.
-  pairs=$(tr -d '\n' < "$config" | sed -n 's/.*"api_keys" *: *{\([^}]*\)}.*/\1/p' | grep -oE '"[^"]*" *: *"[^"]*"')
+# The data folder, found the way the app finds it (lib/server/paths.ts).
+if [ -n "$AI_DIVING_MONITOR_HOME" ]; then data="$AI_DIVING_MONITOR_HOME"
+elif [ -n "$AI_DIVING_MONITOR_DB" ]; then data=$(dirname "$AI_DIVING_MONITOR_DB")
+else data="$HOME/.ai-diving-monitor"; fi
+
+# check_pairs <label> <file> <"name": "value" pairs, one per line>
+check_pairs() {
   # A here-document keeps the loop in this shell, so check() can set found.
   while IFS= read -r pair; do
     [ -n "$pair" ] || continue
     name=$(printf '%s' "$pair" | sed 's/^"\([^"]*\)".*/\1/')
     value=$(printf '%s' "$pair" | sed 's/^"[^"]*" *: *"\([^"]*\)"$/\1/')
-    check "the $name API key" "$value" "$config"
+    check "$(printf "$1" "$name")" "$value" "$2"
   done <<EOF
-$pairs
+$3
 EOF
+}
+
+config="${AI_DIVING_MONITOR_CONFIG:-$data/config.json}"
+if [ -f "$config" ]; then
+  flat=$(tr -d '\n' < "$config")
+  # The keys saved in Settings: every "provider": "key" pair inside "api_keys": { ... }.
+  check_pairs "the %s API key" "$config" "$(printf '%s' "$flat" | sed -n 's/.*"api_keys" *: *{\([^}]*\)}.*/\1/p' | grep -oE '"[^"]*" *: *"[^"]*"')"
+  # The Google OAuth client's secret.
+  check_pairs "%s" "$config" "$(printf '%s' "$flat" | grep -oE '"googleClientSecret" *: *"[^"]*"')"
+fi
+
+token="$data/google-token.json"
+if [ -f "$token" ]; then
+  check_pairs "the Google %s" "$token" "$(tr -d '\n' < "$token" | grep -oE '"(refreshToken|accessToken)" *: *"[^"]*"')"
 fi
 exit $found

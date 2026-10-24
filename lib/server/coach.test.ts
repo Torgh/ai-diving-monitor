@@ -12,6 +12,7 @@ import { agentAppStatus, bunPath, installReviewCommand, runsOf, shellQuote } fro
 import { listModels, runCoach } from "./coachAgent";
 import { apiKey, configPath, readSettings, select, selected, setApiKey } from "./config";
 import { HttpError } from "./http";
+import { restoreEnv } from "../../test-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const saved = { ...process.env };
@@ -40,7 +41,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env = { ...saved };
+  restoreEnv(saved);
   fs.rmSync(home, { recursive: true, force: true });
 });
 
