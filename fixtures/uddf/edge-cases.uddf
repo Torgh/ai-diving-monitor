@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<uddf xmlns="http://www.streit.cc/uddf/3.2/" version="3.2.0">
+  <generator><name>Fictional edge cases</name><version>1.0</version></generator>
+  <gasdefinitions>
+    <mix id="tx2135"><name>Tx 21/35</name><o2>0.21</o2><he>0.35</he></mix>
+    <mix id="ean50"><name>EAN50</name><o2>0.50</o2></mix>
+    <mix id="o2"><name>Oxygen</name><o2>1.0</o2></mix>
+    <mix id="tx1070"><name>Tx 10/70</name><o2>0.10</o2><he>0.70</he></mix>
+    <mix id="ean36"><o2>0.36</o2></mix>
+  </gasdefinitions>
+  <divesite>
+    <site id="hallstatt"><name>Hallstätter See</name><geography><location>Österreich</location></geography></site>
+    <site id="nameless"><geography><location>Somewhere</location></geography></site>
+  </divesite>
+  <profiledata>
+    <repetitiongroup id="rg">
+      <dive id="A">
+        <informationbeforedive>
+          <link ref="hallstatt"/>
+          <divenumber> 101 </divenumber>
+          <date><year>2026</year><month>8</month><day>2</day></date><time><hour>9</hour><minute>5</minute></time>
+        </informationbeforedive>
+        <tankdata id="tA1"><link ref="tx2135"/><tankvolume>11.1</tankvolume><tankpressurebegin>21000000</tankpressurebegin><tankpressureend>12000000</tankpressureend></tankdata>
+        <tankdata id="tA2"><link ref="ean50"/><tankvolume>0.007</tankvolume><tankpressurebegin>20000000</tankpressurebegin><tankpressureend>9000000</tankpressureend></tankdata>
+        <samples>
+        <waypoint><divetime>0</divetime><depth>0.0</depth><temperature>11.50</temperature><tankpressure ref="tA1">21000000</tankpressure><switchmix ref="tx2135"/></waypoint>
+        <waypoint><divetime>20</divetime><depth>6.67</depth><temperature>10.83</temperature><tankpressure ref="tA1">20950000</tankpressure></waypoint>
+        <waypoint><divetime>40</divetime><depth>13.33</depth><temperature>10.17</temperature><tankpressure ref="tA1">20900000</tankpressure></waypoint>
+        <waypoint><divetime>60</divetime><depth>20.0</depth><temperature>9.50</temperature><tankpressure ref="tA1">20850000</tankpressure></waypoint>
+        <waypoint><divetime>80</divetime><depth>26.67</depth><temperature>8.83</temperature><tankpressure ref="tA1">20800000</tankpressure></waypoint>
+        <waypoint><divetime>100</divetime><depth>33.33</depth><temperature>8.17</temperature><tankpressure ref="tA1">20750000</tankpressure></waypoint>
+        <waypoint><divetime>120</divetime><depth>40.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20700000</tankpressure></waypoint>
+        <waypoint><divetime>140</divetime><depth>46.67</depth><temperature>7.50</temperature><tankpressure ref="tA1">20650000</tankpressure></waypoint>
+        <waypoint><divetime>160</divetime><depth>53.33</depth><temperature>7.50</temperature><tankpressure ref="tA1">20600000</tankpressure></waypoint>
+        <waypoint><divetime>180</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20550000</tankpressure></waypoint>
+        <waypoint><divetime>200</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20500000</tankpressure></waypoint>
+        <waypoint><divetime>220</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20450000</tankpressure></waypoint>
+        <waypoint><divetime>240</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20400000</tankpressure></waypoint>
+        <waypoint><divetime>260</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20350000</tankpressure></waypoint>
+        <waypoint><divetime>280</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20300000</tankpressure></waypoint>
+        <waypoint><divetime>300</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20250000</tankpressure></waypoint>
+        <waypoint><divetime>320</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20200000</tankpressure></waypoint>
+        <waypoint><divetime>340</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20150000</tankpressure></waypoint>
+        <waypoint><divetime>360</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20100000</tankpressure></waypoint>
+        <waypoint><divetime>380</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20050000</tankpressure></waypoint>
+        <waypoint><divetime>400</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">20000000</tankpressure></waypoint>
+        <waypoint><divetime>420</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19950000</tankpressure></waypoint>
+        <waypoint><divetime>440</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19900000</tankpressure></waypoint>
+        <waypoint><divetime>460</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19850000</tankpressure></waypoint>
+        <waypoint><divetime>480</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19800000</tankpressure></waypoint>
+        <waypoint><divetime>500</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19750000</tankpressure></waypoint>
+        <waypoint><divetime>520</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19700000</tankpressure></waypoint>
+        <waypoint><divetime>540</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19650000</tankpressure></waypoint>
+        <waypoint><divetime>560</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19600000</tankpressure></waypoint>
+        <waypoint><divetime>580</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19550000</tankpressure></waypoint>
+        <waypoint><divetime>600</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19500000</tankpressure></waypoint>
+        <waypoint><divetime>620</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19450000</tankpressure></waypoint>
+        <waypoint><divetime>640</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19400000</tankpressure></waypoint>
+        <waypoint><divetime>660</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19350000</tankpressure></waypoint>
+        <waypoint><divetime>680</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19300000</tankpressure></waypoint>
+        <waypoint><divetime>700</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19250000</tankpressure></waypoint>
+        <waypoint><divetime>720</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19200000</tankpressure></waypoint>
+        <waypoint><divetime>740</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19150000</tankpressure></waypoint>
+        <waypoint><divetime>760</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19100000</tankpressure></waypoint>
+        <waypoint><divetime>780</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19050000</tankpressure></waypoint>
+        <waypoint><divetime>800</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">19000000</tankpressure></waypoint>
+        <waypoint><divetime>820</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18950000</tankpressure></waypoint>
+        <waypoint><divetime>840</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18900000</tankpressure></waypoint>
+        <waypoint><divetime>860</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18850000</tankpressure></waypoint>
+        <waypoint><divetime>880</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18800000</tankpressure></waypoint>
+        <waypoint><divetime>900</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18750000</tankpressure></waypoint>
+        <waypoint><divetime>920</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18700000</tankpressure></waypoint>
+        <waypoint><divetime>940</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18650000</tankpressure></waypoint>
+        <waypoint><divetime>960</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18600000</tankpressure></waypoint>
+        <waypoint><divetime>980</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18550000</tankpressure></waypoint>
+        <waypoint><divetime>1000</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18500000</tankpressure></waypoint>
+        <waypoint><divetime>1020</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18450000</tankpressure></waypoint>
+        <waypoint><divetime>1040</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18400000</tankpressure></waypoint>
+        <waypoint><divetime>1060</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18350000</tankpressure></waypoint>
+        <waypoint><divetime>1080</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18300000</tankpressure></waypoint>
+        <waypoint><divetime>1100</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18250000</tankpressure></waypoint>
+        <waypoint><divetime>1120</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18200000</tankpressure></waypoint>
+        <waypoint><divetime>1140</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18150000</tankpressure></waypoint>
+        <waypoint><divetime>1160</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18100000</tankpressure></waypoint>
+        <waypoint><divetime>1180</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18050000</tankpressure></waypoint>
+        <waypoint><divetime>1200</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">18000000</tankpressure></waypoint>
+        <waypoint><divetime>1220</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17950000</tankpressure></waypoint>
+        <waypoint><divetime>1240</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17900000</tankpressure></waypoint>
+        <waypoint><divetime>1260</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17850000</tankpressure></waypoint>
+        <waypoint><divetime>1280</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17800000</tankpressure></waypoint>
+        <waypoint><divetime>1300</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17750000</tankpressure></waypoint>
+        <waypoint><divetime>1320</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17700000</tankpressure></waypoint>
+        <waypoint><divetime>1340</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17650000</tankpressure></waypoint>
+        <waypoint><divetime>1360</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17600000</tankpressure></waypoint>
+        <waypoint><divetime>1380</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17550000</tankpressure></waypoint>
+        <waypoint><divetime>1400</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17500000</tankpressure></waypoint>
+        <waypoint><divetime>1420</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17450000</tankpressure></waypoint>
+        <waypoint><divetime>1440</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17400000</tankpressure></waypoint>
+        <waypoint><divetime>1460</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17350000</tankpressure></waypoint>
+        <waypoint><divetime>1480</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17300000</tankpressure></waypoint>
+        <waypoint><divetime>1500</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17250000</tankpressure></waypoint>
+        <waypoint><divetime>1520</divetime><depth>60.0</depth><temperature>7.50</temperature><tankpressure ref="tA1">17200000</tankpressure></waypoint>
+        <waypoint><divetime>1540</divetime><depth>58.66</depth><temperature>7.50</temperature><tankpressure ref="tA1">17150000</tankpressure></waypoint>
+        <waypoint><divetime>1560</divetime><depth>57.31</depth><temperature>7.50</temperature><tankpressure ref="tA1">17100000</tankpressure></waypoint>
+        <waypoint><divetime>1580</divetime><depth>55.97</depth><temperature>7.50</temperature><tankpressure ref="tA1">17050000</tankpressure></waypoint>
+        <waypoint><divetime>1600</divetime><depth>54.62</depth><temperature>7.50</temperature><tankpressure ref="tA1">17000000</tankpressure></waypoint>
+        <waypoint><divetime>1620</divetime><depth>53.28</depth><temperature>7.50</temperature><tankpressure ref="tA1">16950000</tankpressure></waypoint>
+        <waypoint><divetime>1640</divetime><depth>51.93</depth><temperature>7.50</temperature><tankpressure ref="tA1">16900000</tankpressure></waypoint>
+        <waypoint><divetime>1660</divetime><depth>50.59</depth><temperature>7.50</temperature><tankpressure ref="tA1">16850000</tankpressure></waypoint>
+        <waypoint><divetime>1680</divetime><depth>49.24</depth><temperature>7.50</temperature><tankpressure ref="tA1">16800000</tankpressure></waypoint>
+        <waypoint><divetime>1700</divetime><depth>47.9</depth><temperature>7.50</temperature><tankpressure ref="tA1">16750000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1720</divetime><depth>46.55</depth><temperature>7.50</temperature><tankpressure ref="tA1">16700000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1740</divetime><depth>45.21</depth><temperature>7.50</temperature><tankpressure ref="tA1">16650000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1760</divetime><depth>43.86</depth><temperature>7.50</temperature><tankpressure ref="tA1">16600000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1780</divetime><depth>42.52</depth><temperature>7.50</temperature><tankpressure ref="tA1">16550000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1800</divetime><depth>41.17</depth><temperature>7.50</temperature><tankpressure ref="tA1">16500000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1820</divetime><depth>39.83</depth><temperature>7.52</temperature><tankpressure ref="tA1">16450000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1840</divetime><depth>38.48</depth><temperature>7.65</temperature><tankpressure ref="tA1">16400000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1860</divetime><depth>37.14</depth><temperature>7.79</temperature><tankpressure ref="tA1">16350000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1880</divetime><depth>35.79</depth><temperature>7.92</temperature><tankpressure ref="tA1">16300000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1900</divetime><depth>34.45</depth><temperature>8.05</temperature><tankpressure ref="tA1">16250000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1920</divetime><depth>33.1</depth><temperature>8.19</temperature><tankpressure ref="tA1">16200000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1940</divetime><depth>31.76</depth><temperature>8.32</temperature><tankpressure ref="tA1">16150000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1960</divetime><depth>30.41</depth><temperature>8.46</temperature><tankpressure ref="tA1">16100000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>1980</divetime><depth>29.07</depth><temperature>8.59</temperature><tankpressure ref="tA1">16050000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2000</divetime><depth>27.72</depth><temperature>8.73</temperature><tankpressure ref="tA1">16000000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2020</divetime><depth>26.38</depth><temperature>8.86</temperature><tankpressure ref="tA1">15950000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2040</divetime><depth>25.03</depth><temperature>9.00</temperature><tankpressure ref="tA1">15900000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2060</divetime><depth>23.69</depth><temperature>9.13</temperature><tankpressure ref="tA1">15850000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2080</divetime><depth>22.34</depth><temperature>9.27</temperature><tankpressure ref="tA1">15800000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2100</divetime><depth>21.0</depth><temperature>9.40</temperature><tankpressure ref="tA1">15750000</tankpressure><decostop kind="mandatory" decodepth="21"/></waypoint>
+        <waypoint><divetime>2120</divetime><depth>21.0</depth><decostop kind="mandatory" decodepth="9"/><switchmix ref="ean50"/><calculatedpo2>1.556</calculatedpo2></waypoint>
+        <waypoint><divetime>2140</divetime><depth>20.48</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.530</calculatedpo2></waypoint>
+        <waypoint><divetime>2160</divetime><depth>19.97</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.505</calculatedpo2></waypoint>
+        <waypoint><divetime>2180</divetime><depth>19.45</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.479</calculatedpo2></waypoint>
+        <waypoint><divetime>2200</divetime><depth>18.93</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.453</calculatedpo2></waypoint>
+        <waypoint><divetime>2220</divetime><depth>18.41</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.427</calculatedpo2></waypoint>
+        <waypoint><divetime>2240</divetime><depth>17.9</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.401</calculatedpo2></waypoint>
+        <waypoint><divetime>2260</divetime><depth>17.38</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.375</calculatedpo2></waypoint>
+        <waypoint><divetime>2280</divetime><depth>16.86</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.349</calculatedpo2></waypoint>
+        <waypoint><divetime>2300</divetime><depth>16.34</depth><decostop kind="mandatory" decodepth="9"/><alarm>ascent</alarm><calculatedpo2>1.323</calculatedpo2></waypoint>
+        <waypoint><divetime>2320</divetime><depth>15.83</depth><decostop kind="mandatory" decodepth="9"/><alarm>ascent</alarm><calculatedpo2>1.298</calculatedpo2></waypoint>
+        <waypoint><divetime>2340</divetime><depth>15.31</depth><decostop kind="mandatory" decodepth="9"/><alarm>ascent</alarm><calculatedpo2>1.272</calculatedpo2></waypoint>
+        <waypoint><divetime>2360</divetime><depth>14.79</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.246</calculatedpo2></waypoint>
+        <waypoint><divetime>2380</divetime><depth>14.28</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.220</calculatedpo2></waypoint>
+        <waypoint><divetime>2400</divetime><depth>13.76</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.194</calculatedpo2></waypoint>
+        <waypoint><divetime>2420</divetime><depth>13.24</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.168</calculatedpo2></waypoint>
+        <waypoint><divetime>2440</divetime><depth>12.72</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.143</calculatedpo2></waypoint>
+        <waypoint><divetime>2460</divetime><depth>12.21</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.117</calculatedpo2></waypoint>
+        <waypoint><divetime>2480</divetime><depth>11.69</depth><decostop kind="mandatory" decodepth="9"/><calculatedpo2>1.091</calculatedpo2></waypoint>
+        <waypoint><divetime>2500</divetime><depth>11.17</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>1.065</calculatedpo2></waypoint>
+        <waypoint><divetime>2520</divetime><depth>10.66</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>1.039</calculatedpo2></waypoint>
+        <waypoint><divetime>2540</divetime><depth>10.14</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>1.014</calculatedpo2></waypoint>
+        <waypoint><divetime>2560</divetime><depth>9.62</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.987</calculatedpo2></waypoint>
+        <waypoint><divetime>2580</divetime><depth>9.1</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.961</calculatedpo2></waypoint>
+        <waypoint><divetime>2600</divetime><depth>8.59</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.936</calculatedpo2></waypoint>
+        <waypoint><divetime>2620</divetime><depth>8.07</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.910</calculatedpo2></waypoint>
+        <waypoint><divetime>2640</divetime><depth>7.55</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.884</calculatedpo2></waypoint>
+        <waypoint><divetime>2660</divetime><depth>7.03</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.858</calculatedpo2></waypoint>
+        <waypoint><divetime>2680</divetime><depth>6.52</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.832</calculatedpo2></waypoint>
+        <waypoint><divetime>2700</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="6"/><calculatedpo2>0.806</calculatedpo2></waypoint>
+        <waypoint><divetime>2720</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="6"/><switchmix ref="o2"/></waypoint>
+        <waypoint><divetime>2740</divetime><depth>5.93</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2760</divetime><depth>5.86</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2780</divetime><depth>5.8</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2800</divetime><depth>5.73</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2820</divetime><depth>5.66</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2840</divetime><depth>5.59</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2860</divetime><depth>5.52</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2880</divetime><depth>5.45</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2900</divetime><depth>5.39</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2920</divetime><depth>5.32</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2940</divetime><depth>5.25</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2960</divetime><depth>5.18</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>2980</divetime><depth>5.11</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3000</divetime><depth>5.05</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3020</divetime><depth>4.98</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3040</divetime><depth>4.91</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3060</divetime><depth>4.84</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3080</divetime><depth>4.77</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3100</divetime><depth>4.7</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3120</divetime><depth>4.64</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3140</divetime><depth>4.57</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3160</divetime><depth>4.5</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3180</divetime><depth>4.43</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3200</divetime><depth>4.36</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3220</divetime><depth>4.3</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3240</divetime><depth>4.23</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3260</divetime><depth>4.16</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3280</divetime><depth>4.09</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3300</divetime><depth>4.02</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3320</divetime><depth>3.95</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3340</divetime><depth>3.89</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3360</divetime><depth>3.82</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3380</divetime><depth>3.75</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3400</divetime><depth>3.68</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3420</divetime><depth>3.61</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3440</divetime><depth>3.55</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3460</divetime><depth>3.48</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3480</divetime><depth>3.41</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3500</divetime><depth>3.34</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3520</divetime><depth>3.27</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3540</divetime><depth>3.2</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3560</divetime><depth>3.14</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3580</divetime><depth>3.07</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3600</divetime><depth>3.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>3620</divetime><depth>0</depth></waypoint>
+        </samples>
+        <informationafterdive>
+          <greatestdepth>60</greatestdepth><diveduration>3620</diveduration><lowesttemperature>7.5</lowesttemperature>
+          <notes><para>Deco on <b>EAN50</b> and oxygen.</para> Ceiling <![CDATA[busted & noted]]></notes>
+        </informationafterdive>
+      </dive>
+      <dive id="B">
+        <informationbeforedive><link ref="nameless"/><datetime>2026-07-01T08:30:00.25+02:00</datetime></informationbeforedive>
+        <tankdata><link ref="tx1070"/><tankvolume>0.012</tankvolume></tankdata>
+        <samples>
+        <waypoint><divetime>0</divetime><depth>0.0</depth><cns>0.040</cns><tankpressure>20000000</tankpressure><switchmix ref="tx1070"/></waypoint>
+        <waypoint><divetime>10</divetime><depth>6.5</depth><cns>0.042</cns><tankpressure>19875000</tankpressure></waypoint>
+        <waypoint><divetime>20</divetime><depth>13.0</depth><cns>0.044</cns><tankpressure>19750000</tankpressure></waypoint>
+        <waypoint><divetime>30</divetime><depth>19.5</depth><cns>0.046</cns><tankpressure>19625000</tankpressure></waypoint>
+        <waypoint><divetime>40</divetime><depth>26.0</depth><cns>0.048</cns><tankpressure>19500000</tankpressure></waypoint>
+        <waypoint><divetime>60</divetime><depth>26</depth><cns>0.050</cns><tankpressure>19250000</tankpressure></waypoint>
+        <waypoint><divetime>80</divetime><depth>18</depth><cns>0.052</cns><tankpressure>19000000</tankpressure></waypoint>
+        <waypoint><divetime>100</divetime><depth>25</depth><cns>0.054</cns><tankpressure>18750000</tankpressure></waypoint>
+        <waypoint><divetime>120</divetime><depth>17</depth><cns>0.056</cns><tankpressure>18500000</tankpressure></waypoint>
+        <waypoint><divetime>140</divetime><depth>24</depth><cns>0.058</cns><tankpressure>18250000</tankpressure></waypoint>
+        <waypoint><divetime>160</divetime><depth>16</depth><cns>0.060</cns><tankpressure>18000000</tankpressure></waypoint>
+        <waypoint><divetime>180</divetime><depth>25</depth><cns>0.062</cns><tankpressure>17750000</tankpressure></waypoint>
+        <waypoint><divetime>200</divetime><depth>25.0</depth><cns>0.064</cns><tankpressure>17500000</tankpressure></waypoint>
+        <waypoint><divetime>250</divetime><depth>25.0</depth><cns>0.066</cns><tankpressure>16875000</tankpressure></waypoint>
+        <waypoint><divetime>300</divetime><depth>25.0</depth><cns>0.068</cns><tankpressure>16250000</tankpressure></waypoint>
+        <waypoint><divetime>350</divetime><depth>25.0</depth><cns>0.070</cns><tankpressure>15625000</tankpressure></waypoint>
+        <waypoint><divetime>400</divetime><depth>25.0</depth><cns>0.072</cns><tankpressure>15000000</tankpressure></waypoint>
+        <waypoint><divetime>450</divetime><depth>25.0</depth><cns>0.074</cns><tankpressure>14375000</tankpressure></waypoint>
+        <waypoint><divetime>500</divetime><depth>25.0</depth><cns>0.076</cns><tankpressure>13750000</tankpressure></waypoint>
+        <waypoint><divetime>550</divetime><depth>25.0</depth><cns>0.078</cns><tankpressure>13125000</tankpressure></waypoint>
+        <waypoint><divetime>600</divetime><depth>25.0</depth><cns>0.080</cns><tankpressure>12500000</tankpressure></waypoint>
+        <waypoint><divetime>650</divetime><depth>25.0</depth><cns>0.082</cns><tankpressure>11875000</tankpressure></waypoint>
+        <waypoint><divetime>700</divetime><depth>25.0</depth><cns>0.084</cns><tankpressure>11250000</tankpressure></waypoint>
+        <waypoint><divetime>750</divetime><depth>25.0</depth><cns>0.086</cns><tankpressure>10625000</tankpressure></waypoint>
+        <waypoint><divetime>800</divetime><depth>25.0</depth><cns>0.088</cns><tankpressure>10000000</tankpressure></waypoint>
+        <waypoint><divetime>850</divetime><depth>25.0</depth><cns>0.090</cns><tankpressure>9375000</tankpressure></waypoint>
+        <waypoint><divetime>900</divetime><depth>25.0</depth><cns>0.092</cns><tankpressure>8750000</tankpressure></waypoint>
+        <waypoint><divetime>910</divetime><depth>25.0</depth><cns>0.094</cns><tankpressure>8625000</tankpressure></waypoint>
+        <waypoint><divetime>920</divetime><depth>20.83</depth><cns>0.096</cns><tankpressure>8500000</tankpressure></waypoint>
+        <waypoint><divetime>930</divetime><depth>16.67</depth><cns>0.098</cns><tankpressure>8375000</tankpressure></waypoint>
+        <waypoint><divetime>940</divetime><depth>12.5</depth><cns>0.100</cns><tankpressure>8250000</tankpressure></waypoint>
+        <waypoint><divetime>950</divetime><depth>8.33</depth><cns>0.102</cns><tankpressure>8125000</tankpressure></waypoint>
+        <waypoint><divetime>960</divetime><depth>4.17</depth><cns>0.104</cns><tankpressure>8000000</tankpressure></waypoint>
+        <waypoint><divetime>970</divetime><depth>0.0</depth><cns>0.106</cns><tankpressure>7875000</tankpressure></waypoint>
+        </samples>
+      </dive>
+      <dive id="C">
+        <informationbeforedive><divenumber>abc</divenumber><datetime>not a date</datetime></informationbeforedive>
+        <tankdata><link ref="ean36"/><tankvolume>0.015</tankvolume><tankpressurebegin>23000000</tankpressurebegin><tankpressureend>4000000</tankpressureend></tankdata>
+        <samples>
+        <waypoint><divetime>0</divetime><depth>0.0</depth><nodecotime>3000</nodecotime><cns>0.0000</cns></waypoint>
+        <waypoint><divetime>20</divetime><depth>5.5</depth><nodecotime>2960</nodecotime><cns>0.0065</cns></waypoint>
+        <waypoint><divetime>40</divetime><depth>11.0</depth><nodecotime>2920</nodecotime><cns>0.0130</cns></waypoint>
+        <waypoint><divetime>60</divetime><depth>16.5</depth><nodecotime>2880</nodecotime><cns>0.0196</cns></waypoint>
+        <waypoint><divetime>80</divetime><depth>22.0</depth><nodecotime>2840</nodecotime><cns>0.0261</cns></waypoint>
+        <waypoint><divetime>100</divetime><depth>27.5</depth><nodecotime>2800</nodecotime><cns>0.0326</cns></waypoint>
+        <waypoint><divetime>120</divetime><depth>33.0</depth><nodecotime>2760</nodecotime><cns>0.0391</cns></waypoint>
+        <waypoint><divetime>140</divetime><depth>33.0</depth><nodecotime>2720</nodecotime><cns>0.0457</cns></waypoint>
+        <waypoint><divetime>180</divetime><depth>33.0</depth><nodecotime>2640</nodecotime><cns>0.0587</cns></waypoint>
+        <waypoint><divetime>220</divetime><depth>33.0</depth><nodecotime>2560</nodecotime><cns>0.0717</cns></waypoint>
+        <waypoint><divetime>260</divetime><depth>33.0</depth><nodecotime>2480</nodecotime><cns>0.0848</cns></waypoint>
+        <waypoint><divetime>300</divetime><depth>33.0</depth><nodecotime>2400</nodecotime><cns>0.0978</cns></waypoint>
+        <waypoint><divetime>340</divetime><depth>33.0</depth><nodecotime>2320</nodecotime><cns>0.1109</cns></waypoint>
+        <waypoint><divetime>380</divetime><depth>33.0</depth><nodecotime>2240</nodecotime><cns>0.1239</cns></waypoint>
+        <waypoint><divetime>420</divetime><depth>33.0</depth><nodecotime>2160</nodecotime><cns>0.1370</cns></waypoint>
+        <waypoint><divetime>460</divetime><depth>33.0</depth><nodecotime>2080</nodecotime><cns>0.1500</cns></waypoint>
+        <waypoint><divetime>500</divetime><depth>33.0</depth><nodecotime>2000</nodecotime><cns>0.1630</cns></waypoint>
+        <waypoint><divetime>540</divetime><depth>33.0</depth><nodecotime>1920</nodecotime><cns>0.1761</cns></waypoint>
+        <waypoint><divetime>580</divetime><depth>33.0</depth><nodecotime>1840</nodecotime><cns>0.1891</cns></waypoint>
+        <waypoint><divetime>620</divetime><depth>33.0</depth><nodecotime>1760</nodecotime><cns>0.2022</cns></waypoint>
+        <waypoint><divetime>660</divetime><depth>33.0</depth><nodecotime>1680</nodecotime><cns>0.2152</cns></waypoint>
+        <waypoint><divetime>700</divetime><depth>33.0</depth><nodecotime>1600</nodecotime><cns>0.2283</cns></waypoint>
+        <waypoint><divetime>740</divetime><depth>33.0</depth><nodecotime>1520</nodecotime><cns>0.2413</cns></waypoint>
+        <waypoint><divetime>780</divetime><depth>33.0</depth><nodecotime>1440</nodecotime><cns>0.2543</cns></waypoint>
+        <waypoint><divetime>820</divetime><depth>33.0</depth><nodecotime>1360</nodecotime><cns>0.2674</cns></waypoint>
+        <waypoint><divetime>860</divetime><depth>33.0</depth><nodecotime>1280</nodecotime><cns>0.2804</cns></waypoint>
+        <waypoint><divetime>900</divetime><depth>33.0</depth><nodecotime>1200</nodecotime><cns>0.2935</cns></waypoint>
+        <waypoint><divetime>940</divetime><depth>33.0</depth><nodecotime>1120</nodecotime><cns>0.3065</cns></waypoint>
+        <waypoint><divetime>980</divetime><depth>33.0</depth><nodecotime>1040</nodecotime><cns>0.3196</cns></waypoint>
+        <waypoint><divetime>1020</divetime><depth>33.0</depth><nodecotime>960</nodecotime><cns>0.3326</cns></waypoint>
+        <waypoint><divetime>1060</divetime><depth>33.0</depth><nodecotime>880</nodecotime><cns>0.3457</cns></waypoint>
+        <waypoint><divetime>1100</divetime><depth>33.0</depth><nodecotime>800</nodecotime><cns>0.3587</cns></waypoint>
+        <waypoint><divetime>1140</divetime><depth>33.0</depth><nodecotime>720</nodecotime><cns>0.3717</cns></waypoint>
+        <waypoint><divetime>1180</divetime><depth>33.0</depth><nodecotime>640</nodecotime><cns>0.3848</cns></waypoint>
+        <waypoint><divetime>1220</divetime><depth>33.0</depth><nodecotime>560</nodecotime><cns>0.3978</cns></waypoint>
+        <waypoint><divetime>1260</divetime><depth>33.0</depth><nodecotime>480</nodecotime><cns>0.4109</cns></waypoint>
+        <waypoint><divetime>1300</divetime><depth>33.0</depth><nodecotime>400</nodecotime><cns>0.4239</cns></waypoint>
+        <waypoint><divetime>1340</divetime><depth>33.0</depth><nodecotime>320</nodecotime><cns>0.4370</cns></waypoint>
+        <waypoint><divetime>1380</divetime><depth>33.0</depth><nodecotime>240</nodecotime><cns>0.4500</cns></waypoint>
+        <waypoint><divetime>1420</divetime><depth>33.0</depth><nodecotime>160</nodecotime><cns>0.4630</cns></waypoint>
+        <waypoint><divetime>1460</divetime><depth>33.0</depth><nodecotime>80</nodecotime><cns>0.4761</cns></waypoint>
+        <waypoint><divetime>1500</divetime><depth>33.0</depth><nodecotime>60</nodecotime><cns>0.4891</cns></waypoint>
+        <waypoint><divetime>1520</divetime><depth>33.0</depth><nodecotime>60</nodecotime><cns>0.4957</cns></waypoint>
+        <waypoint><divetime>1540</divetime><depth>29.89</depth><nodecotime>60</nodecotime><cns>0.5022</cns></waypoint>
+        <waypoint><divetime>1560</divetime><depth>26.78</depth><nodecotime>60</nodecotime><cns>0.5087</cns></waypoint>
+        <waypoint><divetime>1580</divetime><depth>23.67</depth><nodecotime>60</nodecotime><cns>0.5152</cns></waypoint>
+        <waypoint><divetime>1600</divetime><depth>20.56</depth><nodecotime>60</nodecotime><cns>0.5217</cns></waypoint>
+        <waypoint><divetime>1620</divetime><depth>17.44</depth><nodecotime>60</nodecotime><cns>0.5283</cns></waypoint>
+        <waypoint><divetime>1640</divetime><depth>14.33</depth><nodecotime>60</nodecotime><cns>0.5348</cns></waypoint>
+        <waypoint><divetime>1660</divetime><depth>11.22</depth><nodecotime>60</nodecotime><cns>0.5413</cns></waypoint>
+        <waypoint><divetime>1680</divetime><depth>8.11</depth><nodecotime>60</nodecotime><cns>0.5478</cns></waypoint>
+        <waypoint><divetime>1700</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5543</cns></waypoint>
+        <waypoint><divetime>1720</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5609</cns></waypoint>
+        <waypoint><divetime>1740</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5674</cns></waypoint>
+        <waypoint><divetime>1760</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5739</cns></waypoint>
+        <waypoint><divetime>1780</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5804</cns></waypoint>
+        <waypoint><divetime>1800</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5870</cns></waypoint>
+        <waypoint><divetime>1820</divetime><depth>5.0</depth><nodecotime>60</nodecotime><cns>0.5935</cns></waypoint>
+        <waypoint><divetime>1840</divetime><depth>0</depth><nodecotime>60</nodecotime><cns>0.6000</cns></waypoint>
+        </samples>
+        <informationafterdive><greatestdepth>33</greatestdepth><diveduration>1840</diveduration></informationafterdive>
+      </dive>
+      <dive id="E">
+        <informationbeforedive><datetime>2026-09-03 14:20</datetime></informationbeforedive>
+        <tankdata><link ref="ean36"/></tankdata>
+        <samples>
+        <waypoint><divetime>0</divetime><depth>0.0</depth></waypoint>
+        <waypoint><divetime>20</divetime><depth>6.0</depth></waypoint>
+        <waypoint><divetime>40</divetime><depth>12.0</depth></waypoint>
+        <waypoint><divetime>60</divetime><depth>18.0</depth></waypoint>
+        <waypoint><divetime>80</divetime><depth>24.0</depth></waypoint>
+        <waypoint><divetime>100</divetime><depth>30.0</depth></waypoint>
+        <waypoint><divetime>120</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>140</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>180</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>220</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>260</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>300</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>340</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>380</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>420</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>460</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>500</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>540</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>580</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>620</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>660</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>700</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>740</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>780</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>820</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>860</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>900</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>940</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>980</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1020</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1060</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1100</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1140</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1180</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1220</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1260</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1300</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1340</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1380</divetime><depth>36.0</depth></waypoint>
+        <waypoint><divetime>1420</divetime><depth>36.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1440</divetime><depth>32.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1460</divetime><depth>28.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1480</divetime><depth>24.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1500</divetime><depth>20.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1520</divetime><depth>16.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1540</divetime><depth>12.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1560</divetime><depth>12.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1570</divetime><depth>11.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1580</divetime><depth>10.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1590</divetime><depth>9.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1600</divetime><depth>8.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1610</divetime><depth>7.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1620</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="6"/></waypoint>
+        <waypoint><divetime>1640</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1680</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1720</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1760</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1800</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1840</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1880</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1920</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>1960</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2000</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2040</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2080</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2120</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2160</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2200</divetime><depth>6.0</depth><decostop kind="mandatory" decodepth="3"/></waypoint>
+        <waypoint><divetime>2220</divetime><depth>0</depth></waypoint>
+        </samples>
+      </dive>
+      <dive id="D">
+        <informationbeforedive><datetime>2026-08-30Z</datetime></informationbeforedive>
+        <samples>
+        <waypoint><divetime>30</divetime><depth>1.2</depth><temperature>27</temperature></waypoint>
+        </samples>
+      </dive>
+    </repetitiongroup>
+  </profiledata>
+</uddf>
