@@ -187,7 +187,20 @@ lib/
   units.ts       SI → bar, °C, litres
   py.ts          Python's rounding, float printing and summation, so both versions give the same numbers
   sha256.ts      synchronous SHA-256 for fingerprints (works in the browser and on the phone)
+  record.ts      a stored dive: what the computer recorded, what the diver filled in, the review; "to sort out"
+  coach.ts       the coach's instructions and tool answers (snake_case JSON, as the Python version answered)
+  server/
+    diveStore.ts one *.dive.json file per dive, the original UDDF files, parsing again after parser upgrades
+    files.ts     atomic writes, and a lock per dive shared by the MCP server and the web app
+    migrate.ts   one-time copy of the Python version's SQLite log
+    paths.ts     the data folder
+mcp/server.ts    MCP server (stdio, run by Bun)
 ```
+
+A dive file keeps what the dive computer recorded, parsed from the original UDDF file (kept in
+`originals/` next to it), plus what the diver or the coach filled in later and the review. The
+analysis is computed when the dive is read, from the dive with those details applied: fill in the tank
+volume and the dive has its gas consumption at once.
 
 ## Development
 
@@ -210,6 +223,33 @@ bun run typecheck    # TypeScript 7 (tsc)
 bun run lint         # ESLint, no warnings allowed
 bun run test         # Vitest
 bun run check        # everything CI runs: typecheck, lint, tests with coverage, build
+bun run mcp          # run the MCP server manually (normally Claude Code or Codex starts it)
+bun run migrate      # copy the Python version's log into dive files (safe to run again)
+```
+
+#### Trying the TypeScript MCP server
+
+The TypeScript MCP server works on dive files in the data folder: `AI_DIVING_MONITOR_HOME`, else the
+folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor`. It has the Python server's tools, with
+the same names and answers, and adds three more:
+
+| MCP tool | What it does |
+|---|---|
+| `get_overview` | The log at a glance: number of dives, the latest one, trends, and what is still missing ("to sort out": tank volume, gas, site, review) |
+| `update_dive` | Fill in what the computer doesn't record: site, location, buddy, notes, the main tank's volume and gas (`air`, `EAN32`, `Tx 18/45`…) |
+| `migrate_from_python` | The same as `bun run migrate`, from Claude |
+
+Dives are referred to by their number in the log (`1` = the oldest) or by their id. Prompts:
+`/mcp__ai-diving-monitor-next__dive-review` and `/mcp__ai-diving-monitor-next__sort-out` (go through
+what is missing, one dive at a time).
+
+Until the web app moves over (stage 4), keep the Python server registered as `ai-diving-monitor`. Try
+the new one under a second name: reviews it saves go to the dive files, which the Python web app
+doesn't show.
+
+```bash
+bun run migrate
+claude mcp add --scope user ai-diving-monitor-next -- ~/.bun/bin/bun /path/to/ai-diving-monitor/mcp/server.ts
 ```
 
 The web app listens on port 3001, so it runs next to the Python UI (8501) and TripDeck (3000). It
@@ -228,7 +268,7 @@ are pinned to a commit.
 `bun install` points git at the hooks in `.githooks/`: they refuse a commit or push that contains a
 secret from `.env.local` or an API key saved in Settings (`~/.ai-diving-monitor/config.json`).
 
-Change parsing? Bump `PARSER_VERSION` in `uddf.py`, so existing databases are parsed again.
+Change parsing? Bump `PARSER_VERSION` in `uddf.py` and `lib/uddf.ts`, so stored dives are parsed again.
 
 ### Golden fixtures
 
@@ -262,12 +302,13 @@ in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pu
 0. **Golden fixtures** from the Python version, so the port can be checked number by number. ✅
 1. **Scaffold and CI.** Next.js, Bun, Vitest and ESLint next to the Python code, with CI as in TripDeck. ✅
 2. **Core logic in TypeScript.** UDDF parser, dive analysis and trends in `lib/`, tested against the golden fixtures. ✅
-3. **Dive files and the MCP server.** One file per dive (this PC, OneDrive or Google Drive), a one-time
-   migration from the SQLite database, and an MCP server in TypeScript with new tools to fill in what
-   the computer doesn't record (site, buddy, tank volume and gas, notes) and a "to sort out" overview.
+3. **Dive files and the MCP server.** One file per dive on this PC, a one-time migration from the
+   SQLite database, and an MCP server in TypeScript with new tools to fill in what the computer doesn't
+   record (site, buddy, tank volume and gas, notes) and a "to sort out" overview. ✅
 4. **Web app.** Dashboard, import, dive log, dive details, coach and settings, refreshing live when the
-   agent saves something. The in-app coach takes a Claude or ChatGPT API key; your subscription keeps
-   working through the MCP server.
+   agent saves something. Settings choose where the dives are stored: this PC, OneDrive or Google Drive
+   (Google needs the sign-in the web app provides). The in-app coach takes a Claude or ChatGPT API key;
+   your subscription keeps working through the MCP server.
 5. **Python retired.** The TypeScript version replaces it.
 6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
    and let the coach prepare you for each site from your own history.
