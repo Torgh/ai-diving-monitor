@@ -74,7 +74,17 @@ export function bunPath(home = os.homedir()): string {
   return fs.existsSync(local) ? local : "bun";
 }
 
-const quote = (s: string) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s);
+/**
+ * A word for the diver's terminal. POSIX shells: single quotes, inside which nothing is special, and
+ * a quote written as '\''. Windows (cmd and PowerShell): double quotes; backslashes are ordinary
+ * there and file names can't contain a double quote.
+ */
+export function shellQuote(s: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform === "win32") return /[\s&|<>^()]/.test(s) ? `"${s.split('"').join("")}"` : s;
+  return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.split("'").join("'\\''")}'`;
+}
+
+const quote = (s: string) => shellQuote(s);
 
 /** Environment the server needs to find the same data folder as this app. */
 function envFlags(flag: string): string {

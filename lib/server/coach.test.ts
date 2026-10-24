@@ -8,7 +8,7 @@ import { callCoachTool, type ToolContext } from "../coachTools";
 import { fingerprint } from "../dive";
 import { type DiveRecord, RECORD_FORMAT } from "../record";
 import { parseUddf } from "../uddf";
-import { agentAppStatus, bunPath, installReviewCommand, runsOf } from "./agentApps";
+import { agentAppStatus, bunPath, installReviewCommand, runsOf, shellQuote } from "./agentApps";
 import { listModels, runCoach } from "./coachAgent";
 import { apiKey, configPath, readSettings, select, selected, setApiKey } from "./config";
 import { HttpError } from "./http";
@@ -89,7 +89,7 @@ describe("agent apps", () => {
     const fresh = agentAppStatus("claude-code", repo, home);
     expect(fresh).toMatchObject({ registered: false, runs: null, reviewCommandInstalled: false });
     expect(fresh.commands).toEqual([
-      `claude mcp add --scope user ai-diving-monitor -e AI_DIVING_MONITOR_HOME=${home.includes(" ") ? `"${home}"` : home} -e AI_DIVING_MONITOR_DB=D:\\data\\dives.db -- ${bunPath(home)} ${path.join(repo, "mcp", "server.ts")}`,
+      `claude mcp add --scope user ai-diving-monitor -e AI_DIVING_MONITOR_HOME=${shellQuote(home)} -e AI_DIVING_MONITOR_DB=${shellQuote("D:\\data\\dives.db")} -- ${shellQuote(bunPath(home))} ${shellQuote(path.join(repo, "mcp", "server.ts"))}`,
     ]);
 
     const python = { command: "py", args: ["-m", "ai_diving_monitor.mcp_server"] };
@@ -111,6 +111,14 @@ describe("agent apps", () => {
     );
     expect(agentAppStatus("codex", repo, home)).toMatchObject({ registered: true, runs: "python" });
     expect(agentAppStatus("codex", repo, home).commands[0]).toBe("codex mcp remove ai-diving-monitor");
+  });
+
+  it("quotes paths for the diver's shell", () => {
+    expect(shellQuote("/home/ola/ai-diving-monitor/mcp/server.ts", "linux")).toBe("/home/ola/ai-diving-monitor/mcp/server.ts");
+    expect(shellQuote("/Users/Ola K/dives", "darwin")).toBe("'/Users/Ola K/dives'");
+    expect(shellQuote("/tmp/it's here\\", "linux")).toBe("'/tmp/it'\\''s here\\'");
+    expect(shellQuote("C:\Users\lisza\.bun\bin\bun.exe", "win32")).toBe("C:\Users\lisza\.bun\bin\bun.exe");
+    expect(shellQuote("C:\Program Files\Bun\bun.exe", "win32")).toBe('"C:\Program Files\Bun\bun.exe"');
   });
 
   it("installs the /dive-review command", () => {
