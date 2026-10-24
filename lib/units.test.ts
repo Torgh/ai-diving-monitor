@@ -22,6 +22,6 @@ describe("units", () => {
   it("parses numbers like the Python version", () => {
     expect(parseNumber(" 18.5 ")).toBe(18.5);
     expect(parseNumber("1e3")).toBe(1000);
-    for (const text of [null, undefined, "", "  ", "abc"]) expect(parseNumber(text)).toBeNull();
+    for (const text of [null, undefined, "", "  ", "abc", "0x10", "-0b1"]) expect(parseNumber(text)).toBeNull();
   });
 });

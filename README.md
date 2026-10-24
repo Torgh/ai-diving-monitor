@@ -181,6 +181,20 @@ is based on your actual data. The same tools back both the in-app coach (any pro
 server. The database records the parser version (`PARSER_VERSION` in `uddf.py`); when it is older,
 the stored originals are parsed again on start.
 
+The TypeScript version keeps the same logic in `lib/`, shared later by the web app, the MCP server
+and the phone app:
+
+```
+lib/
+  uddf.ts        UDDF parser (any encoding the file declares; UDDF 2.x dates; exporter quirks)
+  xml.ts         a small element tree over fast-xml-parser, read the way Python's ElementTree reads it
+  dive.ts        dive, tank, sample and gas types; gas labels; the fingerprint that spots duplicates
+  analysis.ts    metrics, findings, score, trends and progress insights
+  units.ts       SI → bar, °C, litres
+  py.ts          Python's rounding, float printing and summation, so both versions give the same numbers
+  sha256.ts      synchronous SHA-256 for fingerprints (works in the browser and on the phone)
+```
+
 ## Development
 
 The repository holds both versions while the TypeScript one is built.
@@ -227,14 +241,23 @@ Change parsing? Bump `PARSER_VERSION` in `uddf.py`, so existing databases are pa
 `fixtures/golden/` holds what the Python version parses and computes for every test file: the parsed
 dive, its metrics, findings and score, and for the sample log the dive list, trends and progress
 insights. The TypeScript port is tested against these files, so it must produce the same numbers.
-The inputs are `examples/*.uddf` and `fixtures/uddf/*.uddf` (a fictional dive shaped like a
-Shearwater export: CNS in whole percent and unused tank slots).
+The inputs are `examples/*.uddf` and `fixtures/uddf/*.uddf`:
+
+- `shearwater-style.uddf`: a fictional dive shaped like a Shearwater export, with CNS in whole percent
+  and unused tank slots
+- `edge-cases.uddf`: fictional dives that reach the branches the sample log doesn't. Among them are
+  deco with a violated ceiling and with stops kept, gas switches, trimix END, computer ppO2 and alarms,
+  a rocket ascent after a sawtooth, a hypoxic gas, CNS as fractions, a dive without a date and a single
+  sample. The file also covers UDDF 2.x dates, time zones, mixed-content notes and ISO-8859-1.
 
 ```bash
-python scripts/export_golden.py      # rewrite fixtures/golden/ after changing parsing or analysis
+python scripts/generate_edge_cases.py   # rewrite fixtures/uddf/edge-cases.uddf
+python scripts/export_golden.py         # rewrite fixtures/golden/ after changing parsing or analysis
 ```
 
-`pytest` fails when the golden files are out of date.
+`pytest` fails when the golden files are out of date, and `lib/golden.test.ts` fails when the
+TypeScript port parses or analyses any of these files differently: every number, finding, text,
+fingerprint, trend and progress insight must match.
 
 ## Roadmap
 
@@ -244,7 +267,7 @@ in OneDrive or on Google Drive. It gets there by a rewrite in TypeScript, one pu
 
 0. **Golden fixtures** from the Python version, so the port can be checked number by number. ✅
 1. **Scaffold and CI.** Next.js, Bun, Vitest and ESLint next to the Python code, with CI as in TripDeck. ✅
-2. **Core logic in TypeScript.** UDDF parser, dive analysis and trends in `lib/`, tested against the golden fixtures.
+2. **Core logic in TypeScript.** UDDF parser, dive analysis and trends in `lib/`, tested against the golden fixtures. ✅
 3. **Dive files and the MCP server.** One file per dive (this PC, OneDrive or Google Drive), a one-time
    migration from the SQLite database, and an MCP server in TypeScript with new tools to fill in what
    the computer doesn't record (site, buddy, tank volume and gas, notes) and a "to sort out" overview.

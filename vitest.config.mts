@@ -17,7 +17,7 @@ export default defineConfig({
       exclude: ["**/*.test.ts"],
       reporter: ["text-summary", "text", "json-summary"],
       // Raised as the port grows; CI fails when a change drops coverage below these.
-      thresholds: { statements: 90, branches: 85, functions: 90, lines: 90 },
+      thresholds: { statements: 95, branches: 90, functions: 95, lines: 97 },
     },
   },
 });

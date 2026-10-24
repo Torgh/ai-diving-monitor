@@ -23,9 +23,11 @@ export function toLitres(volume: number | null): number | null {
   return volume < 1 ? volume * 1000 : volume;
 }
 
-/** A number from XML text, or null when it is missing or not a number. */
+/** A number from XML text, or null when it is missing or not a number (as Python's float() reads it). */
 export function parseNumber(text: string | null | undefined): number | null {
   if (text === null || text === undefined || !text.trim()) return null;
+  // JavaScript also reads hex, binary and octal ("0x10" is 16); Python's float() refuses them.
+  if (/^\s*[+-]?0[xob]/i.test(text)) return null;
   const value = Number(text.trim());
   return Number.isFinite(value) ? value : null;
 }
