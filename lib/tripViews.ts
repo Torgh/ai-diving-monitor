@@ -20,6 +20,8 @@ export interface TripRow {
   /** Days until the trip starts; negative once it has. */
   daysUntil: number | null;
   cards: number;
+  /** Days with at least one dive card. */
+  diveDays: number;
   prepared: number;
   loggedDives: number;
   updatedAt: string;
@@ -79,6 +81,7 @@ export function tripRow(plan: TripPlan, today: Date = new Date()): TripRow {
     when,
     daysUntil: start ? daysBetween(now, start) : null,
     cards: plan.dives.length,
+    diveDays: new Set(plan.dives.map((d) => d.date ?? `day ${d.day ?? d.itemId}`)).size,
     prepared: plan.dives.filter((d) => d.prep).length,
     loggedDives: plan.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
     updatedAt: plan.updatedAt,
