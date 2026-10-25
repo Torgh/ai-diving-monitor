@@ -4,8 +4,9 @@
  */
 
 import { z } from "zod";
-import { DESCRIPTIONS, diveAnalysis, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive } from "./coach";
+import { DESCRIPTIONS, diveAnalysis, divePrep, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, tripPlans } from "./coach";
 import type { DiveRecord } from "./record";
+import type { TripPlan } from "./trip";
 
 const diveRef = z
   .union([z.number().int(), z.string()])
@@ -13,6 +14,8 @@ const diveRef = z
 
 export interface ToolContext {
   records: () => Promise<DiveRecord[]>;
+  /** The saved trips (none when not given). */
+  trips?: () => Promise<TripPlan[]>;
   dataFolder: string;
 }
 
@@ -62,6 +65,26 @@ export const COACH_TOOLS: CoachTool[] = [
     description: DESCRIPTIONS.get_progress_trend,
     schema: z.object({ metric: z.enum(Object.keys(METRIC_NAMES) as [string, ...string[]]) }),
     run: async ({ metric }, ctx) => progressTrend(await ctx.records(), metric),
+  }),
+  tool({
+    name: "prepare_dive",
+    description: DESCRIPTIONS.prepare_dive,
+    schema: z.object({
+      site: z.string().max(200).optional(),
+      location: z.string().max(200).optional(),
+      max_depth_m: z.number().positive().max(200).optional(),
+      gas: z.string().max(40).optional().describe('"air", "nitrox", "trimix" or the mix: "EAN32", "Tx 18/45".'),
+      dives: z.number().int().min(1).max(10).optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("YYYY-MM-DD"),
+    }),
+    run: async (a, ctx) =>
+      divePrep(await ctx.records(), { site: a.site, location: a.location, maxDepthM: a.max_depth_m, gas: a.gas, dives: a.dives, date: a.date }),
+  }),
+  tool({
+    name: "get_trip_plans",
+    description: DESCRIPTIONS.get_trip_plans,
+    schema: z.object({ trip_id: z.string().max(64).optional() }),
+    run: async ({ trip_id }, ctx) => tripPlans((await ctx.trips?.()) ?? [], await ctx.records(), trip_id?.trim() || undefined),
   }),
 ];
 

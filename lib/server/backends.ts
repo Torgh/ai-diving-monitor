@@ -9,12 +9,13 @@ import { GoogleDriveBackend } from "./googleDrive";
 import { CLOUD_FOLDER, dataDir } from "./paths";
 
 /**
- * Where the dive log lives. The dive files (`dives`) and the original UDDF files (`originals`) are
- * plain files in two areas; a backend lists, reads, writes and removes them, nothing more, so the dive
- * store works the same on this PC, in the OneDrive folder and on Google Drive.
+ * Where the dive log lives. The dive files (`dives`), the original UDDF files (`originals`) and the
+ * trips being prepared for (`trips`) are plain files in three areas; a backend lists, reads, writes
+ * and removes them, nothing more, so the stores work the same on this PC, in the OneDrive folder and
+ * on Google Drive.
  */
 export type StorageKind = "local" | "onedrive" | "google";
-export type Area = "dives" | "originals";
+export type Area = "dives" | "originals" | "trips";
 
 export interface StoredFile {
   name: string;

@@ -58,11 +58,12 @@ describe.skipIf(!bun)("MCP server", () => {
   it("offers the coach tools and prompts", async () => {
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
-      "get_dive_analysis", "get_dive_profile", "get_overview", "get_progress_trend", "import_uddf",
-      "list_dives", "migrate_from_python", "save_dive_summary", "update_dive",
+      "get_dive_analysis", "get_dive_profile", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
+      "list_dives", "migrate_from_python", "prepare_dive", "save_dive_summary", "save_trip_plan", "update_dive",
     ]);
-    expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "sort-out"]);
+    expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "sort-out", "trip-prep"]);
     expect(client.getInstructions()).toContain("save it with update_dive");
+    expect(client.getInstructions()).toContain("TripDeck's get_trip");
   });
 
   it("starts with an empty log", async () => {
@@ -120,6 +121,50 @@ describe.skipIf(!bun)("MCP server", () => {
     expect((await json("list_dives"))[1].has_review).toBe(true);
     const prompt = await client.getPrompt({ name: "dive-review", arguments: {} });
     expect(JSON.stringify(prompt.messages)).toContain("Review dive #10");
+  });
+
+  it("prepares for a planned dive from the log", async () => {
+    const prep = await json("prepare_dive", { site: "Koparki", max_depth_m: 40, gas: "EAN32", dives: 2, date: "2027-05-10" });
+    expect(prep.experience).toMatchObject({ dives: 10, deepest_m: 52, deeper_than_ever: false });
+    expect(prep.at_this_site.map((d: { site: string }) => d.site)).toEqual(["Koparki", "Koparki"]);
+    expect(prep.gas_plan).toMatchObject({ ppo2_at_max_depth: 1.6, mod_m: 33.8, best_nitrox_percent: 27 });
+    expect(prep.notes[0]).toContain("not safe at that depth");
+    expect((await call("prepare_dive", { date: "10.05.2027" })).isError).toBe(true);
+  });
+
+  it("saves a trip's dive cards with the preparation, and links logged dives after the trip", async () => {
+    const card = { item_id: "c1", title: "Blue Hole", day: 2, date: "2026-07-11", site: "Blue Hole", max_depth_m: 30, gas: "nitrox" };
+    expect(await ok("get_trip_plans")).toContain("No trips saved yet");
+    const saved = await json("save_trip_plan", {
+      trip_id: "dahab-2026",
+      trip_name: "Dahab",
+      start_date: "2026-07-10",
+      summary_markdown: "Practise stops.",
+      dives: [{ ...card, prep_markdown: "## Ready" }, { item_id: "c2", title: "Canyon", date: "2026-07-12" }],
+    });
+    expect(saved).toMatchObject({ saved: true, dive_cards: 2, prepared: 1, without_prep: ["c2"] });
+
+    // The cards again, as TripDeck has them now: c2 was removed; c1 keeps its preparation.
+    const dives = await json("list_dives");
+    const sameDay = dives.filter((d: { start: string }) => d.start?.startsWith("2026-07-11"));
+    await ok("save_trip_plan", { trip_id: "dahab-2026", trip_name: "Dahab", dives: [card] });
+    const plan = await json("get_trip_plans", { trip_id: "dahab-2026" });
+    expect(plan).toMatchObject({ name: "Dahab", summary: "Practise stops.", start_date: null });
+    expect(plan.cards).toHaveLength(1);
+    expect(plan.cards[0]).toMatchObject({ item_id: "c1", prep: "## Ready", logged_dives: [] });
+    expect(plan.cards[0].logged_that_day.map((d: { id: string }) => d.id)).toEqual(sameDay.map((d: { id: string }) => d.id));
+
+    await ok("save_trip_plan", { trip_id: "dahab-2026", trip_name: "Dahab", dives: [{ ...card, logged_dives: [sameDay[0].seq] }] });
+    const linked = (await json("get_trip_plans", { trip_id: "dahab-2026" })).cards[0];
+    expect(linked.logged_dives).toEqual([{ id: sameDay[0].id, seq: sameDay[0].seq, start: sameDay[0].start, site: sameDay[0].site }]);
+    expect(linked.logged_that_day).toHaveLength(sameDay.length - 1);
+    expect(await json("get_trip_plans")).toEqual([expect.objectContaining({ trip_id: "dahab-2026", dive_cards: 1, prepared: 1, logged_dives: 1 })]);
+
+    expect((await call("save_trip_plan", { trip_id: "../x", trip_name: "X", dives: [] })).text).toContain("Invalid trip id");
+    expect((await call("save_trip_plan", { trip_id: "x", trip_name: "X", dives: [{ ...card, logged_dives: [99] }] })).text).toContain("There is no dive 99");
+    expect((await call("get_trip_plans", { trip_id: "nope" })).isError).toBe(true);
+    const prompt = await client.getPrompt({ name: "trip-prep", arguments: { trip: "Dahab" } });
+    expect(JSON.stringify(prompt.messages)).toContain('trip \\"Dahab\\"');
   });
 
   it("explains when there is no Python database to migrate", async () => {

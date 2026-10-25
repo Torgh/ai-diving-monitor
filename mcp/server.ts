@@ -15,6 +15,7 @@ import { z } from "zod";
 import {
   DESCRIPTIONS,
   diveAnalysis,
+  divePrep,
   diveProfile,
   listDives,
   MCP_INSTRUCTIONS,
@@ -22,15 +23,19 @@ import {
   progressTrend,
   resolveDive,
   SUMMARY_REQUEST,
+  TRIP_PREP_REQUEST,
+  tripPlans,
 } from "../lib/coach";
 import { analyzeRecord, chronological, parseGas } from "../lib/record";
 import { DiveStore } from "../lib/server/diveStore";
 import { migrateFromPython } from "../lib/server/migrate";
 import { pythonDbPath } from "../lib/server/paths";
+import { TripStore } from "../lib/server/tripStore";
 import { UddfParseError } from "../lib/uddf";
 
 /** The log where Settings say it is stored, looked up on every call so a change applies at once. */
 const store = () => new DiveStore();
+const trips = () => new TripStore();
 const server = new McpServer({ name: "ai-diving-monitor", title: "AI Diving Monitor", version: "0.2.0" }, { instructions: MCP_INSTRUCTIONS });
 
 const text = (value: unknown) => ({
@@ -211,6 +216,130 @@ server.registerTool(
   }),
 );
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+const gasText = z.string().max(40).describe('"air", "nitrox", "trimix" (as TripDeck has it) or the mix: "EAN32", "Tx 18/45".');
+
+server.registerTool(
+  "prepare_dive",
+  {
+    title: "Prepare for a dive",
+    description: DESCRIPTIONS.prepare_dive,
+    inputSchema: {
+      site: z.string().max(200).optional().describe("Dive site, e.g. Blue Hole."),
+      location: z.string().max(200).optional().describe("Region or country."),
+      max_depth_m: z.number().positive().max(200).optional().describe("Planned maximum depth in metres."),
+      gas: gasText.optional(),
+      dives: z.number().int().min(1).max(10).optional().describe("Dives in the outing, e.g. 2 for a two-tank boat trip."),
+      date: isoDate.optional().describe("The day of the dive, YYYY-MM-DD (default: today)."),
+    },
+    annotations: READ_ONLY,
+  },
+  tool(async (args: { site?: string; location?: string; max_depth_m?: number; gas?: string; dives?: number; date?: string }) =>
+    divePrep(await store().list(), {
+      site: args.site,
+      location: args.location,
+      maxDepthM: args.max_depth_m,
+      gas: args.gas,
+      dives: args.dives,
+      date: args.date,
+    }),
+  ),
+);
+
+const tripCard = z.object({
+  item_id: z.string().min(1).max(64).describe("The card's id in TripDeck."),
+  title: z.string().max(200),
+  day: z.number().int().min(1).optional().describe("Trip day, 1 = the first."),
+  date: isoDate.optional(),
+  start_time: z.string().regex(/^\d{2}:\d{2}$/).optional().describe("HH:MM"),
+  site: z.string().max(200).optional(),
+  center: z.string().max(200).optional().describe("Dive centre."),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  max_depth_m: z.number().positive().max(200).optional(),
+  gas: gasText.optional(),
+  dives: z.number().int().min(1).max(10).optional(),
+  prep_markdown: z.string().max(20000).optional().describe('Your preparation for this dive. Omit to keep the saved one; "" removes it.'),
+  logged_dives: z
+    .array(z.union([z.number().int(), z.string()]))
+    .max(20)
+    .optional()
+    .describe("Logged dives this card turned into (numbers or ids). Omit to keep the saved links."),
+});
+
+server.registerTool(
+  "save_trip_plan",
+  {
+    title: "Save trip preparation",
+    description: DESCRIPTIONS.save_trip_plan,
+    inputSchema: {
+      trip_id: z.string().min(1).max(64).describe("The trip's id in TripDeck."),
+      trip_name: z.string().min(1).max(200),
+      destination: z.string().max(200).optional(),
+      start_date: isoDate.optional(),
+      end_date: isoDate.optional(),
+      summary_markdown: z.string().max(20000).optional().describe('Notes for the whole trip. Omit to keep the saved ones; "" removes them.'),
+      dives: z.array(tripCard).max(100).describe("Every dive card of the trip."),
+    },
+    annotations: WRITES,
+  },
+  tool(async (args: {
+    trip_id: string;
+    trip_name: string;
+    destination?: string;
+    start_date?: string;
+    end_date?: string;
+    summary_markdown?: string;
+    dives: z.infer<typeof tripCard>[];
+  }) => {
+    const records = await store().list();
+    const target = trips();
+    const plan = await target.save({
+      id: args.trip_id,
+      name: args.trip_name,
+      destination: args.destination,
+      startDate: args.start_date,
+      endDate: args.end_date,
+      summaryMarkdown: args.summary_markdown,
+      dives: args.dives.map((c) => ({
+        itemId: c.item_id,
+        title: c.title,
+        day: c.day,
+        date: c.date,
+        startTime: c.start_time,
+        site: c.site,
+        center: c.center,
+        lat: c.lat,
+        lng: c.lng,
+        maxDepthM: c.max_depth_m,
+        gas: c.gas,
+        dives: c.dives,
+        prepMarkdown: c.prep_markdown,
+        loggedDiveIds: c.logged_dives?.map((ref) => resolveDive(records, ref).record.id),
+      })),
+    });
+    return {
+      saved: true,
+      trip_id: plan.id,
+      dive_cards: plan.dives.length,
+      prepared: plan.dives.filter((d) => d.prep).length,
+      without_prep: plan.dives.filter((d) => !d.prep).map((d) => d.itemId),
+      stored_in: target.backend.location,
+    };
+  }),
+);
+
+server.registerTool(
+  "get_trip_plans",
+  {
+    title: "Saved trips",
+    description: DESCRIPTIONS.get_trip_plans,
+    inputSchema: { trip_id: z.string().max(64).optional().describe("A trip's id, for its cards in full.") },
+    annotations: READ_ONLY,
+  },
+  tool(async ({ trip_id }: { trip_id?: string }) => tripPlans(await trips().list(), await store().list(), trip_id?.trim() || undefined)),
+);
+
 server.registerTool(
   "migrate_from_python",
   {
@@ -255,6 +384,23 @@ server.registerPrompt(
           type: "text",
           text: "Look at my dive log with get_overview. Go through what is still missing, one dive at a time: ask me for the tank size, gas, site or buddy, save each answer with update_dive, and tell me what it changed (for example the gas consumption). Offer a review for dives that have none.",
         },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
+  "trip-prep",
+  {
+    title: "Prepare for a trip",
+    description: "Get ready for the dives of a TripDeck trip, from your own dive log",
+    argsSchema: { trip: z.string().optional().describe("The trip's name or id in TripDeck (default: the next trip with dives)") },
+  },
+  ({ trip }) => ({
+    messages: [
+      {
+        role: "user",
+        content: { type: "text", text: TRIP_PREP_REQUEST.replace("{trip}", trip?.trim() ? `"${trip.trim()}"` : "(the next one with dives)") },
       },
     ],
   }),
