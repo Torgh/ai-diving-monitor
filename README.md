@@ -50,10 +50,11 @@ copied over.
   keep coming back. The *Trips* page shows each dive card with the preparation and the numbers behind
   it, and the dashboard the trip coming next. After the trip, link each logged dive to its card there
   (or let the companion do it).
-- **Live dashboard.** Dives logged, time underwater, the deepest dive, the latest score, progress
-  insights such as "Gas consumption: improving, 23.5 → 16.2 L/min", and charts of RMV, peak ascent
-  rate, safety stop time and score across your dives, each with its trend line. Every page updates
-  within seconds when your companion changes the log.
+- **Live dashboard.** Your coming trips with how far their preparation is, dives logged, time
+  underwater, the deepest dive and the latest score, and what is still to sort out, with the tank size
+  or the gas saved for every dive that misses it in one go. Charts of RMV, peak ascent rate, safety
+  stop time and score across your dives, each with its trend line and its direction
+  ("worsening · 4.2 → 9.6 m/min"). Every page updates within seconds when your companion changes the log.
 - **Dive details.** The metrics beside your average, the findings, the companion's debrief, and the
   profile: depth with the computer's deco stops, gas switches and fast ascents, and tank pressure,
   ppO2 (1.4 and 1.6 bar lines) and water temperature below it on the same time axis. Every chart has a
@@ -345,8 +346,8 @@ rewrite in TypeScript, one pull request per stage:
    - 6b. A *Trips* page in the app with the preparation of each dive, and the next trip on the dashboard. ✅
    - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app. ✅
    - Then the new design, in four pull requests: (a) the *buddy bubbles* logo, a menu with icons
-     that shows where the log is stored, and the AI as your companion ✅ (this one); (b) the
-     dashboard; (c) the dive page; (d) the trip page.
+     that shows where the log is stored, and the AI as your companion ✅; (b) the
+     dashboard ✅ (this one); (c) the dive page; (d) the trip page.
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis

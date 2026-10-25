@@ -1,40 +1,251 @@
 "use client";
 
 import Link from "next/link";
-import { LineChart } from "@/components/LineChart";
+import { useState } from "react";
 import { Findings } from "@/components/Findings";
-import { useLive } from "@/components/useLive";
-import { formatDateRange, formatMinutes, formatNumber, formatTripWhen } from "@/lib/format";
+import { LineChart } from "@/components/LineChart";
+import { api, useLive } from "@/components/useLive";
+import { useSettings } from "@/components/useSettings";
+import { formatDate, formatDateRange, formatMinutes, formatNumber, formatTripWhen } from "@/lib/format";
+import type { TodoKind } from "@/lib/record";
 import type { TripRow } from "@/lib/tripViews";
 import type { LogView, ProgressSeries } from "@/lib/views";
 
 type Data = LogView & { version: string; dataFolder: string };
+type Todo = Data["todos"][number];
 
 const UNIT: Record<string, string> = { rmvLMin: "L/min", maxAscentRateMMin: "m/min", safetyStopS: "s", score: "" };
 
-function ProgressChart({ p }: { p: ProgressSeries }) {
-  if (p.points.length < 2) {
+/** Small status icons; a status is never told by colour alone. */
+const Icon = {
+  alert: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 8v5M12 17h.01" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  ),
+  check: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12l5 5 9-10" />
+    </svg>
+  ),
+  up: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  ),
+  down: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M6 13l6 6 6-6" />
+    </svg>
+  ),
+};
+
+/** The trips under way or coming, each with how far its preparation is. */
+function UpcomingTrips() {
+  const { data } = useLive<{ version: string; trips: TripRow[] }>("/api/trips");
+  const trips = data?.trips.filter((t) => t.when === "now" || t.when === "upcoming") ?? [];
+  if (!trips.length) return null;
+  return (
+    <section className="trip-cards" aria-label="Upcoming trips">
+      {trips.map((t) => {
+        const left = t.cards - t.prepared;
+        return (
+          <Link key={t.id} href={`/trips/${t.id}`} className="card trip-card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span className="eyebrow">{formatTripWhen(t)}</span>
+              {t.cards > 0 &&
+                (left > 0 ? (
+                  <span className="badge warning">
+                    {Icon.alert}
+                    {left} to prepare
+                  </span>
+                ) : (
+                  <span className="badge good">{Icon.check}All prepared</span>
+                ))}
+            </div>
+            <h2>{t.name}</h2>
+            <span className="secondary">
+              {[formatDateRange(t.startDate, t.endDate), t.destination?.toLowerCase() === t.name.toLowerCase() ? null : t.destination, t.diveDays ? `${t.diveDays} dive day${t.diveDays === 1 ? "" : "s"}` : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {t.cards > 0 && (
+              <div className="stack" style={{ gap: "0.35rem" }}>
+                <div className="meter" role="img" aria-label={`${t.prepared} of ${t.cards} dive cards prepared`}>
+                  <span style={{ width: `${(100 * t.prepared) / t.cards}%` }} />
+                </div>
+                <span className="muted" style={{ fontSize: "0.85rem" }}>
+                  {t.prepared} of {t.cards} dive cards prepared
+                </span>
+              </div>
+            )}
+          </Link>
+        );
+      })}
+    </section>
+  );
+}
+
+const TODO_COPY: Record<TodoKind, { title: string; why: string }> = {
+  "tank-volume": { title: "Tank size", why: "Needed for your gas consumption (RMV)." },
+  gas: { title: "Gas", why: "Needed to check ppO2, CNS and END." },
+  site: { title: "Dive site", why: "Lets trip preparation find your dives at the same site." },
+  review: { title: "Debrief", why: "Your companion's look at the dive." },
+};
+
+function DiveLinks({ todo }: { todo: Todo }) {
+  return (
+    <span className="why">
+      {todo.seqs.slice(0, 8).map((seq, i) => (
+        <span key={seq}>
+          {i ? ", " : ""}
+          <Link href={`/dives/${todo.dives[i]}`}>#{seq}</Link>
+        </span>
+      ))}
+      {todo.seqs.length > 8 ? ` and ${todo.seqs.length - 8} more` : ""}
+    </span>
+  );
+}
+
+/** One value for every dive that misses it: most divers use the same tank and gas all along. */
+function SaveForAll({ todo, field, label, placeholder, onSaved }: { todo: Todo; field: "tankVolumeL" | "gas"; label: string; placeholder: string; onSaved: () => void }) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const n = todo.dives.length;
+
+  async function save() {
+    const raw = value.trim().replace(",", ".");
+    if (field === "tankVolumeL" && !(Number(raw) > 0)) {
+      setFailure("The tank size is a number of litres, e.g. 12.");
+      return;
+    }
+    setBusy(true);
+    setFailure(null);
+    try {
+      for (const id of todo.dives) await api(`/api/dives/${id}`, "PATCH", { [field]: field === "tankVolumeL" ? Number(raw) : raw });
+      setValue("");
+      onSaved();
+    } catch (err) {
+      setFailure((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <label>
+        {label}
+        <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} inputMode={field === "tankVolumeL" ? "decimal" : "text"} />
+      </label>
+      <button className="button primary" type="button" disabled={busy || !value.trim()} onClick={save}>
+        {busy ? "Saving…" : `Save for ${n === 1 ? "this dive" : `${n} dives`}`}
+      </button>
+      {failure && (
+        <span role="alert" style={{ color: "var(--critical)", flexBasis: "100%" }}>
+          {failure}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** A debrief here with an API key; with a subscription, the command to run in Claude Code or Codex. */
+function DebriefAction({ todo, onSaved }: { todo: Todo; onSaved: () => void }) {
+  const { settings } = useSettings();
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const provider = settings?.providers.find((p) => p.id === settings.provider);
+  if (!provider) return null;
+  const last = todo.dives.length - 1;
+  if (!provider.usesApi || !provider.key) {
     return (
-      <div className="card">
-        <h3>{p.label}</h3>
-        <p className="muted">{p.points.length ? "One dive so far: the chart starts with the second." : "No dive has this value yet."}</p>
-      </div>
+      <span className="muted">
+        In {provider.app}: <code>/mcp__divedeck__dive-review {todo.seqs[last]}</code>
+      </span>
     );
   }
+  async function ask() {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await api("/api/coach/review", "POST", { diveId: todo.dives[last] });
+      onSaved();
+    } catch (err) {
+      setFailure((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <button className="button" type="button" disabled={busy} onClick={ask}>
+        {busy ? "Debriefing…" : `Get a debrief of #${todo.seqs[last]}`}
+      </button>
+      {failure && (
+        <span role="alert" style={{ color: "var(--critical)", flexBasis: "100%" }}>
+          {failure}
+        </span>
+      )}
+    </>
+  );
+}
+
+function SortOut({ todos, onSaved }: { todos: Todo[]; onSaved: () => void }) {
+  return (
+    <section className="card" aria-labelledby="todo-h">
+      <h2 id="todo-h">To sort out</h2>
+      {todos.map((t) => (
+        <div key={t.kind} className="todo-row">
+          <div className="what">
+            <strong>{TODO_COPY[t.kind].title}</strong>
+            <span className="why">{TODO_COPY[t.kind].why}</span>
+            <DiveLinks todo={t} />
+          </div>
+          {t.kind === "tank-volume" && <SaveForAll todo={t} field="tankVolumeL" label="Tank (L)" placeholder="12" onSaved={onSaved} />}
+          {t.kind === "gas" && <SaveForAll todo={t} field="gas" label="Gas" placeholder="air, EAN32" onSaved={onSaved} />}
+          {t.kind === "site" && (
+            <Link className="button" href={`/dives/${t.dives[0]}#details`}>
+              Fill in #{t.seqs[0]}
+            </Link>
+          )}
+          {t.kind === "review" && <DebriefAction todo={t} onSaved={onSaved} />}
+        </div>
+      ))}
+      <p className="muted" style={{ marginBottom: 0 }}>
+        Or ask your companion in Claude Code: <code>/mcp__divedeck__sort-out</code>.
+      </p>
+    </section>
+  );
+}
+
+/** "worsening · 4.2 → 9.6 m/min", with an arrow for the direction and a colour for good or bad. */
+function TrendNote({ p }: { p: ProgressSeries }) {
+  if (!p.trend) return <span className="trend">trend after 3 dives</span>;
+  const { verdict, earlyAvg, recentAvg } = p.trend;
+  if (verdict === "stable") return <span className="trend">stable</span>;
+  const tone = verdict === "improving" ? "good" : verdict === "worsening" ? "warning" : "";
+  const unit = UNIT[p.metric];
+  return (
+    <span className={`trend ${tone}`}>
+      {recentAvg > earlyAvg ? Icon.up : recentAvg < earlyAvg ? Icon.down : null}
+      {verdict} · {formatNumber(earlyAvg, 1, "")} → {formatNumber(recentAvg, 1, unit)}
+    </span>
+  );
+}
+
+function ProgressChart({ p }: { p: ProgressSeries }) {
   const x = p.points.map((pt) => pt.seq);
   const fit = p.fit;
   const fitAt = (seq: number) => (fit ? fit[0].value + ((fit[1].value - fit[0].value) * (seq - fit[0].seq)) / (fit[1].seq - fit[0].seq || 1) : null);
   const unit = UNIT[p.metric];
-  const verdict = p.trend ? `${p.trend.verdict} (${p.trend.changePct > 0 ? "+" : ""}${p.trend.changePct}%)` : "trend after 3 dives";
   return (
     <div className="card">
       <div className="chart-head">
         <h3>{p.label}</h3>
-        <span className="muted">
-          {verdict}
-          {p.better !== "neutral" ? ` · ${p.better} is better` : ""}
-          {p.metric === "maxAscentRateMMin" ? " · line: 10 m/min recommended limit" : ""}
-        </span>
+        <TrendNote p={p} />
       </div>
       <LineChart
         title={p.label}
@@ -49,33 +260,68 @@ function ProgressChart({ p }: { p: ProgressSeries }) {
           ...(fit ? [{ key: "trend", label: "Trend", color: "var(--series-muted)", values: x.map(fitAt), muted: true }] : []),
         ]}
         xTicks={x.filter((_, i) => i % Math.ceil(x.length / 8) === 0 || i === x.length - 1)}
-        refLines={p.metric === "maxAscentRateMMin" ? [{ y: 10, label: "10 limit" }] : []}
+        refLines={p.metric === "maxAscentRateMMin" ? [{ y: 10, label: "10 m/min limit" }] : []}
       />
+      <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
+        {p.better !== "neutral" ? `${p.better === "lower" ? "Lower" : "Higher"} is better.` : ""}
+      </p>
     </div>
   );
 }
 
-/** The trip under way or coming next, and how far its preparation is. */
-function NextTrip() {
-  const { data } = useLive<{ version: string; next: TripRow | null }>("/api/trips");
-  const trip = data?.next;
-  if (!trip) return null;
+function Progress({ data }: { data: Data }) {
+  const charted = data.progress.filter((p) => p.points.length >= 2);
+  const waiting = data.progress.filter((p) => p.points.length < 2);
+  // The trends of the charted metrics are on their charts; the rest (recurring issues…) stays a list.
+  const labels = charted.map((p) => `${p.label}:`);
+  const other = data.insights.filter((f) => !labels.some((l) => f.title.startsWith(l)));
   return (
-    <div className="notice">
-      <strong>{formatTripWhen(trip)}:</strong> <Link href={`/trips/${trip.id}`}>{trip.name}</Link>
-      {trip.destination ? `, ${trip.destination}` : ""} · {formatDateRange(trip.startDate, trip.endDate)} · {trip.prepared} of {trip.cards} dives prepared
-    </div>
+    <section className="stack" aria-labelledby="prog-h">
+      <div className="chart-head">
+        <h2 id="prog-h" style={{ margin: 0 }}>
+          Progress
+        </h2>
+        {waiting.length > 0 && (
+          <span className="muted">
+            {waiting
+              .map((p) =>
+                p.metric === "rmvLMin" && p.points.length === 0 ? `${p.label} shows up once tank sizes are filled in` : `${p.label} starts with the second dive`,
+              )
+              .join(" · ")}
+          </span>
+        )}
+      </div>
+      {other.length > 0 && (
+        <div className="card">
+          <Findings findings={other} />
+        </div>
+      )}
+      <div className="grid cols-2">
+        {charted.map((p) => (
+          <ProgressChart key={p.metric} p={p} />
+        ))}
+      </div>
+    </section>
   );
 }
 
 export default function Dashboard() {
-  const { data, error, loading } = useLive<Data>("/api/dives");
+  const { data, error, loading, reload } = useLive<Data>("/api/dives");
   if (error && !data) return <div className="error">Couldn&apos;t load the dive log: {error}</div>;
   if (!data) return <p className="muted">Loading the dive log…</p>;
+  const head = (
+    <div className="page-head">
+      <h1>Dashboard</h1>
+      <Link className="button primary" href="/import">
+        Import dives
+      </Link>
+    </div>
+  );
   if (!data.dives.length) {
     return (
       <div className="stack">
-        <h1>Dashboard</h1>
+        {head}
+        <UpcomingTrips />
         <div className="notice">
           Your dive log is empty. <Link href="/import">Import your dives</Link> from a UDDF export, migrate the Python version&apos;s log, or
           load the sample dives.
@@ -84,67 +330,43 @@ export default function Dashboard() {
       </div>
     );
   }
-  const { totals } = data;
-  const latest = data.dives[data.dives.length - 1];
+  const { totals, dives } = data;
+  const latest = dives[dives.length - 1];
+  const deepest = dives.reduce((a, b) => (b.maxDepthM > a.maxDepthM ? b : a));
   return (
-    <div className={`stack ${loading ? "loading" : ""}`}>
-      <h1>Dashboard</h1>
-      <NextTrip />
-      <div className="tiles">
+    <div className={`stack ${loading ? "loading" : ""}`} style={{ gap: "1.25rem" }}>
+      {head}
+      <UpcomingTrips />
+      <section className="tiles" aria-label="Summary">
         <div className="card tile">
-          <div className="label">Dives logged</div>
+          <div className="label">Dives</div>
           <div className="value">{totals.dives}</div>
+          <div className="note">{dives[0].start ? `since ${formatDate(dives[0].start, false)}` : ""}</div>
         </div>
         <div className="card tile">
           <div className="label">Time underwater</div>
           <div className="value">{formatMinutes(totals.minutes)}</div>
+          <div className="note">{formatMinutes(totals.minutes / totals.dives)} on average</div>
         </div>
         <div className="card tile">
-          <div className="label">Deepest dive</div>
+          <div className="label">Deepest</div>
           <div className="value">{formatNumber(totals.deepestM, 1, "m")}</div>
-        </div>
-        <div className="card tile">
-          <div className="label">Latest dive score</div>
-          <div className="value">{totals.latestScore ?? "–"}</div>
           <div className="note">
-            <Link href={`/dives/${latest.id}`}>Dive #{latest.seq}</Link>
+            <Link href={`/dives/${deepest.id}`}>dive #{deepest.seq}</Link>
           </div>
         </div>
-      </div>
-
-      {data.todos.length > 0 && (
-        <div className="card">
-          <h2>To sort out</h2>
-          <ul>
-            {data.todos.map((t) => (
-              <li key={t.kind}>
-                {t.text.split(". ")[0]}:{" "}
-                {t.seqs.slice(0, 8).map((seq, i) => (
-                  <span key={seq}>
-                    {i ? ", " : ""}
-                    <Link href={`/dives/${t.dives[i]}`}>#{seq}</Link>
-                  </span>
-                ))}
-                {t.seqs.length > 8 ? ` and ${t.seqs.length - 8} more` : ""}
-              </li>
-            ))}
-          </ul>
-          <p className="muted">
-            Fill them in on each dive&apos;s page, or ask your companion in Claude Code: <code>/mcp__divedeck__sort-out</code>.
-          </p>
+        <div className="card tile">
+          <div className="label">Latest score</div>
+          <div className="value">{totals.latestScore ?? "–"}</div>
+          <div className="note">
+            <Link href={`/dives/${latest.id}`}>dive #{latest.seq} ›</Link>
+          </div>
         </div>
-      )}
+      </section>
 
-      <div className="card">
-        <h2>Progress</h2>
-        <Findings findings={data.insights} />
-      </div>
+      {data.todos.length > 0 && <SortOut todos={data.todos} onSaved={reload} />}
 
-      <div className="grid cols-2">
-        {data.progress.map((p) => (
-          <ProgressChart key={p.metric} p={p} />
-        ))}
-      </div>
+      <Progress data={data} />
     </div>
   );
 }

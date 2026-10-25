@@ -35,6 +35,12 @@ describe("tripRow", () => {
     expect(tripRow(plan({ startDate: "2026-10-20" }), TODAY)).toMatchObject({ when: "past", endDate: "2026-10-20" });
     expect(tripRow(plan({ startDate: "2026-10-20", endDate: "2026-10-10" }), TODAY).endDate).toBe("2026-10-20");
     expect(tripRow(plan({}), TODAY)).toMatchObject({ when: "undated", startDate: null, daysUntil: null, cards: 0, prepared: 0, loggedDives: 0 });
+    const twoDays = [
+      { itemId: "a", title: "A", date: "2026-11-02" },
+      { itemId: "b", title: "B", date: "2026-11-02" },
+      { itemId: "c", title: "C", date: "2026-11-03" },
+    ];
+    expect(tripRow(plan({ dives: twoDays }), TODAY).diveDays).toBe(2);
   });
 });
 

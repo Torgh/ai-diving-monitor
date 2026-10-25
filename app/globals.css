@@ -22,6 +22,10 @@
   --serious: #ec835a;
   --critical: #d03b3b;
   --info: #2a78d6;
+  --warning-text: #7a4a00;
+  --warning-wash: #fef3c7;
+  --good-wash: #dcfce7;
+  --good-line: #86efac;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,6 +46,10 @@
     --series-2: #d95926;
     --good-text: #0ca30c;
     --info: #3987e5;
+    --warning-text: #fab219;
+    --warning-wash: rgba(250, 178, 25, 0.12);
+    --good-wash: rgba(12, 163, 12, 0.14);
+    --good-line: rgba(12, 163, 12, 0.5);
   }
 }
 
@@ -62,6 +70,10 @@
   --series-2: #d95926;
   --good-text: #0ca30c;
   --info: #3987e5;
+  --warning-text: #fab219;
+  --warning-wash: rgba(250, 178, 25, 0.12);
+  --good-wash: rgba(12, 163, 12, 0.14);
+  --good-line: rgba(12, 163, 12, 0.5);
 }
 
 * {
@@ -560,4 +572,150 @@ details.table-view summary {
 details.table-view .table-scroll {
   max-height: 260px;
   overflow: auto;
+}
+
+/* Badges: a status always comes with an icon and words. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.1rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--axis);
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.badge.warning {
+  color: var(--warning-text);
+  background: var(--warning-wash);
+  border-color: var(--warning);
+}
+
+.badge.good {
+  color: var(--good-text);
+  background: var(--good-wash);
+  border-color: var(--good-line);
+}
+
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+.trend.warning {
+  color: var(--warning-text);
+}
+
+.trend.good {
+  color: var(--good-text);
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+/* Dashboard */
+.trip-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+}
+
+a.trip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+a.trip-card:hover {
+  border-color: var(--accent);
+}
+
+.trip-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--grid);
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.tile .value {
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--grid);
+}
+
+.todo-row:last-of-type {
+  border-bottom: 0;
+}
+
+.todo-row .what {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.todo-row .why {
+  font-size: 0.9rem;
+  color: var(--fg-2);
+}
+
+.todo-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--fg-2);
+}
+
+.todo-row input {
+  width: 7rem;
+  min-height: 44px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--axis);
+  border-radius: 8px;
+  background: var(--raised);
 }
