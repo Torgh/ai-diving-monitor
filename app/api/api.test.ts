@@ -7,7 +7,11 @@ import { GET as getDives } from "./dives/route";
 import { POST as importFiles } from "./import/route";
 import { POST as importSamples } from "./import/samples/route";
 import { GET as migrateStatus, POST as migrate } from "./migrate/route";
+import { POST as linkDive } from "./trips/[id]/dives/route";
+import { DELETE as deleteTrip, GET as getTrip } from "./trips/[id]/route";
+import { GET as getTrips } from "./trips/route";
 import { GET as getVersion } from "./version/route";
+import { TripStore } from "../../lib/server/tripStore";
 import { restoreEnv } from "../../test-env";
 
 /** The route handlers, called as Next.js calls them, against a temporary data folder. */
@@ -92,6 +96,46 @@ describe("API", () => {
     const [, status] = await read(await migrateStatus(req("/api/migrate"), {}));
     expect(status).toEqual({ database: path.join(home, "no-such.db"), available: false });
     expect((await migrate(json("/api/migrate", "POST", {}), {})).status).toBe(404);
+  });
+
+  it("shows the saved trips, links logged dives to their cards and forgets a trip", async () => {
+    expect(await read(await getTrips(req("/api/trips"), {}))).toEqual([200, expect.objectContaining({ trips: [], next: null })]);
+    await importSamples(json("/api/import/samples", "POST", {}), {});
+    const [, log] = await read(await getDives(req("/api/dives"), {}));
+    const dive = log.dives[5]; // 2026-07-11 in Dahab
+    const date = dive.start.slice(0, 10);
+    await new TripStore().save({
+      id: "dahab",
+      name: "Dahab",
+      dives: [
+        { itemId: "c1", title: "Canyon", date, maxDepthM: 30, gas: "EAN32", prepMarkdown: "## Ready" },
+        { itemId: "c2", title: "Blue Hole", date },
+      ],
+    });
+
+    const [, list] = await read(await getTrips(req("/api/trips"), {}));
+    expect(list.trips).toEqual([expect.objectContaining({ id: "dahab", when: "past", cards: 2, prepared: 1 })]);
+    const [status, trip] = await read(await getTrip(req("/api/trips/dahab"), ctx("dahab")));
+    expect(status).toBe(200);
+    expect(trip.version).toBe(list.version);
+    expect(trip.dives[0]).toMatchObject({ itemId: "c1", prep: { markdown: "## Ready" }, facts: { experience: { dives: 5 } } });
+    expect(trip.dives[0].loggedThatDay.map((d: { id: string }) => d.id)).toEqual([dive.id]);
+
+    const link = (body: unknown) => linkDive(json("/api/trips/dahab/dives", "POST", body), ctx("dahab"));
+    expect(await read(await link({ itemId: "c1", diveId: dive.id, linked: true }))).toEqual([200, { loggedDiveIds: [dive.id] }]);
+    // A dive belongs to one card: linking it to another card moves it.
+    expect(await read(await link({ itemId: "c2", diveId: dive.id, linked: true }))).toEqual([200, { loggedDiveIds: [dive.id] }]);
+    const [, moved] = await read(await getTrip(req("/api/trips/dahab"), ctx("dahab")));
+    expect(moved.dives.map((d: { logged: unknown[] }) => d.logged.length)).toEqual([0, 1]);
+    expect(await read(await link({ itemId: "c2", diveId: dive.id, linked: false }))).toEqual([200, { loggedDiveIds: [] }]);
+    expect((await link({ itemId: "c9", diveId: dive.id, linked: true })).status).toBe(404);
+    expect((await link({ itemId: "c1", diveId: "nope", linked: true })).status).toBe(404);
+    expect((await linkDive(json("/api/trips/x/dives", "POST", { itemId: "c1", diveId: dive.id, linked: true }), ctx("x"))).status).toBe(404);
+
+    expect((await getTrip(req("/api/trips/nope"), ctx("nope"))).status).toBe(404);
+    expect((await deleteTrip(req("/api/trips/dahab", { method: "DELETE" }), ctx("dahab"))).status).toBe(415);
+    expect(await read(await deleteTrip(json("/api/trips/dahab", "DELETE", {}), ctx("dahab")))).toEqual([200, { deleted: true }]);
+    expect((await deleteTrip(json("/api/trips/dahab", "DELETE", {}), ctx("dahab"))).status).toBe(404);
   });
 
   it("only answers requests addressed to localhost", async () => {

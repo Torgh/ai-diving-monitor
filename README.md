@@ -45,7 +45,9 @@ copied over.
   same agent, the coach reads a trip's dive cards and prepares you for each one from your own log:
   comparable dives (the same site first, then the closest depth), time since your last dive, your gas
   consumption at the planned depth, ppO2, MOD and the richest nitrox for it, and the problems that
-  keep coming back. After the trip, the logged dives are linked to their cards.
+  keep coming back. The *Trips* page shows each dive card with the preparation and the numbers behind
+  it, and the dashboard the trip coming next. After the trip, link each logged dive to its card there
+  (or let the coach do it).
 - **Live dashboard.** Dives logged, time underwater, the deepest dive, the latest score, progress
   insights such as "Gas consumption: improving, 23.5 → 16.2 L/min", and charts of RMV, peak ascent
   rate, safety stop time and score across your dives, each with its trend line. Every page updates
@@ -135,6 +137,7 @@ coach reads the trip with TripDeck's `get_trip` and stores its dive cards and th
 one `*.trip.json` file per trip next to your dives; TripDeck stays where the trip is planned, so
 running it again after a change in TripDeck updates the cards and keeps the preparation of the ones
 that stayed. The app never reads TripDeck's files itself, so it works wherever TripDeck keeps them.
+*Forget this trip* on its page removes it here only; the trip stays in TripDeck.
 
 ### 2. Coach in the app with an API key (optional)
 
@@ -227,6 +230,7 @@ lib/
   coach.ts       the coach's instructions and tool answers (snake_case JSON, as the Python version answered)
   coachTools.ts  the in-app coach's tools (the MCP server's read-only tools), with argument checks
   views.ts       what the pages show: the log, its totals, trends and to-do list; one dive and its profile
+  tripViews.ts   the Trips pages: which trip is next, and each dive card with its preparation and logged dives
   providers.ts   how the coach runs: Claude Code, Codex, or a Claude or ChatGPT API key
   units.ts, py.ts, sha256.ts   SI units; Python's rounding and float printing; synchronous SHA-256
   server/
@@ -243,7 +247,7 @@ lib/
     migrate.ts   one-time copy of the Python version's SQLite log
     http.ts, version.ts, paths.ts   API guards; the tag the browser polls; the data folder
 mcp/server.ts    MCP server (stdio, run by Bun)
-app/             web app (Next.js): dashboard, dive log, dive details, import, coach, settings; api/
+app/             web app (Next.js): dashboard, dive log, dive details, trips, import, coach, settings; api/
 components/      LineChart (SVG, shared crosshair, keyboard, table view), profile charts, forms
 ```
 
@@ -328,7 +332,7 @@ rewrite in TypeScript, one pull request per stage:
 6. **Prepare for trips**, in three pull requests:
    - 6a. The coach prepares you for each dive card of a TripDeck trip from your own history, stores
      the trip with its preparation, and links your logged dives to the cards after the trip. ✅
-   - 6b. A *Trips* page in the app with the preparation of each dive.
+   - 6b. A *Trips* page in the app with the preparation of each dive, and the next trip on the dashboard. ✅
    - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app.
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 

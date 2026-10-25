@@ -152,6 +152,11 @@ function daysBetween(from: string, to: string): number | null {
   return Number.isNaN(a) || Number.isNaN(b) ? null : Math.round((b - a) / DAY_MS);
 }
 
+/** The note on the problems that keep coming back (the same for every dive of a trip). */
+export function recurringNote(recurring: DivePrep["recurringIssues"]): string {
+  return `Keeps coming back: ${recurring.map((r) => `${r.title} (${r.dives} of the last ${r.of} dives)`).join("; ")}.`;
+}
+
 export function prepareDive(records: DiveRecord[], plan: PlannedDive, today = new Date()): DivePrep {
   const on = isDate(plan.date) ? plan.date : today.toISOString().slice(0, 10);
   // What the diver had done before the day of the dive, also when the plan is read after the trip.
@@ -233,14 +238,14 @@ export function prepareDive(records: DiveRecord[], plan: PlannedDive, today = ne
   if (daysSince !== null && daysSince > REFRESHER_DAYS)
     notes.push(`${daysSince} days since the last logged dive: worth a refresher or an easy check-out dive first.`);
   if (gas && gas.o2 === null)
-    notes.push(`The ${gas.family} mix isn't known yet: ask which mix, to check ppO2 and MOD${bestNitrox !== null ? ` (EAN${bestNitrox} is the richest nitrox for ${depth} m)` : ""}.`);
+    notes.push(`The ${gas.family} mix isn't known yet: ask which mix, to check ppO2 and MOD${gas.family === "nitrox" && bestNitrox !== null ? ` (EAN${bestNitrox} is the richest nitrox for ${depth} m)` : ""}.`);
   if (gas && log.length && withGas === 0) notes.push(`No logged dives on ${gas.family} yet.`);
   if (gas?.family === "air" && depth !== null && depth > NARCOSIS_DEPTH_M)
     notes.push(`Air at ${depth} m: expect narcosis (END ${pyRound(depth, 1)} m).`);
   if (end !== null && end > NARCOSIS_DEPTH_M) notes.push(`END ${end} m at ${depth} m: narcosis is worth planning for.`);
   if (log.length && rmv === null) notes.push("No gas consumption in the log: fill in tank volumes (update_dive) to plan gas from the diver's RMV.");
   if ((plan.dives ?? 1) >= 2) notes.push(`${plan.dives} dives in this outing: plan the surface interval and the second dive shallower than the first.`);
-  if (recurring.length) notes.push(`Keeps coming back: ${recurring.map((r) => `${r.title} (${r.dives} of the last ${r.of} dives)`).join("; ")}.`);
+  if (recurring.length) notes.push(recurringNote(recurring));
   if (plan.site && log.length && !atSite.length) notes.push(`First dive at ${plan.site} in the log.`);
 
   return {

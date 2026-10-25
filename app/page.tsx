@@ -4,7 +4,8 @@ import Link from "next/link";
 import { LineChart } from "@/components/LineChart";
 import { Findings } from "@/components/Findings";
 import { useLive } from "@/components/useLive";
-import { formatMinutes, formatNumber } from "@/lib/format";
+import { formatDateRange, formatMinutes, formatNumber, formatTripWhen } from "@/lib/format";
+import type { TripRow } from "@/lib/tripViews";
 import type { LogView, ProgressSeries } from "@/lib/views";
 
 type Data = LogView & { version: string; dataFolder: string };
@@ -54,6 +55,19 @@ function ProgressChart({ p }: { p: ProgressSeries }) {
   );
 }
 
+/** The trip under way or coming next, and how far its preparation is. */
+function NextTrip() {
+  const { data } = useLive<{ version: string; next: TripRow | null }>("/api/trips");
+  const trip = data?.next;
+  if (!trip) return null;
+  return (
+    <div className="notice">
+      <strong>{formatTripWhen(trip)}:</strong> <Link href={`/trips/${trip.id}`}>{trip.name}</Link>
+      {trip.destination ? `, ${trip.destination}` : ""} · {formatDateRange(trip.startDate, trip.endDate)} · {trip.prepared} of {trip.cards} dives prepared
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { data, error, loading } = useLive<Data>("/api/dives");
   if (error && !data) return <div className="error">Couldn&apos;t load the dive log: {error}</div>;
@@ -75,6 +89,7 @@ export default function Dashboard() {
   return (
     <div className={`stack ${loading ? "loading" : ""}`}>
       <h1>Dashboard</h1>
+      <NextTrip />
       <div className="tiles">
         <div className="card tile">
           <div className="label">Dives logged</div>
