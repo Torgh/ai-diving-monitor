@@ -47,8 +47,10 @@ copied over.
   same agent, the companion reads a trip's dive cards and prepares you for each one from your own log:
   comparable dives (the same site first, then the closest depth), time since your last dive, your gas
   consumption at the planned depth, ppO2, MOD and the richest nitrox for it, and the problems that
-  keep coming back. The *Trips* page shows each dive card with the preparation and the numbers behind
-  it, and the dashboard the trip coming next. After the trip, link each logged dive to its card there
+  keep coming back. A trip's page starts with a few checks before you go (time since your last logged
+  dive, what keeps coming back, your gas plan, how many cards are prepared), then the dive days by
+  date, with the days without diving between them; each card has its status, a one-line note and the
+  full preparation with the numbers behind it. The dashboard shows the trips coming next. After the trip, link each logged dive to its card there
   (or let the companion do it).
 - **Live dashboard.** Your coming trips with how far their preparation is, dives logged, time
   underwater, the deepest dive and the latest score, and what is still to sort out, with the tank size
@@ -202,6 +204,7 @@ Everything is set in **Settings**; environment variables still work, and a saved
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | – | API keys for the in-app companion |
 | `DIVEDECK_PROVIDER`, `DIVEDECK_MODEL` | Claude, `claude-opus-5-5` | How the companion runs, when nothing is chosen in Settings |
 | `DIVEDECK_EFFORT` | `high` | Claude's effort for the in-app companion (`low` … `max`) |
+| `NEXT_PUBLIC_TRIPDECK_URL` | `http://localhost:3000` | TripDeck's web app, for *Open in TripDeck* on a trip's page (read at build time) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | – | The Google OAuth client |
 
 When you set any of the `DIVEDECK_*` folders, give the MCP server the same values
@@ -348,7 +351,7 @@ rewrite in TypeScript, one pull request per stage:
    - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app. ✅
    - Then the new design, in four pull requests: (a) the *buddy bubbles* logo, a menu with icons
      that shows where the log is stored, and the AI as your companion ✅; (b) the
-     dashboard ✅; (c) the dive page ✅ (this one); (d) the trip page.
+     dashboard ✅; (c) the dive page ✅; (d) the trip page ✅ (this one).
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis
