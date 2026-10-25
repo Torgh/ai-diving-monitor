@@ -56,7 +56,7 @@ describe("choosing the storage", () => {
     const oneDrive = path.join(home, "OneDrive");
     fs.mkdirSync(oneDrive);
     process.env.OneDrive = oneDrive;
-    expect(oneDriveFolder()).toBe(path.join(oneDrive, "AI Diving Monitor"));
+    expect(oneDriveFolder()).toBe(path.join(oneDrive, "AiDive"));
     expect(activeStorage()).toBe("onedrive");
     await updateSettings({ oneDriveFolder: path.join(home, "elsewhere") });
     expect(activeStorage()).toBe("local"); // a configured folder that doesn't exist
@@ -75,7 +75,7 @@ describe("choosing the storage", () => {
     const there = new DiveStore();
     expect(there.backend.kind).toBe("onedrive");
     expect((await there.list()).map((r) => r.id)).toEqual([id]);
-    expect(fs.readdirSync(path.join(oneDrive, "AI Diving Monitor", "originals"))).toHaveLength(1);
+    expect(fs.readdirSync(path.join(oneDrive, "AiDive", "originals"))).toHaveLength(1);
 
     await there.updateDetails(id, { site: "Koparki" });
     expect(await switchStorage("local")).toBe(1); // the OneDrive copy is newer
@@ -168,17 +168,17 @@ function connectGoogle() {
 }
 
 describe("Google Drive", () => {
-  it("keeps the log in My Drive › AI Diving Monitor", async () => {
+  it("keeps the log in My Drive › AiDive", async () => {
     const drive = fakeDrive();
     vi.stubGlobal("fetch", drive.fetch);
     connectGoogle();
     const store = new DiveStore(new GoogleDriveBackend());
-    expect(store.backend.location).toBe("My Drive › AI Diving Monitor");
+    expect(store.backend.location).toBe("My Drive › AiDive");
 
     const [id] = (await store.importFile("sw.uddf", SHEARWATER)).added;
     const names = [...drive.files.values()].map((f) => f.name).sort();
     expect(names).toHaveLength(5);
-    expect(names).toEqual(expect.arrayContaining(["AI Diving Monitor", "dives", "originals", expect.stringMatching(/\.uddf$/), expect.stringMatching(/\.dive\.json$/)]));
+    expect(names).toEqual(expect.arrayContaining(["AiDive", "dives", "originals", expect.stringMatching(/\.uddf$/), expect.stringMatching(/\.dive\.json$/)]));
     const before = await logVersion(store.backend);
 
     forgetDriveCache();
@@ -313,7 +313,7 @@ describe("storage API", () => {
     const oneDrive = path.join(home, "MyOneDrive");
     fs.mkdirSync(oneDrive);
     const saved = await (await storagePost(req("POST", { oneDriveFolder: oneDrive }), {})).json();
-    expect(saved.onedrive.folder).toBe(path.join(oneDrive, "AI Diving Monitor"));
+    expect(saved.onedrive.folder).toBe(path.join(oneDrive, "AiDive"));
     await new DiveStore().importFile("sw.uddf", SHEARWATER);
     const switched = await (await storagePost(req("POST", { storage: "onedrive" }), {})).json();
     expect(switched).toMatchObject({ active: "onedrive", copied: 1 });

@@ -103,7 +103,7 @@ export function StorageSettings() {
           <span>
             Google Drive{" "}
             <span className="muted">
-              · {view.google.account !== null ? `My Drive › AI Diving Monitor${view.google.account ? `, ${view.google.account}` : ""}` : "not connected"}
+              · {view.google.account !== null ? `My Drive › AiDive${view.google.account ? `, ${view.google.account}` : ""}` : "not connected"}
             </span>
           </span>
         </label>
