@@ -6,26 +6,52 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { DetailsForm } from "@/components/DetailsForm";
-import { Findings } from "@/components/Findings";
+import { FindingBadge, Findings } from "@/components/Findings";
 import { ProfileCharts } from "@/components/ProfileCharts";
 import { api, useLive } from "@/components/useLive";
 import { useSettings } from "@/components/useSettings";
-import type { DiveMetrics } from "@/lib/analysis";
+import { RESERVE_WARN_BAR } from "@/lib/analysis";
 import { formatDate, formatNumber, formatSeconds } from "@/lib/format";
 import type { DiveView } from "@/lib/views";
 
 type Data = DiveView & { version: string };
 
-const TILES: { key: keyof DiveMetrics; label: string; format: (v: number) => string }[] = [
-  { key: "maxDepthM", label: "Max depth", format: (v) => formatNumber(v, 1, "m") },
-  { key: "durationMin", label: "Duration", format: (v) => formatNumber(v, 0, "min") },
-  { key: "rmvLMin", label: "Gas consumption (RMV)", format: (v) => formatNumber(v, 1, "L/min") },
-  { key: "maxAscentRateMMin", label: "Peak ascent rate", format: (v) => formatNumber(v, 1, "m/min") },
-  { key: "safetyStopS", label: "Time at 3–6 m on the way up", format: formatSeconds },
-  { key: "endPressureBar", label: "Gas left", format: (v) => formatNumber(v, 0, "bar") },
-  { key: "cnsPercent", label: "CNS", format: (v) => formatNumber(v, 1, "%") },
-  { key: "score", label: "Dive score", format: (v) => formatNumber(v, 0) },
-];
+/** The score on a ring, out of 100. */
+function ScoreRing({ score }: { score: number }) {
+  const r = 50;
+  const length = 2 * Math.PI * r;
+  return (
+    <svg className="ring" viewBox="0 0 120 120" width="112" height="112" role="img" aria-label={`Dive score ${score} out of 100`}>
+      <circle cx="60" cy="60" r={r} fill="none" stroke="var(--grid)" strokeWidth="12" />
+      <circle
+        cx="60"
+        cy="60"
+        r={r}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="12"
+        strokeLinecap="round"
+        strokeDasharray={`${(length * Math.max(0, Math.min(score, 100))) / 100} ${length}`}
+        transform="rotate(-90 60 60)"
+      />
+      <text x="60" y="66" textAnchor="middle" fontSize="30" fontWeight="700">
+        {score}
+      </text>
+      <text className="of" x="60" y="86" textAnchor="middle" fontSize="11">
+        of 100
+      </text>
+    </svg>
+  );
+}
+
+/** One sentence from the findings: how many things need attention. */
+function headline(findings: DiveView["findings"]) {
+  const count = (severity: string) => findings.filter((f) => f.severity === severity).length;
+  const [critical, warning] = [count("critical"), count("warning")];
+  if (critical) return `${critical} serious problem${critical === 1 ? "" : "s"} to look at${warning ? `, and ${warning} more to watch` : ""}.`;
+  if (warning) return `${warning} thing${warning === 1 ? "" : "s"} to watch.`;
+  return "A clean dive: nothing to watch.";
+}
 
 /** The companion's debrief, and a way to ask for one: here with an API key, or in Claude Code / Codex. */
 function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
@@ -48,8 +74,7 @@ function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
   }
 
   return (
-    <div className="card review">
-      <h2>Debrief</h2>
+    <div className="review">
       {data.review ? (
         <>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.review.markdown}</ReactMarkdown>
@@ -63,9 +88,7 @@ function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
           <button className="button" disabled={busy} onClick={ask}>
             {busy ? "Your companion is debriefing the dive…" : data.review ? "Get a new debrief" : "Get a debrief"}
           </button>
-          <span className="muted">
-            {provider.name}, billed per use
-          </span>
+          <span className="muted">{provider.name}, billed per use</span>
         </div>
       ) : provider ? (
         <p className="muted">
@@ -77,76 +100,191 @@ function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
   );
 }
 
+/** Debrief and findings in one panel, as two tabs. */
+function DebriefAndFindings({ data, onSaved }: { data: Data; onSaved: () => void }) {
+  const [tab, setTab] = useState<"debrief" | "findings">("debrief");
+  const tabs = [
+    { id: "debrief", label: "Debrief" },
+    { id: "findings", label: `Findings (${data.findings.length})` },
+  ] as const;
+  return (
+    <section className="card" aria-label="Debrief and findings">
+      <div className="tabs" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            id={`tab-${t.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {tab === "debrief" ? <Debrief data={data} onSaved={onSaved} /> : <Findings findings={data.findings} />}
+      </div>
+    </section>
+  );
+}
+
+function MetricCards({ data }: { data: Data }) {
+  const { metrics: m, averages: avg } = data;
+  const missingVolume = m.rmvLMin === null && data.tanks.some((t) => t.startBar && t.endBar !== null && !t.volumeL);
+  const lowReserve = m.endPressureBar !== null && m.endPressureBar < RESERVE_WARN_BAR;
+  const tank = data.tanks.find((t) => t.startBar !== null);
+  const average = [
+    avg.maxDepthM !== undefined ? formatNumber(avg.maxDepthM, 1, "m") : null,
+    avg.durationMin !== undefined ? formatNumber(avg.durationMin, 0, "min") : null,
+    avg.maxAscentRateMMin !== undefined ? formatNumber(avg.maxAscentRateMMin, 1, "m/min") : null,
+  ].filter(Boolean);
+  const safetyFoot = [
+    m.ceilingViolationS > 0 ? `deco ceiling broken for ${formatSeconds(m.ceilingViolationS)}` : null,
+    m.alarms.length ? `alarms: ${m.alarms.join(", ")}` : null,
+  ].filter(Boolean);
+  return (
+    <section className="metric-cards" aria-label="Metrics">
+      <div className="card metric-card">
+        <h3>Profile</h3>
+        <div className="kv">
+          <span>Max depth</span>
+          <strong>{formatNumber(m.maxDepthM, 1, "m")}</strong>
+        </div>
+        <div className="kv">
+          <span>Duration</span>
+          <strong>{formatNumber(m.durationMin, 0, "min")}</strong>
+        </div>
+        <div className="kv">
+          <span>Peak ascent</span>
+          <strong>{formatNumber(m.maxAscentRateMMin, 1, "m/min")}</strong>
+        </div>
+        {average.length > 0 && <span className="foot">Your average: {average.join(" · ")}</span>}
+      </div>
+
+      <div className={`card metric-card ${missingVolume || lowReserve ? "warn" : ""}`}>
+        <h3>Gas</h3>
+        <div className="kv">
+          <span>Gas left</span>
+          <strong className={lowReserve ? "warn" : ""}>{formatNumber(m.endPressureBar, 0, "bar")}</strong>
+        </div>
+        <div className="kv">
+          <span>Consumption (RMV)</span>
+          {missingVolume ? (
+            <a href="#details" style={{ fontWeight: 600 }}>
+              add tank size
+            </a>
+          ) : (
+            <strong>{formatNumber(m.rmvLMin, 1, "L/min")}</strong>
+          )}
+        </div>
+        <div className="kv">
+          <span>CNS</span>
+          <strong>{formatNumber(m.cnsPercent, 1, "%")}</strong>
+        </div>
+        <span className="foot">
+          {[
+            tank ? `${formatNumber(tank.startBar, 0)} → ${formatNumber(tank.endBar, 0)} bar` : "no tank pressure",
+            m.maxPpo2 !== null ? `max ppO2 ${formatNumber(m.maxPpo2, 2)}` : null,
+            m.gases.join(", ") || "gas unknown",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </div>
+
+      <div className="card metric-card">
+        <h3>Safety</h3>
+        <div className="kv">
+          <span>Time at 3–6 m</span>
+          <strong>{formatSeconds(m.safetyStopS)}</strong>
+        </div>
+        <div className="kv">
+          <span>Lowest NDL</span>
+          <strong>{m.minNdlMin !== null ? formatNumber(m.minNdlMin, 0, "min") : "–"}</strong>
+        </div>
+        <div className="kv">
+          <span>Decompression</span>
+          <strong>{m.hadDeco ? "yes" : "none"}</strong>
+        </div>
+        <span className="foot">{safetyFoot.length ? safetyFoot.join(" · ") : "no ceiling breaches or alarms"}</span>
+      </div>
+    </section>
+  );
+}
+
 export default function DivePage() {
   const { id } = useParams<{ id: string }>();
   const { data, error, loading, reload } = useLive<Data>(`/api/dives/${id}`);
   if (error && !data) return <div className="error">{error}</div>;
   if (!data) return <p className="muted">Loading the dive…</p>;
   const { dive, metrics } = data;
-  const missing = metrics.rmvLMin === null && data.tanks.some((t) => t.startBar && t.endBar !== null && !t.volumeL);
+  const site = [dive.site, dive.location].filter(Boolean).join(", ");
+  const shown = data.findings;
 
   return (
-    <div className={`stack ${loading ? "loading" : ""}`}>
-      <div className="row" style={{ justifyContent: "space-between" }}>
+    <div className={`stack ${loading ? "loading" : ""}`} style={{ gap: "1.25rem" }}>
+      <div className="dive-head">
         <div>
-          <h1>
-            Dive #{data.seq} · {formatDate(dive.start)}
-          </h1>
+          <Link className="back" href="/dives">
+            ‹ Dive log
+          </Link>
+          <h1>Dive #{data.seq}</h1>
           <div className="secondary">
-            {[dive.site, dive.location].filter(Boolean).join(", ") || "Site not filled in"}
-            {data.details.buddy ? ` · with ${data.details.buddy}` : ""} · {metrics.gases.join(", ") || "gas unknown"}
-            {dive.computer ? ` · ${dive.computer}` : ""}
+            {[formatDate(dive.start), metrics.gases.join(", ") || "gas unknown", dive.computer, data.details.buddy ? `with ${data.details.buddy}` : null]
+              .filter(Boolean)
+              .join(" · ")}
+            {" · "}
+            {site || <a href="#details">add site</a>}
           </div>
         </div>
-        <div className="row">
-          {data.prevId && (
-            <Link className="button" href={`/dives/${data.prevId}`}>
-              ← Previous
+        <nav className="row" aria-label="Other dives">
+          {data.prevId ? (
+            <Link className="button" href={`/dives/${data.prevId}`} aria-label={`Previous dive, #${data.seq - 1}`}>
+              ‹ #{data.seq - 1}
             </Link>
+          ) : (
+            <span className="button" aria-disabled="true">
+              ‹
+            </span>
           )}
-          {data.nextId && (
-            <Link className="button" href={`/dives/${data.nextId}`}>
-              Next →
+          {data.nextId ? (
+            <Link className="button" href={`/dives/${data.nextId}`} aria-label={`Next dive, #${data.seq + 1}`}>
+              #{data.seq + 1} ›
             </Link>
+          ) : (
+            <span className="button" aria-disabled="true">
+              ›
+            </span>
           )}
-        </div>
+        </nav>
       </div>
 
-      {missing && (
-        <div className="notice">
-          The tank volume is missing, so gas consumption (RMV) can&apos;t be computed. Fill it in under <a href="#details">Details</a>.
+      <section className="card verdict" aria-label="Score">
+        <ScoreRing score={metrics.score} />
+        <div style={{ flex: "1 1 320px" }}>
+          <p className="headline">{headline(shown)}</p>
+          <div className="row" style={{ gap: "0.5rem" }}>
+            {shown.map((f, i) => (
+              <FindingBadge key={`${f.title}${i}`} finding={f} />
+            ))}
+          </div>
         </div>
-      )}
+      </section>
 
-      <div className="tiles">
-        {TILES.map((t) => {
-          const value = metrics[t.key];
-          const avg = data.averages[t.key];
-          return (
-            <div className="card tile" key={t.key}>
-              <div className="label">{t.label}</div>
-              <div className="value">{typeof value === "number" ? t.format(value) : "–"}</div>
-              {avg !== undefined && <div className="note">your average {t.format(avg)}</div>}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid cols-2">
-        <div className="card">
-          <h2>Findings</h2>
-          <Findings findings={data.findings} />
-        </div>
-        <Debrief data={data} onSaved={reload} />
-      </div>
-
-      <div className="card">
-        <h2>Profile</h2>
+      <section className="card" aria-labelledby="profile-h">
+        <h2 id="profile-h">Profile</h2>
         <ProfileCharts view={data} />
-      </div>
+      </section>
 
-      <div className="card" id="details">
-        <h2>Details</h2>
+      <MetricCards data={data} />
+
+      <DebriefAndFindings data={data} onSaved={reload} />
+
+      <section className="card" id="details" aria-labelledby="details-h">
+        <h2 id="details-h">Details</h2>
         <p className="muted">What the dive computer doesn&apos;t record. Your companion can fill these in too.</p>
         <DetailsForm key={JSON.stringify(data.details)} id={data.id} details={data.details} onSaved={reload} />
         {data.tanks.length > 0 && (
@@ -160,7 +298,7 @@ export default function DivePage() {
         <p className="muted">
           Imported from {data.source.fileName} on {formatDate(data.importedAt.slice(0, 19), false)} · id <code>{data.id}</code>
         </p>
-      </div>
+      </section>
     </div>
   );
 }

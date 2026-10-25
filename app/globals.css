@@ -719,3 +719,158 @@ a.trip-card:hover {
   border-radius: 8px;
   background: var(--raised);
 }
+
+.badge.critical {
+  color: var(--critical);
+  background: rgba(208, 59, 59, 0.08);
+  border-color: var(--critical);
+}
+
+.badge.info {
+  color: var(--info);
+}
+
+.findings .severity {
+  display: inline-flex;
+  padding-top: 0.2rem;
+}
+
+.findings .severity svg {
+  width: 18px;
+  height: 18px;
+}
+
+.severity.good {
+  color: var(--good-text);
+}
+.severity.warning {
+  color: var(--warning-text);
+}
+.severity.critical {
+  color: var(--critical);
+}
+.severity.info {
+  color: var(--info);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Dive page */
+.dive-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dive-head h1 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 1.75rem;
+}
+
+.back {
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.button[aria-disabled="true"] {
+  color: var(--muted);
+  border-color: var(--grid);
+  cursor: default;
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.verdict .headline {
+  margin: 0 0 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.ring text {
+  fill: var(--fg);
+}
+
+.ring .of {
+  fill: var(--fg-2);
+}
+
+.metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.metric-card.warn {
+  border-color: var(--warning);
+}
+
+.metric-card h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.kv strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.kv .warn {
+  color: var(--warning-text);
+}
+
+.metric-card .foot {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--grid);
+  margin: -0.4rem 0 1rem;
+}
+
+.tabs button {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-weight: 600;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
