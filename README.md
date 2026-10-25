@@ -51,8 +51,8 @@ directly through an MCP server, and the web app shows every change within second
 - With TripDeck's MCP server connected to the same agent, your companion reads a trip's dive cards and
   prepares each one from your log: comparable dives (the same site first, then the closest depth),
   time since your last dive, gas consumption at the planned depth, ppO2, MOD and the richest nitrox,
-  and the problems that keep coming back. It puts its verdict on each TripDeck card, with a link back
-  here.
+  and the problems that keep coming back. It gives each card a verdict, *ready* or *check* with one
+  line on what to sort out, shown here and on the TripDeck card, with a link back here.
 - After the trip, link each logged dive to its card (or let your companion do it).
 
 **The app**
@@ -66,9 +66,11 @@ directly through an MCP server, and the web app shows every change within second
   safety), the debrief and the findings, and the profile: depth with the computer's deco stops, gas
   switches and fast ascents, then tank pressure, ppO2 and temperature on the same time axis. Every
   chart has a crosshair, works with the arrow keys and has a table view.
-- **A trip:** a few checks before you go (time since your last logged dive, what keeps coming back,
-  your gas plan, how many cards are prepared), then the dive days by date with the days off between
-  them; each card with its status, a one-line note and the full preparation.
+- **A trip:** a few checks before you go: the break before it (from your last logged dive, or the
+  last dive of an earlier trip when that is later), what keeps coming back, your gas plan, the hours
+  from the last dive to the flight against DAN's guidance (12 h after a single dive, 18 h after
+  repetitive or multi-day diving), and the cards to check. Then the dive days by date with the days
+  off between them; each card with its verdict, a one-line note and the full preparation.
 - **Companion** chat (with an API key), **Import** with a summary of what came in, and **Settings**.
 - Updates live, light and dark mode, works at phone width; every command has a copy button.
 
@@ -143,18 +145,21 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `update_dive` | Fill in the site, location, buddy, notes, the main tank's size and gas (`air`, `EAN32`, `Tx 18/45`…) |
 | `save_dive_summary` | Store the debrief so the app shows it |
 | `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from the log: experience, gas plan, ppO2/MOD, recurring problems |
-| `save_trip_plan` | Store a TripDeck trip's dive cards with the preparation for each and the logged dives they turned into; answers each card's link for TripDeck |
-| `get_trip_plans` | The saved trips; one trip's cards with the dives logged on each card's day |
+| `save_trip_plan` | Store a TripDeck trip's dive cards with the preparation and verdict for each, the trip's flights, and the logged dives the cards turned into; answers each card's link for TripDeck |
+| `get_trip_plans` | The saved trips; one trip's cards, verdicts and flights, with the dives logged on each card's day |
 | `migrate_from_python` | Copy AI Diving Monitor's log, as `bun run migrate` does |
 
 Dives are referred to by their number in the log (`1` = the oldest) or by their id.
 
 **Trips.** Connect TripDeck's MCP server to the same Claude Code or Codex and run `trip-prep`. Your
 companion reads the trip with TripDeck's `get_trip` and stores its dive cards with the preparation
-here, one `*.trip.json` per trip next to your dives. Run it again after changing the trip in TripDeck:
-the cards follow, and the preparation of the ones that stayed is kept. It then saves its verdict on
-each TripDeck card (TripDeck's `save_dive_prep`), so the board shows *Prepared* or *Check prep* with
-a one-line summary and a link to the card here; a gas mix you told it goes on the card too. The app
+here with its verdict for each card and the trip's flights, one `*.trip.json` per trip next to your
+dives. Run it again after changing the trip in TripDeck: the cards and flights follow, and the
+preparation and verdict of the cards that stayed are kept. It saves the same verdict on each TripDeck
+card (TripDeck's `save_dive_prep`), so the board shows *Prepared* or *Check prep* with the one-line
+summary and a link to the card here; a gas mix you told it goes on the card too. The no-fly time is
+counted in local time from about the end of the last dive (90 minutes a dive from its start, 18:00
+when the card has no time) to the departure; when a time is missing, it is counted cautiously. The app
 never reads TripDeck's files, so it works wherever TripDeck keeps them. *Open in TripDeck* on a trip's
 page goes to `http://localhost:3000` (see `NEXT_PUBLIC_TRIPDECK_URL`); *Forget here* removes the trip
 from DiveDeck only.

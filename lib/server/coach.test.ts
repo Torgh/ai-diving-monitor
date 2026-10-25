@@ -174,7 +174,7 @@ describe("coach tools", () => {
     );
     const withTrips: ToolContext = { ...ctx, trips: async () => [plan] };
     expect(JSON.parse(await callCoachTool("get_trip_plans", {}, withTrips))).toEqual([
-      { trip_id: "pl", name: "Poland", destination: "Koparki", start_date: null, end_date: null, dive_cards: 2, prepared: 1, logged_dives: 1, updated_at: plan.updatedAt },
+      { trip_id: "pl", name: "Poland", destination: "Koparki", start_date: null, end_date: null, dive_cards: 2, prepared: 1, to_check: 0, logged_dives: 1, updated_at: plan.updatedAt },
     ]);
     const full = JSON.parse(await callCoachTool("get_trip_plans", { trip_id: "pl" }, withTrips));
     expect(full).toMatchObject({ trip_id: "pl", summary: "Stops." });

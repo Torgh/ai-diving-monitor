@@ -17,10 +17,10 @@ export function TripCard({ trip: t }: { trip: TripRow }) {
           </span>
         ) : (
           t.cards > 0 &&
-          (left > 0 ? (
+          (t.toCheck > 0 || left > 0 ? (
             <span className="badge warning">
               {Icon.alert}
-              {left} to prepare
+              {[t.toCheck ? `${t.toCheck} to check` : null, left ? `${left} to prepare` : null].filter(Boolean).join(" · ")}
             </span>
           ) : (
             <span className="badge good">{Icon.check}All prepared</span>

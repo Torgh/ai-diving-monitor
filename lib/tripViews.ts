@@ -5,7 +5,7 @@
 
 import { type DivePrep, prepareDive, recurringNote } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive } from "./record";
-import type { SavedText, TripDive, TripPlan } from "./trip";
+import type { SavedText, TripDive, TripFlight, TripPlan } from "./trip";
 
 /** Upcoming, under way (today is between its first and last day), past, or without dates. */
 export type TripWhen = "upcoming" | "now" | "past" | "undated";
@@ -23,6 +23,8 @@ export interface TripRow {
   /** Days with at least one dive card. */
   diveDays: number;
   prepared: number;
+  /** Cards whose verdict says something is still to sort out. */
+  toCheck: number;
   loggedDives: number;
   updatedAt: string;
 }
@@ -49,8 +51,28 @@ export interface TripCardView extends Omit<TripDive, "prep" | "loggedDiveIds"> {
   loggedThatDay: LoggedDiveLink[];
 }
 
+/** The rest before the trip: from the last logged dive, or the last dive of an earlier trip if that is later. */
+export interface BreakBefore {
+  days: number;
+  after: { kind: "dive"; seq: number; date: string } | { kind: "trip"; id: string; name: string; date: string };
+}
+
+/** Time from the end of the last dive to the next flight, against DAN's guidance. */
+export interface FlightCheck {
+  flight: TripFlight;
+  /** "YYYY-MM-DDTHH:MM", local time. */
+  lastDiveEnd: string;
+  hours: number;
+  /** 12 h after a single no-deco dive, 18 h after repetitive or multi-day diving. */
+  neededHours: 12 | 18;
+  /** The last dive or the flight has no time on its card, so a cautious one was assumed. */
+  timeAssumed: boolean;
+}
+
 export interface TripView extends TripRow {
   summary: SavedText | null;
+  breakBefore: BreakBefore | null;
+  flight: FlightCheck | null;
   /** Problems on at least 2 of the last 10 dives before the trip. */
   recurringIssues: DivePrep["recurringIssues"];
   dives: TripCardView[];
@@ -83,6 +105,7 @@ export function tripRow(plan: TripPlan, today: Date = new Date()): TripRow {
     cards: plan.dives.length,
     diveDays: new Set(plan.dives.map((d) => d.date ?? `day ${d.day ?? d.itemId}`)).size,
     prepared: plan.dives.filter((d) => d.prep).length,
+    toCheck: plan.dives.filter((d) => d.verdict?.status === "check").length,
     loggedDives: plan.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
     updatedAt: plan.updatedAt,
   };
@@ -100,6 +123,58 @@ export function tripsView(plans: TripPlan[], today: Date = new Date()): { trips:
       return (a.when === "past" ? -byDate : byDate) || a.name.localeCompare(b.name);
     });
   return { trips, next: trips.find((t) => t.when === "now" || t.when === "upcoming") ?? null };
+}
+
+const dated = (plan: TripPlan) => plan.dives.filter((d): d is TripDive & { date: string } => !!d.date);
+
+export function breakBefore(plan: TripPlan, plans: TripPlan[], records: DiveRecord[]): BreakBefore | null {
+  const first = dated(plan)[0]?.date ?? plan.startDate;
+  if (!first) return null;
+  const log = chronological(records);
+  let after: BreakBefore["after"] | null = null;
+  log.forEach((r, i) => {
+    const date = effectiveDive(r).start?.slice(0, 10);
+    if (date && date < first && (!after || date >= after.date)) after = { kind: "dive", seq: i + 1, date };
+  });
+  for (const other of plans) {
+    if (other.id === plan.id) continue;
+    const last = dated(other)
+      .map((d) => d.date)
+      .filter((d) => d < first)
+      .pop();
+    if (last && (!after || last > after.date)) after = { kind: "trip", id: other.id, name: other.name, date: last };
+  }
+  const found = after as BreakBefore["after"] | null;
+  return found ? { days: daysBetween(found.date, first), after: found } : null;
+}
+
+const MINUTE_MS = 60_000;
+const at = (date: string, time: string) => Date.parse(`${date}T${time}:00Z`);
+const stamp = (ms: number) => new Date(ms).toISOString().slice(0, 16);
+
+/**
+ * The first flight after the trip's last dive, and the hours between. A dive without a time counts as
+ * ending at 18:00, an outing as about 90 minutes per dive from its start, and a flight without a time
+ * as leaving at the first moment of its day (or right after the dive, on the same day): when unsure,
+ * the gap comes out shorter, never longer. Times are local, as on TripDeck's cards.
+ */
+export function flightAfterDiving(plan: TripPlan): FlightCheck | null {
+  const cards = dated(plan);
+  if (!cards.length || !plan.flights?.length) return null;
+  const last = cards.reduce((a, b) => (`${b.date}${b.startTime ?? "99"}` > `${a.date}${a.startTime ?? "99"}` ? b : a));
+  const end = last.startTime ? at(last.date, last.startTime) + (last.dives ?? 1) * 90 * MINUTE_MS : at(last.date, "18:00");
+  // Flights are sorted; the first one from the last dive's day on is the one that counts.
+  const flight = plan.flights.find((f) => f.date >= last.date);
+  if (!flight) return null;
+  const departs = flight.time ? at(flight.date, flight.time) : Math.max(at(flight.date, "00:00"), end);
+  const repetitive = cards.some((d) => (d.dives ?? 1) > 1) || new Set(cards.map((d) => d.date)).size > 1;
+  return {
+    flight,
+    lastDiveEnd: stamp(end),
+    hours: Math.round(((departs - end) / 3_600_000) * 10) / 10,
+    neededHours: repetitive ? 18 : 12,
+    timeAssumed: !last.startTime || !flight.time,
+  };
 }
 
 export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, today: Date = new Date()): TripView | null {
@@ -121,6 +196,8 @@ export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, t
   return {
     ...row,
     summary: plan.summary,
+    breakBefore: breakBefore(plan, plans, records),
+    flight: flightAfterDiving(plan),
     recurringIssues: prepareDive(records, { date: row.startDate ?? undefined }, today).recurringIssues,
     dives: plan.dives.map(({ prep, loggedDiveIds, ...card }) => {
       const facts = prepareDive(records, { site: card.site, maxDepthM: card.maxDepthM, gas: card.gas, dives: card.dives, date: card.date }, today);

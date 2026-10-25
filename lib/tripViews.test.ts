@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fingerprint } from "./dive";
 import { type DiveRecord, RECORD_FORMAT } from "./record";
 import { mergeTripPlan, type TripPlan, type TripPlanInput } from "./trip";
-import { tripRow, tripsView, tripView } from "./tripViews";
+import { breakBefore, flightAfterDiving, tripRow, tripsView, tripView } from "./tripViews";
 import { parseUddf } from "./uddf";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -104,5 +104,54 @@ describe("tripView after the log", () => {
     expect(view.recurringIssues.length).toBeGreaterThan(0);
     expect(facts.notes.some((n) => n.startsWith("Keeps coming back"))).toBe(true);
     expect(notes.some((n) => n.startsWith("Keeps coming back"))).toBe(false);
+  });
+});
+
+describe("before and after the trip", () => {
+  const thailand = plan({ id: "th", name: "Thailand", dives: [{ itemId: "t1", title: "T1", date: "2027-01-25" }, { itemId: "t2", title: "T2", date: "2027-01-28" }] });
+  const mexico = plan({
+    id: "mx",
+    name: "Mexico",
+    dives: [
+      { itemId: "m1", title: "The Pit", date: "2027-02-22", startTime: "08:00", dives: 2, verdict: "check", verdictSummary: "First cenotes." },
+      { itemId: "m2", title: "Cozumel", date: "2027-03-02", startTime: "08:00", dives: 2, verdict: "ready" },
+    ],
+    flights: [
+      { date: "2027-02-13", time: "10:00", from: "WAW", to: "CUN" },
+      { date: "2027-03-04", time: "13:35", from: "CUN", to: "MEX" },
+    ],
+  });
+
+  it("counts the break from the later of the last logged dive and an earlier trip's last dive", () => {
+    expect(breakBefore(mexico, [thailand, mexico], records)).toEqual({ days: 25, after: { kind: "trip", id: "th", name: "Thailand", date: "2027-01-28" } });
+    const alone = breakBefore(mexico, [mexico], records);
+    expect(alone?.after).toMatchObject({ kind: "dive", seq: records.length });
+    expect(breakBefore(plan({}), [], records)).toBeNull();
+    expect(breakBefore(mexico, [mexico], [])).toBeNull();
+  });
+
+  it("counts the hours from the last dive to the next flight, cautiously", () => {
+    // Two dives from 08:00 end about 11:00; the flight leaves two days later at 13:35.
+    expect(flightAfterDiving(mexico)).toEqual({
+      flight: { date: "2027-03-04", time: "13:35", from: "CUN", to: "MEX" },
+      lastDiveEnd: "2027-03-02T11:00",
+      hours: 50.6,
+      neededHours: 18,
+      timeAssumed: false,
+    });
+    // One dive without a time counts as ending at 18:00; a flight without a time leaves right after it.
+    const day = plan({ dives: [{ itemId: "a", title: "A", date: "2026-11-02" }], flights: [{ date: "2026-11-02", time: "20:00" }] });
+    expect(flightAfterDiving(day)).toMatchObject({ hours: 2, neededHours: 12, timeAssumed: true });
+    expect(flightAfterDiving({ ...day, flights: [{ date: "2026-11-02" }] })).toMatchObject({ hours: 0, timeAssumed: true });
+    expect(flightAfterDiving({ ...day, flights: [{ date: "2026-11-01", time: "08:00" }] })).toBeNull();
+    expect(flightAfterDiving(plan({}))).toBeNull();
+  });
+
+  it("puts both on the trip, and the cards to check on its row", () => {
+    const view = tripView([thailand, mexico], records, "mx", TODAY)!;
+    expect(view.toCheck).toBe(1);
+    expect(view.breakBefore?.days).toBe(25);
+    expect(view.flight?.hours).toBe(50.6);
+    expect(view.dives[0].verdict).toMatchObject({ status: "check", summary: "First cenotes." });
   });
 });

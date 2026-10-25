@@ -10,6 +10,7 @@ import { Icon } from "@/components/Icons";
 import { TripPrepHint } from "@/components/TripPrepHint";
 import { api, useLive } from "@/components/useLive";
 import { formatDate, formatDateRange, formatNumber, formatTripWhen } from "@/lib/format";
+import { REFRESHER_DAYS } from "@/lib/prep";
 import type { LoggedDiveLink, TripCardView, TripView } from "@/lib/tripViews";
 
 type Data = TripView & { version: string };
@@ -72,6 +73,25 @@ const DAY_MS = 86_400_000;
 const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
 const dayPart = (date: string, part: "month" | "weekday") => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { [part]: "short", timeZone: "UTC" });
 
+/** The card's verdict as on TripDeck (ready / check), else whether it is prepared at all. */
+function CardStatus({ card }: { card: TripCardView }) {
+  if (card.verdict?.status === "check" || !card.prep)
+    return (
+      <span className="badge warning">
+        {Icon.alert}
+        {card.verdict?.status === "check" ? "Check" : "Not prepared"}
+      </span>
+    );
+  return (
+    <span className="badge good">
+      {Icon.check}
+      {card.verdict?.status === "ready" ? "Ready" : "Prepared"}
+    </span>
+  );
+}
+
+const flightTime = (f: { date: string; time?: string }) => `${formatDate(f.date, false)}${f.time ? `, ${f.time}` : ""}`;
+
 function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId: string; open: boolean; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -99,7 +119,8 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
   ].filter(Boolean);
   // The missing RMV is on the trip's "Gas plan" tile once, not on every card.
   const notes = card.facts.gasPlan.rmvLMin === null ? card.notes.filter((n) => !n.startsWith("No gas consumption in the log")) : card.notes;
-  const [first, ...more] = notes;
+  // The verdict's line says it best; without one, the first note.
+  const [first, ...more] = card.verdict?.summary ? [card.verdict.summary, ...notes] : notes;
   const { comparable } = card.facts;
 
   return (
@@ -122,14 +143,7 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
             {card.date && <span className="visually-hidden">{formatDate(card.date, false)}: </span>}
             {card.title}
           </h3>
-          {card.prep ? (
-            <span className="badge good">{Icon.check}Prepared</span>
-          ) : (
-            <span className="badge warning">
-              {Icon.alert}
-              Not prepared
-            </span>
-          )}
+          <CardStatus card={card} />
         </div>
         <span className="secondary" style={{ fontSize: "0.9rem" }}>
           {plan.join(" · ") || "No depth or gas on the card yet"}
@@ -212,14 +226,26 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
 function BeforeYouGo({ data }: { data: Data }) {
   const first = data.dives.find((d) => d.date) ?? data.dives[0];
   if (!first) return null;
-  const { experience: e, gasPlan: g } = first.facts;
+  const { gasPlan: g } = first.facts;
   const issue = data.recurringIssues[0];
+  const { breakBefore: b, flight: f } = data;
   return (
     <section className="tiles" aria-label="Before you go">
-      <div className="card tile">
-        <div className="label">Since your last logged dive</div>
-        <div className="value">{e.daysSinceLastDive === null ? "–" : `${e.daysSinceLastDive} days`}</div>
-        <div className="note">{e.lastDive ? `from #${e.lastDive.seq} to the first dive of the trip` : "no dives logged before"}</div>
+      <div className={`card tile ${b && b.days > REFRESHER_DAYS ? "warn" : ""}`}>
+        <div className="label">Break before</div>
+        <div className="value">{b ? `${b.days} day${b.days === 1 ? "" : "s"}` : "–"}</div>
+        <div className="note">
+          {!b ? (
+            "no dives logged before"
+          ) : b.after.kind === "trip" ? (
+            <>
+              after <Link href={`/trips/${b.after.id}`}>{b.after.name}</Link> ({formatDate(b.after.date, false)})
+            </>
+          ) : (
+            `after your last logged dive, #${b.after.seq}`
+          )}
+          {b && b.days > REFRESHER_DAYS ? " · worth a check-out dive first" : ""}
+        </div>
       </div>
       <div className={`card tile ${issue ? "warn" : ""}`}>
         <div className="label">Keeps coming back</div>
@@ -233,12 +259,34 @@ function BeforeYouGo({ data }: { data: Data }) {
         <div className="value">{g.rmvLMin === null ? "No RMV yet" : formatNumber(g.rmvLMin, 1, "L/min")}</div>
         <div className="note">{g.rmvLMin === null ? <Link href="/">add your tank sizes</Link> : `your RMV, from ${g.rmvDives} dive${g.rmvDives === 1 ? "" : "s"}`}</div>
       </div>
-      <div className={`card tile ${data.prepared < data.cards ? "warn" : ""}`}>
+      <div className={`card tile ${f && f.hours < f.neededHours ? "warn" : ""}`}>
+        <div className="label">Flying after diving</div>
+        {f ? (
+          <>
+            <div className="value">
+              {formatNumber(f.hours, 0, "h")}{" "}
+              <span className={`severity ${f.hours < f.neededHours ? "warning" : "good"}`} role="img" aria-label={f.hours < f.neededHours ? "Too short" : "Enough"}>
+                {f.hours < f.neededHours ? Icon.alert : Icon.check}
+              </span>
+            </div>
+            <div className="note">
+              {[f.flight.from && f.flight.to ? `${f.flight.from}→${f.flight.to}` : "flight", flightTime(f.flight)].join(" ")} · DAN: at least {f.neededHours} h
+              {f.timeAssumed ? " · a time was missing, so counted cautiously" : ""}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="value">–</div>
+            <div className="note">no flight after the dives saved; trip-prep brings the flights from TripDeck</div>
+          </>
+        )}
+      </div>
+      <div className={`card tile ${data.prepared < data.cards || data.toCheck ? "warn" : ""}`}>
         <div className="label">Prepared</div>
         <div className="value">
           {data.prepared} of {data.cards}
         </div>
-        <div className="note">dive cards</div>
+        <div className="note">{data.toCheck ? `${data.toCheck} to check` : "dive cards"}</div>
       </div>
     </section>
   );
@@ -248,8 +296,8 @@ function BeforeYouGo({ data }: { data: Data }) {
 function DiveDays({ data, onChange }: { data: Data; onChange: () => void }) {
   const dated = data.dives.filter((d) => d.date).sort((a, b) => a.date!.localeCompare(b.date!) || (a.startTime ?? "").localeCompare(b.startTime ?? ""));
   const undated = data.dives.filter((d) => !d.date);
-  // Open the first card still to prepare, else the first one.
-  const openFirst = (data.dives.find((d) => !d.prep) ?? dated[0] ?? undated[0])?.itemId;
+  // Open the first card to check or still to prepare, else the first one.
+  const openFirst = (data.dives.find((d) => d.verdict?.status === "check" || !d.prep) ?? dated[0] ?? undated[0])?.itemId;
   return (
     <section className="stack" style={{ gap: "0.75rem" }} aria-labelledby="days-h">
       <h2 id="days-h" style={{ margin: 0 }}>
