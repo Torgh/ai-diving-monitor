@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyKit, type Kit, updateKit } from "./kit";
 import type { DiveRecord } from "./record";
-import { bodySurface, estimateWeighting } from "./weighting";
+import { bodySurface, confidenceOf, estimateWeighting } from "./weighting";
 
 const kit = (): Kit =>
   updateKit(
@@ -105,6 +105,55 @@ describe("estimateWeighting", () => {
     const salt = estimateWeighting(k, records, set(k, "Lake"), "salt");
     expect(salt.leadKg!).toBeGreaterThan(e.leadKg!);
     expect(e.missing.some((m) => m.includes("a few dives"))).toBe(false);
+  });
+});
+
+describe("parts and how sure", () => {
+  it("counts a 3/2 suit's torso and limbs apart", () => {
+    const k = updateKit(
+      kit(),
+      {
+        items: [
+          { name: "Suit 3/2", kind: "suit", suitType: "wetsuit", thicknessMm: 3, thicknessLimbsMm: 2 },
+          { name: "Suit 3", kind: "suit", suitType: "wetsuit", thicknessMm: 3 },
+          { name: "Suit 2", kind: "suit", suitType: "wetsuit", thicknessMm: 2 },
+        ],
+        sets: [
+          { name: "A", items: ["Suit 3/2"] },
+          { name: "B", items: ["Suit 3"] },
+          { name: "C", items: ["Suit 2"] },
+        ],
+      },
+      "T2",
+    );
+    const suit = (name: string) => estimateWeighting(k, [], set(k, name), "salt").parts[1];
+    expect(suit("A").kg).toBeLessThan(suit("B").kg);
+    expect(suit("A").kg).toBeGreaterThan(suit("C").kg);
+    expect(suit("A").why).toContain("3 mm torso, 2 mm limbs");
+  });
+
+  it("says whose each figure is, and points every part at its gear", () => {
+    const k = kit();
+    const parts = estimateWeighting(k, [], set(k, "Warm"), "salt").parts;
+    const status = Object.fromEntries(parts.map((p) => [p.label, p.status]));
+    expect(status).toMatchObject({ You: "yours", "Shorty 3": "yours", "Al 11": "typical", Jacket: "typical", Housing: "unknown" });
+    expect(parts.find((p) => p.label === "Al 11")?.itemId).toBe("al-11");
+    expect(parts.find((p) => p.label === "You")?.itemId).toBeUndefined();
+    const fins = estimateWeighting(k, [], set(k, "Lake"), "salt").parts.find((p) => p.label === "Fins");
+    expect(fins).toMatchObject({ status: "yours", kg: -0.6 });
+  });
+
+  it("is less sure without a tank, with typical or unknown figures and without dives", () => {
+    const k = kit();
+    const lake = estimateWeighting(k, [], set(k, "Lake"), "salt").confidence;
+    expect(lake.reasons).toEqual(["2 typical figures", "no dives logged with this set yet"]);
+    expect(lake.level).toBe("medium");
+    const sure = confidenceOf([{ label: "You", kg: 0.2, assumed: false, status: "yours", why: "" }], true, { dives: 4, offsetKg: 1 });
+    expect(sure).toEqual({ level: "high", score: 100, reasons: ["corrected by 4 of your dives"] });
+    const unsure = confidenceOf([{ label: "Cam", kg: 0, assumed: true, status: "unknown", why: "" }], false, { dives: 1, offsetKg: 0 });
+    expect(unsure).toMatchObject({ level: "low", score: 43 });
+    expect(unsure.reasons).toEqual(["no tank in the set", "1 unknown", "corrected by 1 of your dive"]);
+    expect(confidenceOf([], false, null)).toMatchObject({ level: "low", score: 40 });
   });
 });
 

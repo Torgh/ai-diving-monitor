@@ -32,17 +32,20 @@ directly through an MCP server, and the web app shows every change within second
 **Your gear**
 
 - **The kit:** you (body mass, height, body fat), your gear with what matters for buoyancy (suit type
-  and neoprene thickness, tank material, volume, working pressure and empty buoyancy, backplate…),
-  sets of gear with the lead you usually carry, and the water (fresh, brackish, salt) at each dive
-  site. Kept with the log, so every device and your companion see the same.
+  and neoprene thickness, torso and limbs apart for a 3/2 suit, tank material, volume, working pressure
+  and empty buoyancy, backplate…) and its weight on land, sets of gear with the lead you usually carry,
+  and the water (fresh, brackish, salt) at each dive site. Kept with the log, so every device and your
+  companion see the same.
 - **On each dive:** the set you dived with, the lead you carried, the water (from its site unless the
   dive says otherwise) and how the weighting felt: too light, right or too heavy.
 - **How much lead:** for each set in fresh, brackish and salt water, neutral at the safety stop with an
   empty BCD and 50 bar left. It adds up your own buoyancy (body mass, body fat, the air in your lungs),
   the neoprene squeezed at 5 m (thickness, area, age), the tank with the gas still in it, the plate and
-  the rest, then corrects it by your dives with the set: the lead you carried and how it felt. Each
-  part says whether it is your figure or a typical one, and the page lists what would make the
-  estimate better. Your companion explains it and ends with a weight check in the water.
+  the rest, then corrects it by your dives with the set: the lead you carried and how it felt. The
+  Gear page shows it per set as a balance (what floats, what sinks, which figures are typical or
+  unknown), the lead with how sure it is, and the few steps that would make it surer (a tank, a
+  camera's buoyancy, dives with the lead logged). Your companion explains it and ends with a weight
+  check in the water.
 
 **Analysis** (rule-based, offline, no AI needed)
 
