@@ -28,3 +28,22 @@ export function formatSeconds(seconds: number): string {
   const s = Math.round(seconds % 60);
   return m ? `${m} min ${s} s` : `${s} s`;
 }
+
+/** "8–15 May 2027", "28 Apr – 3 May 2027", "8 May 2027", or "No dates". */
+export function formatDateRange(start: string | null, end: string | null): string {
+  if (!start) return "No dates";
+  if (!end || end === start) return formatDate(start, false);
+  const [a, b] = [formatDate(start, false).split(" "), formatDate(end, false).split(" ")];
+  if (a[2] !== b[2]) return `${a.join(" ")} – ${b.join(" ")}`;
+  if (a[1] !== b[1]) return `${a[0]} ${a[1]} – ${b.join(" ")}`;
+  return `${a[0]}–${b.join(" ")}`;
+}
+
+/** When a trip is, from today: "in 12 days", "tomorrow", "under way", "ended 3 days ago". */
+export function formatTripWhen(trip: { when: "upcoming" | "now" | "past" | "undated"; daysUntil: number | null; endDate: string | null }, today = new Date()): string {
+  if (trip.when === "undated" || trip.daysUntil === null) return "No dates yet";
+  if (trip.when === "now") return "Under way";
+  if (trip.when === "upcoming") return trip.daysUntil === 1 ? "Tomorrow" : `In ${trip.daysUntil} days`;
+  const end = trip.endDate ? Math.round((today.getTime() - Date.parse(`${trip.endDate}T00:00:00Z`)) / 86_400_000) : null;
+  return end !== null && end > 0 ? `Ended ${end === 1 ? "yesterday" : `${end} days ago`}` : "Ended";
+}

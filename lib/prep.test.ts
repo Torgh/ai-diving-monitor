@@ -99,6 +99,8 @@ describe("prepareDive", () => {
     expect(nitrox.notes[0]).toBe("The nitrox mix isn't known yet: ask which mix, to check ppO2 and MOD (EAN40 is the richest nitrox for 18 m).");
     expect(prepareDive(records, { gas: "trimix" }, TODAY).notes[0]).toBe("The trimix mix isn't known yet: ask which mix, to check ppO2 and MOD.");
     expect(prepareDive(records, { gas: "oxygen" }, TODAY).notes).toContain("No logged dives on oxygen yet.");
+    // The richest nitrox is no hint for a trimix dive.
+    expect(prepareDive(records, { gas: "trimix", maxDepthM: 56 }, TODAY).notes).toContain("The trimix mix isn't known yet: ask which mix, to check ppO2 and MOD.");
   });
 
   it("gives a trimix its END, and counts days to today without a date", () => {
