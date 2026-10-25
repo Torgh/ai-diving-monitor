@@ -282,8 +282,11 @@ home, and Google Drive is replaced with an in-memory fake. Change parsing? Bump 
 ### CI
 
 On every pull request and every commit to `main`, CI runs `bun run check` on Linux and the tests on
-Windows. It fails when test coverage drops below the thresholds in `vitest.config.mts`. A new push to
-a pull request cancels the run for the previous one. CodeQL scans the TypeScript and workflow code on
+Windows. It fails when test coverage drops below the thresholds in `vitest.config.mts`. The jobs are
+shared with TripDeck (`bun-app.yml` in [Torgh/tripdeck](https://github.com/Torgh/tripdeck), called
+from its `main`), so the two apps are checked the same way; Bun's package cache is kept between runs.
+On a pull request, a dependency review fails when a new dependency has a known high or critical
+vulnerability. A new push to a pull request cancels the run for the previous one. CodeQL scans the TypeScript and workflow code on
 every pull request, on `main` and weekly. Dependabot opens grouped update pull requests for Bun and
 GitHub Actions every Monday, and security fixes as soon as they are published. Actions are pinned to
 a commit, and `main` only takes pull requests whose checks pass.
