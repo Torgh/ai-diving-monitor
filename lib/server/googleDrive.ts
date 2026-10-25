@@ -1,7 +1,7 @@
 import type { Area, Backend, StoredFile } from "./backends";
 import { accessToken, googleAccount } from "./cloudAuth";
 import { HttpError } from "./http";
-import { CLOUD_FOLDER } from "./paths";
+import { CLOUD_FOLDER, LEGACY_CLOUD_FOLDERS } from "./paths";
 
 const DRIVE = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -49,7 +49,7 @@ async function driveFetch(url: string, init: RequestInit = {}): Promise<Response
 const query = (params: Record<string, string>) => `${DRIVE}?${new URLSearchParams(params)}`;
 
 /**
- * The dive log on Google Drive: a visible "AiDive" folder in My Drive with the dive files
+ * The dive log on Google Drive: a visible "DiveDeck" folder in My Drive with the dive files
  * in `dives`, the original UDDF files in `originals` and the trips in `trips`. The app can only see
  * files it created there.
  */
@@ -58,12 +58,17 @@ export class GoogleDriveBackend implements Backend {
   readonly location = `My Drive › ${CLOUD_FOLDER}`;
   private account = googleAccount()?.email ?? "";
 
-  /** A folder by name under `parent` (or in My Drive), created when missing. */
-  private async folder(name: string, parent?: string): Promise<string> {
+  /** A folder by name under `parent` (or in My Drive), if there is one. */
+  private async findFolder(name: string, parent?: string): Promise<string | undefined> {
     const where = parent ? ` and '${parent}' in parents` : " and 'root' in parents";
     const res = await driveFetch(query({ q: `mimeType='${FOLDER_MIME}' and name='${name}' and trashed=false${where}`, fields: "files(id)", orderBy: "createdTime", pageSize: "1" }));
-    const found = ((await res.json()) as { files?: { id: string }[] }).files?.[0];
-    if (found) return found.id;
+    return ((await res.json()) as { files?: { id: string }[] }).files?.[0]?.id;
+  }
+
+  /** A folder by name under `parent` (or in My Drive), created when missing. */
+  private async folder(name: string, parent?: string): Promise<string> {
+    const found = await this.findFolder(name, parent);
+    if (found) return found;
     const created = await driveFetch(`${DRIVE}?fields=id`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,10 +77,27 @@ export class GoogleDriveBackend implements Backend {
     return ((await created.json()) as { id: string }).id;
   }
 
+  /** The app's folder in My Drive. One under an earlier name is renamed, so the log stays where it is. */
+  private async rootFolder(): Promise<string> {
+    const found = await this.findFolder(CLOUD_FOLDER);
+    if (found) return found;
+    for (const name of LEGACY_CLOUD_FOLDERS) {
+      const legacy = await this.findFolder(name);
+      if (!legacy) continue;
+      await driveFetch(`${DRIVE}/${legacy}?fields=id`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: CLOUD_FOLDER }),
+      });
+      return legacy;
+    }
+    return this.folder(CLOUD_FOLDER);
+  }
+
   private async areaFolder(area: Area): Promise<string> {
     let cached = folderIds.get(this.account);
     if (!cached || Date.now() - cached.at > FOLDERS_MS) {
-      cached = { at: Date.now(), root: await this.folder(CLOUD_FOLDER), areas: {} };
+      cached = { at: Date.now(), root: await this.rootFolder(), areas: {} };
       folderIds.set(this.account, cached);
     }
     cached.areas[area] ??= await this.folder(area, cached.root);

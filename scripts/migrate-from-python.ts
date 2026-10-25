@@ -2,7 +2,7 @@
  * Copies the Python version's dive log (its SQLite database) into the dive files of the TypeScript
  * version: every dive and saved review. The database is only read; running it again adds nothing twice.
  *
- *   bun run migrate                 # AI_DIVING_MONITOR_DB, or ~/.ai-diving-monitor/dives.db
+ *   bun run migrate                 # DIVEDECK_DB, or ~/.ai-diving-monitor/dives.db
  *   bun run migrate path/to/dives.db
  */
 import fs from "node:fs";

@@ -10,7 +10,7 @@ import { copyLog, DiveStore } from "./diveStore";
 import { forgetDriveCache, GoogleDriveBackend } from "./googleDrive";
 import { switchStorage } from "./storage";
 import { logVersion } from "./version";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SHEARWATER = new Uint8Array(fs.readFileSync(path.join(ROOT, "fixtures", "uddf", "shearwater-style.uddf")));
@@ -21,9 +21,9 @@ let home: string;
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-storage-"));
   for (const name of Object.keys(process.env)) {
-    if (/^(AI_DIVING_MONITOR_|ONEDRIVE|GOOGLE_CLIENT_)/i.test(name)) delete process.env[name];
+    if (/^(ONEDRIVE|GOOGLE_CLIENT_)/i.test(name)) delete process.env[name];
   }
-  process.env.AI_DIVING_MONITOR_HOME = home;
+  isolateEnv(home);
   forgetDriveCache();
 });
 
@@ -56,13 +56,22 @@ describe("choosing the storage", () => {
     const oneDrive = path.join(home, "OneDrive");
     fs.mkdirSync(oneDrive);
     process.env.OneDrive = oneDrive;
-    expect(oneDriveFolder()).toBe(path.join(oneDrive, "AiDive"));
+    expect(oneDriveFolder()).toBe(path.join(oneDrive, "DiveDeck"));
     expect(activeStorage()).toBe("onedrive");
     await updateSettings({ oneDriveFolder: path.join(home, "elsewhere") });
     expect(activeStorage()).toBe("local"); // a configured folder that doesn't exist
     await updateSettings({ oneDriveFolder: null, storage: "google" });
     expect(activeStorage()).toBe("local"); // Google not connected
     expect(backendFor("local").location).toBe(home);
+  });
+
+  it("renames an AiDive folder in OneDrive to DiveDeck", () => {
+    const oneDrive = path.join(home, "OneDrive");
+    fs.mkdirSync(path.join(oneDrive, "AiDive", "dives"), { recursive: true });
+    process.env.OneDrive = oneDrive;
+    expect(oneDriveFolder()).toBe(path.join(oneDrive, "DiveDeck"));
+    expect(fs.readdirSync(oneDrive)).toEqual(["DiveDeck"]);
+    expect(fs.readdirSync(path.join(oneDrive, "DiveDeck"))).toEqual(["dives"]);
   });
 
   it("copies the log when switching, and the newer dive wins", async () => {
@@ -75,7 +84,7 @@ describe("choosing the storage", () => {
     const there = new DiveStore();
     expect(there.backend.kind).toBe("onedrive");
     expect((await there.list()).map((r) => r.id)).toEqual([id]);
-    expect(fs.readdirSync(path.join(oneDrive, "AiDive", "originals"))).toHaveLength(1);
+    expect(fs.readdirSync(path.join(oneDrive, "DiveDeck", "originals"))).toHaveLength(1);
 
     await there.updateDetails(id, { site: "Koparki" });
     expect(await switchStorage("local")).toBe(1); // the OneDrive copy is newer
@@ -151,6 +160,12 @@ function fakeDrive() {
       const file = files.get(id);
       return file ? new Response(file.content as BlobPart) : json({}, 404);
     }
+    if (id && method === "PATCH") {
+      const file = files.get(id);
+      if (!file) return json({}, 404);
+      file.name = JSON.parse(String(init.body)).name;
+      return json({ id });
+    }
     if (id && method === "DELETE") {
       files.delete(id);
       return new Response(null, { status: 204 });
@@ -168,17 +183,17 @@ function connectGoogle() {
 }
 
 describe("Google Drive", () => {
-  it("keeps the log in My Drive › AiDive", async () => {
+  it("keeps the log in My Drive › DiveDeck", async () => {
     const drive = fakeDrive();
     vi.stubGlobal("fetch", drive.fetch);
     connectGoogle();
     const store = new DiveStore(new GoogleDriveBackend());
-    expect(store.backend.location).toBe("My Drive › AiDive");
+    expect(store.backend.location).toBe("My Drive › DiveDeck");
 
     const [id] = (await store.importFile("sw.uddf", SHEARWATER)).added;
     const names = [...drive.files.values()].map((f) => f.name).sort();
     expect(names).toHaveLength(5);
-    expect(names).toEqual(expect.arrayContaining(["AiDive", "dives", "originals", expect.stringMatching(/\.uddf$/), expect.stringMatching(/\.dive\.json$/)]));
+    expect(names).toEqual(expect.arrayContaining(["DiveDeck", "dives", "originals", expect.stringMatching(/\.uddf$/), expect.stringMatching(/\.dive\.json$/)]));
     const before = await logVersion(store.backend);
 
     forgetDriveCache();
@@ -204,6 +219,21 @@ describe("Google Drive", () => {
     await store.list();
     // One folder lookup chain and one listing, no downloads.
     expect(drive.requests.filter((r) => r.startsWith("GET /drive/v3/files/"))).toEqual([]);
+  });
+
+  it("renames the folder of an earlier name instead of starting an empty one", async () => {
+    const drive = fakeDrive();
+    vi.stubGlobal("fetch", drive.fetch);
+    connectGoogle();
+    const folder = "application/vnd.google-apps.folder";
+    drive.files.set("old", { id: "old", name: "AiDive", parents: ["root"], mimeType: folder, content: new Uint8Array(), modifiedTime: "t0" });
+    drive.files.set("oldDives", { id: "oldDives", name: "dives", parents: ["old"], mimeType: folder, content: new Uint8Array(), modifiedTime: "t0" });
+    expect(await new DiveStore(new GoogleDriveBackend()).list()).toEqual([]);
+    const folders = [...drive.files.values()].filter((f) => f.mimeType === folder);
+    expect(folders.map((f) => [f.id, f.name])).toEqual([
+      ["old", "DiveDeck"],
+      ["oldDives", "dives"],
+    ]);
   });
 
   it("finds the folders again when they were deleted on Drive, and removes files", async () => {
@@ -313,7 +343,7 @@ describe("storage API", () => {
     const oneDrive = path.join(home, "MyOneDrive");
     fs.mkdirSync(oneDrive);
     const saved = await (await storagePost(req("POST", { oneDriveFolder: oneDrive }), {})).json();
-    expect(saved.onedrive.folder).toBe(path.join(oneDrive, "AiDive"));
+    expect(saved.onedrive.folder).toBe(path.join(oneDrive, "DiveDeck"));
     await new DiveStore().importFile("sw.uddf", SHEARWATER);
     const switched = await (await storagePost(req("POST", { storage: "onedrive" }), {})).json();
     expect(switched).toMatchObject({ active: "onedrive", copied: 1 });

@@ -8,7 +8,7 @@ import { updateSettings } from "./config";
 import { switchStorage } from "./storage";
 import { copyTrips, TripStore } from "./tripStore";
 import { logVersion } from "./version";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 const saved = { ...process.env };
 let home: string;
@@ -23,8 +23,8 @@ const trip = (over: Partial<TripPlanInput> = {}): TripPlanInput => ({
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-trips-"));
-  for (const name of Object.keys(process.env)) if (/^(AI_DIVING_MONITOR_|ONEDRIVE)/i.test(name)) delete process.env[name];
-  process.env.AI_DIVING_MONITOR_HOME = home;
+  for (const name of Object.keys(process.env)) if (/^ONEDRIVE/i.test(name)) delete process.env[name];
+  isolateEnv(home);
 });
 
 afterEach(() => {

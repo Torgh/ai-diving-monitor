@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_PROVIDER, isProviderId, PROVIDERS, type Provider, type ProviderId } from "../providers";
 import { writeFileAtomic } from "./files";
-import { dataDir } from "./paths";
+import { dataDir, envVar } from "./paths";
 
 /**
- * The settings file shared with the Python version: `AI_DIVING_MONITOR_CONFIG`, else `config.json`
+ * The settings file shared with the Python version: `DIVEDECK_CONFIG`, else `config.json`
  * in the data folder. API keys are stored in plain text, outside the repository (mode 600 where the
  * OS allows it); the git hooks refuse to commit them.
  */
@@ -23,7 +23,7 @@ export interface Settings {
 }
 
 export function configPath(): string {
-  return process.env.AI_DIVING_MONITOR_CONFIG?.trim() || path.join(dataDir(), "config.json");
+  return envVar("CONFIG") || path.join(dataDir(), "config.json");
 }
 
 export function readSettings(): Settings {
@@ -48,9 +48,9 @@ export function selected(): { provider: Provider; model: string } {
     id = settings.provider;
     model = settings.models?.[id];
   } else {
-    const env = process.env.AI_DIVING_MONITOR_PROVIDER;
+    const env = envVar("PROVIDER");
     if (isProviderId(env)) id = env;
-    model = process.env.AI_DIVING_MONITOR_MODEL;
+    model = envVar("MODEL");
   }
   const provider = PROVIDERS[id];
   return { provider, model: model || provider.models[0] || "" };
@@ -67,9 +67,9 @@ export async function select(id: ProviderId, model?: string): Promise<void> {
 export function apiKey(id: ProviderId): { key: string; source: "saved" | string } | null {
   const saved = readSettings().api_keys?.[id]?.trim();
   if (saved) return { key: saved, source: "saved" };
-  const envVar = PROVIDERS[id].envVar;
-  const env = envVar ? process.env[envVar]?.trim() : undefined;
-  return env && envVar ? { key: env, source: envVar } : null;
+  const keyVar = PROVIDERS[id].envVar;
+  const env = keyVar ? process.env[keyVar]?.trim() : undefined;
+  return env && keyVar ? { key: env, source: keyVar } : null;
 }
 
 /** Saves a key, or removes the saved one with null (an environment variable then applies again). */

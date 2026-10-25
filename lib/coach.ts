@@ -32,7 +32,7 @@ How to work with the dive log:
 - Dives are referred to by their number in the log (seq: 1 = the oldest dive) or by their id. list_dives shows both.
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
-- Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the AI Diving Monitor app.
+- Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the DiveDeck app.
 - Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation through save_trip_plan, so the app shows them. Then put the verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
 export const SUMMARY_REQUEST = `Review dive {dive} for me. Structure the answer as:
@@ -97,7 +97,7 @@ export const DESCRIPTIONS = {
     "The trips saved with save_trip_plan. Without trip_id: each trip with its dates and how many cards are prepared. With trip_id: its cards, preparation, " +
     "linked logged dives, and the dives logged on each card's day that aren't linked yet.",
   migrate_from_python:
-    "Copy the dive log of the Python version of AI Diving Monitor (its SQLite database) into this one: every dive and saved review. " +
+    "Copy the dive log of the Python version (AI Diving Monitor, its SQLite database) into this one: every dive and saved review. " +
     "Safe to run again; nothing is added twice and the database is only read.",
 } as const;
 

@@ -12,7 +12,7 @@ import { DELETE as deleteTrip, GET as getTrip } from "./trips/[id]/route";
 import { GET as getTrips } from "./trips/route";
 import { GET as getVersion } from "./version/route";
 import { TripStore } from "../../lib/server/tripStore";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 /** The route handlers, called as Next.js calls them, against a temporary data folder. */
 
@@ -30,8 +30,7 @@ const read = async (res: Response) => [res.status, await res.json()] as const;
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-api-"));
-  process.env.AI_DIVING_MONITOR_HOME = home;
-  process.env.AI_DIVING_MONITOR_DB = path.join(home, "no-such.db");
+  isolateEnv(home);
 });
 
 afterEach(() => {

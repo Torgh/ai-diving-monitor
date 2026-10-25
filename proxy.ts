@@ -15,5 +15,5 @@ export function hostName(host: string): string {
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   if (LOCAL_HOSTS.has(hostName(host).toLowerCase())) return NextResponse.next();
-  return new NextResponse("AI Diving Monitor only answers requests to localhost.", { status: 403 });
+  return new NextResponse("DiveDeck only answers requests to localhost.", { status: 403 });
 }

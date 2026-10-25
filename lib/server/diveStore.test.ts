@@ -10,7 +10,7 @@ import { DiveNotFoundError, DiveStore } from "./diveStore";
 import { LockTimeoutError, withLock } from "./files";
 import { migrateFromPython } from "./migrate";
 import { dataDir, divesDir, pythonDbPath } from "./paths";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const read = (...p: string[]) => new Uint8Array(fs.readFileSync(path.join(ROOT, ...p)));
@@ -23,7 +23,8 @@ const saved = { ...process.env };
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-store-"));
-  process.env.AI_DIVING_MONITOR_HOME = home;
+  isolateEnv(home);
+  delete process.env.DIVEDECK_DB;
   store = new DiveStore();
 });
 
@@ -151,15 +152,29 @@ describe("withLock", () => {
 });
 
 describe("paths", () => {
-  it("uses AI_DIVING_MONITOR_HOME, else the Python database's folder, else ~/.ai-diving-monitor", () => {
+  it("uses DIVEDECK_HOME, else the Python database's folder, else ~/.divedeck", () => {
     expect(dataDir()).toBe(home);
-    delete process.env.AI_DIVING_MONITOR_HOME;
-    process.env.AI_DIVING_MONITOR_DB = path.join(home, "py", "dives.db");
+    delete process.env.DIVEDECK_HOME;
+    process.env.DIVEDECK_DB = path.join(home, "py", "dives.db");
     expect(dataDir()).toBe(path.join(home, "py"));
     expect(pythonDbPath()).toBe(path.join(home, "py", "dives.db"));
-    delete process.env.AI_DIVING_MONITOR_DB;
-    expect(dataDir()).toBe(path.join(os.homedir(), ".ai-diving-monitor"));
-    expect(pythonDbPath()).toBe(path.join(os.homedir(), ".ai-diving-monitor", "dives.db"));
+    delete process.env.DIVEDECK_DB;
+    process.env.HOME = process.env.USERPROFILE = home;
+    expect(dataDir()).toBe(path.join(home, ".divedeck"));
+    expect(pythonDbPath()).toBe(path.join(home, ".ai-diving-monitor", "dives.db"));
+    // Only the folder of the AI Diving Monitor days exists: it is still used.
+    fs.mkdirSync(path.join(home, ".ai-diving-monitor"));
+    expect(dataDir()).toBe(path.join(home, ".ai-diving-monitor"));
+    fs.mkdirSync(path.join(home, ".divedeck"));
+    expect(dataDir()).toBe(path.join(home, ".divedeck"));
+  });
+
+  it("still reads the AI Diving Monitor variables, the DiveDeck ones first", () => {
+    delete process.env.DIVEDECK_HOME;
+    process.env.AI_DIVING_MONITOR_HOME = path.join(home, "old");
+    expect(dataDir()).toBe(path.join(home, "old"));
+    process.env.DIVEDECK_HOME = path.join(home, "new");
+    expect(dataDir()).toBe(path.join(home, "new"));
   });
 });
 

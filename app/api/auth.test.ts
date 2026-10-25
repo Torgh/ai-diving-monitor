@@ -12,7 +12,7 @@ import { GET as callback } from "./auth/google/callback/route";
 import { POST as disconnect } from "./auth/google/disconnect/route";
 import { GET as start } from "./auth/google/start/route";
 import { POST as installCommand } from "./settings/review-command/route";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 /** The Google sign-in routes and the /dive-review install, against a temporary data folder and home. */
 
@@ -23,9 +23,8 @@ let home: string;
 
 beforeEach(async () => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-auth-"));
-  for (const name of Object.keys(process.env)) if (/^(AI_DIVING_MONITOR_|GOOGLE_CLIENT_)/i.test(name)) delete process.env[name];
-  process.env.AI_DIVING_MONITOR_HOME = home;
-  process.env.AI_DIVING_MONITOR_DB = path.join(home, "no-such.db");
+  for (const name of Object.keys(process.env)) if (/^GOOGLE_CLIENT_/i.test(name)) delete process.env[name];
+  isolateEnv(home);
   // os.homedir() reads these, so the slash command lands in the temporary folder.
   process.env.HOME = home;
   process.env.USERPROFILE = home;
@@ -96,7 +95,7 @@ describe("Google sign-in routes", () => {
     const res = await callback(get(`${BASE}/api/auth/google/callback?code=c&state=s1`, { adm_oauth_state: "s1", adm_oauth_verifier: "v" }));
     expect(backTo(res)).toEqual({ google: "connected", copied: "1" });
     expect(readSettings().storage).toBe("google");
-    expect([...drive.values()].map((f) => f.name)).toEqual(expect.arrayContaining(["AiDive", "dives", "originals"]));
+    expect([...drive.values()].map((f) => f.name)).toEqual(expect.arrayContaining(["DiveDeck", "dives", "originals"]));
 
     expect(await (await disconnect(post(`${BASE}/api/auth/google/disconnect`), {})).json()).toEqual({ ok: true, copied: 0 });
     expect(readSettings().storage).toBe("local");

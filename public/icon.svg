@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="depth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".45" stop-color="#0e7490"/><stop offset="1" stop-color="#082f49"/></linearGradient>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <g id="background" clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#depth)"/>
+    <path d="M0 150c48-16 96-16 144 0s96 16 144 0 96-16 144 0 56 12 80 4V0H0z" fill="#ecfeff" opacity=".22"/>
+  </g>
+  <g id="artwork">
+    <path d="M96 156 L170 372 L300 372 L350 214 L400 214 L422 162" stroke="#fff" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 30"/>
+    <circle cx="96" cy="156" r="20" fill="#fff"/>
+    <circle cx="318" cy="318" r="11" fill="#fff" opacity=".55"/>
+    <circle cx="334" cy="286" r="8" fill="#fff" opacity=".55"/>
+    <circle cx="326" cy="258" r="5" fill="#fff" opacity=".55"/>
+    <rect x="408" y="64" width="30" height="100" rx="15" fill="#f97316"/>
+    <rect x="408" y="96" width="30" height="10" fill="#fff" opacity=".85"/>
+  </g>
+</svg>

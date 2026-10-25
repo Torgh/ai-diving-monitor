@@ -1,11 +1,11 @@
 /**
- * AI Diving Monitor MCP server: turns Claude Code / Claude Desktop (or Codex with a ChatGPT plan) into
+ * DiveDeck MCP server: turns Claude Code / Claude Desktop (or Codex with a ChatGPT plan) into
  * your dive coach, on your own subscription. No API key needed: the client's model does the coaching,
  * this server exposes your dive log, the analytics, and tools to fill in what the computer doesn't record.
  *
  * It reads and writes the dive files in the data folder (see lib/server/paths.ts).
  *
- *   claude mcp add --scope user ai-diving-monitor -- <path-to-bun> <path-to-repo>/mcp/server.ts
+ *   claude mcp add --scope user divedeck -- <path-to-bun> <path-to-repo>/mcp/server.ts
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -37,7 +37,7 @@ import { UddfParseError } from "../lib/uddf";
 /** The log where Settings say it is stored, looked up on every call so a change applies at once. */
 const store = () => new DiveStore();
 const trips = () => new TripStore();
-const server = new McpServer({ name: "ai-diving-monitor", title: "AI Diving Monitor", version: "0.2.0" }, { instructions: MCP_INSTRUCTIONS });
+const server = new McpServer({ name: "divedeck", title: "DiveDeck", version: "0.3.0" }, { instructions: MCP_INSTRUCTIONS });
 
 const text = (value: unknown) => ({
   content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value) }],
@@ -348,7 +348,7 @@ server.registerTool(
   {
     title: "Migrate the Python version's log",
     description: DESCRIPTIONS.migrate_from_python,
-    inputSchema: { db_path: z.string().optional().describe("The Python version's dives.db (default: AI_DIVING_MONITOR_DB or ~/.ai-diving-monitor/dives.db).") },
+    inputSchema: { db_path: z.string().optional().describe("The Python version's dives.db (default: DIVEDECK_DB or ~/.ai-diving-monitor/dives.db).") },
     annotations: WRITES,
   },
   tool(async ({ db_path }: { db_path?: string }) => {
@@ -370,7 +370,7 @@ server.registerPrompt(
     const log = chronological(await store().list());
     const target = dive?.trim() || (log.length ? String(log.length) : "");
     const request = target
-      ? `${SUMMARY_REQUEST.replace("{dive}", `#${target}`)}\n\nUse the ai-diving-monitor tools (get_dive_analysis, get_dive_profile, list_dives, get_progress_trend), then save the review with save_dive_summary.`
+      ? `${SUMMARY_REQUEST.replace("{dive}", `#${target}`)}\n\nUse the divedeck tools (get_dive_analysis, get_dive_profile, list_dives, get_progress_trend), then save the review with save_dive_summary.`
       : "My dive log is empty. Help me import my UDDF files with the import_uddf tool, or migrate my old log with migrate_from_python.";
     return { messages: [{ role: "user", content: { type: "text", text: request } }] };
   },
@@ -414,6 +414,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("AI Diving Monitor MCP server failed:", err);
+  console.error("DiveDeck MCP server failed:", err);
   process.exit(1);
 });

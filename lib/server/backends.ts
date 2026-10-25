@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, renameSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { googleAccount } from "./cloudAuth";
 import { readSettings } from "./config";
 import { writeFileAtomic } from "./files";
 import { GoogleDriveBackend } from "./googleDrive";
-import { CLOUD_FOLDER, dataDir } from "./paths";
+import { CLOUD_FOLDER, dataDir, envVar, LEGACY_CLOUD_FOLDERS } from "./paths";
 
 /**
  * Where the dive log lives. The dive files (`dives`), the original UDDF files (`originals`) and the
@@ -25,7 +25,7 @@ export interface StoredFile {
 
 export interface Backend {
   kind: StorageKind;
-  /** Where the files are, for people: a folder, or "My Drive › AiDive". */
+  /** Where the files are, for people: a folder, or "My Drive › DiveDeck". */
   location: string;
   list(area: Area): Promise<StoredFile[]>;
   read(area: Area, name: string): Promise<Uint8Array | undefined>;
@@ -35,7 +35,7 @@ export interface Backend {
 
 export const STORAGE_LABEL: Record<StorageKind, string> = { local: "This PC", onedrive: "OneDrive", google: "Google Drive" };
 
-/** Files in a folder: the data folder on this PC, or AiDive in the folder OneDrive syncs. */
+/** Files in a folder: the data folder on this PC, or DiveDeck in the folder OneDrive syncs. */
 export class FolderBackend implements Backend {
   constructor(
     readonly kind: "local" | "onedrive",
@@ -78,7 +78,7 @@ export class FolderBackend implements Backend {
  * sets %OneDrive%), else OneDrive under ~/Library/CloudStorage on macOS.
  */
 export function oneDriveRoot(): string | undefined {
-  const configured = readSettings().oneDriveFolder?.trim() || process.env.AI_DIVING_MONITOR_ONEDRIVE_FOLDER?.trim();
+  const configured = readSettings().oneDriveFolder?.trim() || envVar("ONEDRIVE_FOLDER");
   if (configured) return existsSync(configured) ? configured : undefined;
   for (const name of ["OneDriveConsumer", "OneDrive", "OneDriveCommercial"]) {
     const dir = process.env[name];
@@ -92,10 +92,25 @@ export function oneDriveRoot(): string | undefined {
   return undefined;
 }
 
-/** AiDive inside OneDrive, if OneDrive was found on this PC. */
+/**
+ * DiveDeck inside OneDrive, if OneDrive was found on this PC. A folder under an earlier name is
+ * renamed, so the log stays where it is.
+ */
 export function oneDriveFolder(): string | undefined {
   const root = oneDriveRoot();
-  return root && path.join(root, CLOUD_FOLDER);
+  if (!root) return undefined;
+  const folder = path.join(root, CLOUD_FOLDER);
+  if (!existsSync(folder)) {
+    const legacy = LEGACY_CLOUD_FOLDERS.map((name) => path.join(root, name)).find((dir) => existsSync(dir));
+    if (legacy) {
+      try {
+        renameSync(legacy, folder);
+      } catch {
+        return legacy; // In use (OneDrive syncing it): keep working there, rename next time.
+      }
+    }
+  }
+  return folder;
 }
 
 /** The storage chosen in Settings; this PC when OneDrive is missing or Google isn't connected. */

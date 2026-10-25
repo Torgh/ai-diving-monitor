@@ -15,7 +15,7 @@ function Commands({ status }: { status: AppStatus }) {
         {status.runs === "python"
           ? `⚠️ ${name} still runs the Python version's server, which reads the old database. Switch it over in a terminal:`
           : status.registered
-            ? `⚠️ ${name} has a server called ai-diving-monitor that isn't this app's. Replace it in a terminal:`
+            ? `⚠️ ${name} has a server called divedeck that isn't this app's. Replace it in a terminal:`
             : `Connect the dive log to ${name} once, in a terminal:`}
       </p>
       <pre className="card" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", margin: 0 }}>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
               </div>
             )}
             <p className="muted">
-              Then ask in {active.app}: “Review my latest dive and save the review”, or run <code>/mcp__ai-diving-monitor__dive-review</code>. Reviews
+              Then ask in {active.app}: “Review my latest dive and save the review”, or run <code>/mcp__divedeck__dive-review</code>. Reviews
               appear here within seconds.
             </p>
           </>
