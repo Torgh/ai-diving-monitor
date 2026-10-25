@@ -1,19 +1,21 @@
-# 🤿 AI Diving Monitor
+<img src="public/icon.svg" alt="" width="72" height="72">
+
+# DiveDeck
 
 **An AI dive coach for scuba divers.** Import the logs from your dive computer and get a clear,
 data-driven review of every dive: what went well, what to watch, and how you're progressing over
 time, for example whether your gas consumption is getting better. Use the coach with the Claude or
 ChatGPT subscription you already have, **no API key needed**, or with a Claude or ChatGPT API key.
-Your dives stay yours: on this PC, in OneDrive or on Google Drive.
+Your dives stay yours: on this PC, in OneDrive or on Google Drive. (Formerly AI Diving Monitor.)
 
 ![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Next.js%20%2B%20Bun-blue)
 
-AI Diving Monitor works like its companion trip planner [TripDeck](https://github.com/Torgh/tripdeck):
+DiveDeck works like its companion trip planner [TripDeck](https://github.com/Torgh/tripdeck):
 the coach in Claude Code or Codex works on your log directly through an MCP server, and the web app
 shows its changes within seconds. It was rewritten from Python to TypeScript; the Python version
 (a Streamlit app on SQLite) is kept under the tag
-[`v0.1-python`](https://github.com/Torgh/ai-diving-monitor/tree/v0.1-python), and its log can be
+[`v0.1-python`](https://github.com/Torgh/divedeck/tree/v0.1-python), and its log can be
 copied over.
 
 ## Features
@@ -63,8 +65,8 @@ Requirements: [Bun](https://bun.sh) (it runs the MCP server and the app; Node.js
 web app).
 
 ```bash
-git clone https://github.com/Torgh/ai-diving-monitor.git
-cd ai-diving-monitor
+git clone https://github.com/Torgh/divedeck.git
+cd divedeck
 bun install
 bun run dev          # http://localhost:3001 (bound to 127.0.0.1)
 ```
@@ -79,7 +81,7 @@ improved.
 
 ### 1. Coach with your Claude or ChatGPT subscription (MCP, no API key)
 
-AI Diving Monitor ships an [MCP](https://modelcontextprotocol.io) server. Connect it to Claude Code,
+DiveDeck ships an [MCP](https://modelcontextprotocol.io) server. Connect it to Claude Code,
 Claude Desktop or Codex and the agent becomes your dive coach, on your own Claude Pro/Max or ChatGPT
 Plus/Pro plan at no extra cost. The server only exposes your dive log and the analytics.
 
@@ -89,10 +91,10 @@ computer, including the environment that points it at the same data folder. Typi
 
 ```bash
 # Claude Code (sign in with /login)
-claude mcp add --scope user ai-diving-monitor -- ~/.bun/bin/bun /path/to/ai-diving-monitor/mcp/server.ts
+claude mcp add --scope user divedeck -- ~/.bun/bin/bun /path/to/divedeck/mcp/server.ts
 
 # Codex CLI (codex login → Sign in with ChatGPT)
-codex mcp add ai-diving-monitor -- ~/.bun/bin/bun /path/to/ai-diving-monitor/mcp/server.ts
+codex mcp add divedeck -- ~/.bun/bin/bun /path/to/divedeck/mcp/server.ts
 ```
 
 For Claude Desktop, add the same command to `mcpServers` in its config. If Claude Code or Codex still
@@ -103,10 +105,10 @@ third-party apps to use claude.ai sign-in); the model runs in Claude Code or Cod
 Then ask in plain language, or use the prompts:
 
 ```
-/mcp__ai-diving-monitor__dive-review      # review of your latest dive, compared with your history
-/mcp__ai-diving-monitor__dive-review 7    # review of dive 7 (1 = your oldest dive)
-/mcp__ai-diving-monitor__sort-out         # go through what your log is still missing, one dive at a time
-/mcp__ai-diving-monitor__trip-prep Dahab  # get ready for the dives of a TripDeck trip
+/mcp__divedeck__dive-review      # review of your latest dive, compared with your history
+/mcp__divedeck__dive-review 7    # review of dive 7 (1 = your oldest dive)
+/mcp__divedeck__sort-out         # go through what your log is still missing, one dive at a time
+/mcp__divedeck__trip-prep Dahab  # get ready for the dives of a TripDeck trip
 > Import my dives from D:\Shearwater\export.uddf
 > Dive 2 was at Koparki with a 12 L tank of EAN32.
 > Is my gas consumption improving? What should I practise before my next deco dive?
@@ -165,14 +167,14 @@ Completions. A declined, cut-off or empty answer is shown, never saved as a dive
 Switching copies your dives and trips to the new place (the copy with the newer changes wins); the
 old place keeps its copy. The MCP server follows the choice at once.
 
-- **This PC**: `dives/`, `originals/` and `trips/` in the data folder (`AI_DIVING_MONITOR_HOME`, else the
-  folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor`).
-- **OneDrive**: an *AiDive* folder inside your OneDrive folder on this PC (on Windows
+- **This PC**: `dives/`, `originals/` and `trips/` in the data folder (`DIVEDECK_HOME`, else the
+  folder of `DIVEDECK_DB`, else `~/.divedeck`).
+- **OneDrive**: a *DiveDeck* folder inside your OneDrive folder on this PC (on Windows
   `%OneDrive%`, on macOS under `~/Library/CloudStorage/OneDrive-…`), synced by the OneDrive app. No
   sign-in needed. If it isn't found, enter the folder in Settings or set
-  `AI_DIVING_MONITOR_ONEDRIVE_FOLDER`. When two computers change the same dive offline, OneDrive keeps
+  `DIVEDECK_ONEDRIVE_FOLDER`. When two computers change the same dive offline, OneDrive keeps
   both files and the newer one wins; the next save removes the other.
-- **Google Drive**: *My Drive › AiDive*. The app asks only for `drive.file`: the files it
+- **Google Drive**: *My Drive › DiveDeck* (a folder from an earlier version, *AiDive*, is renamed). The app asks only for `drive.file`: the files it
   created, never your other files. It needs your own OAuth client, once, and Settings walks you
   through it:
   1. In Google Cloud, enable the **Google Drive API**.
@@ -191,21 +193,22 @@ Everything is set in **Settings**; environment variables still work, and a saved
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AI_DIVING_MONITOR_HOME` | the folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor` | Data folder: settings, sign-in, locks, and the dives when they're stored on this PC |
-| `AI_DIVING_MONITOR_DB` | `~/.ai-diving-monitor/dives.db` | The Python version's database (for the migration) |
-| `AI_DIVING_MONITOR_CONFIG` | `config.json` in the data folder | Settings file (the same one the Python version used) |
-| `AI_DIVING_MONITOR_ONEDRIVE_FOLDER` | found automatically | Your OneDrive folder |
+| `DIVEDECK_HOME` | the folder of `DIVEDECK_DB`, else `~/.divedeck` (`~/.ai-diving-monitor` when only that exists) | Data folder: settings, sign-in, locks, and the dives when they're stored on this PC |
+| `DIVEDECK_DB` | `~/.ai-diving-monitor/dives.db` | The Python version's database (for the migration) |
+| `DIVEDECK_CONFIG` | `config.json` in the data folder | Settings file (the same one the Python version used) |
+| `DIVEDECK_ONEDRIVE_FOLDER` | found automatically | Your OneDrive folder |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | – | API keys for the in-app coach |
-| `AI_DIVING_MONITOR_PROVIDER`, `AI_DIVING_MONITOR_MODEL` | Claude, `claude-opus-5-5` | How the coach runs, when nothing is chosen in Settings |
-| `AI_DIVING_MONITOR_EFFORT` | `high` | Claude's effort for the in-app coach (`low` … `max`) |
+| `DIVEDECK_PROVIDER`, `DIVEDECK_MODEL` | Claude, `claude-opus-5-5` | How the coach runs, when nothing is chosen in Settings |
+| `DIVEDECK_EFFORT` | `high` | Claude's effort for the in-app coach (`low` … `max`) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | – | The Google OAuth client |
 
-When you set any of the `AI_DIVING_MONITOR_*` folders, give the MCP server the same values
-(`claude mcp add … -e NAME=value`); the command Settings shows includes them.
+When you set any of the `DIVEDECK_*` folders, give the MCP server the same values
+(`claude mcp add … -e NAME=value`); the command Settings shows includes them. The names from the AI
+Diving Monitor days (`AI_DIVING_MONITOR_*`) still work when no `DIVEDECK_*` one is set.
 
 ## Security model
 
-AI Diving Monitor is a **personal, local app**:
+DiveDeck is a **personal, local app**:
 
 - The web app listens on `127.0.0.1` only, so other devices on your network can't open your dive log.
 - Its API only answers requests addressed to `localhost` (which defeats DNS rebinding) and coming
@@ -319,7 +322,7 @@ inputs and the first golden files are in the Python version.
 
 ## Roadmap
 
-AI Diving Monitor is heading towards working like [TripDeck](https://github.com/Torgh/tripdeck), by a
+DiveDeck (then AI Diving Monitor) is heading towards working like [TripDeck](https://github.com/Torgh/tripdeck), by a
 rewrite in TypeScript, one pull request per stage:
 
 0. **Golden fixtures** from the Python version, so the port can be checked number by number. ✅
@@ -348,7 +351,7 @@ and team/buddy comparisons.
 
 ## Disclaimer
 
-AI Diving Monitor is a training and logbook aid. It is **not** a decompression planner, and it does not
+DiveDeck is a training and logbook aid. It is **not** a decompression planner, and it does not
 replace your training, your dive computer or medical advice. If you have any symptoms of
 decompression sickness, contact DAN or the nearest hyperbaric facility immediately.
 

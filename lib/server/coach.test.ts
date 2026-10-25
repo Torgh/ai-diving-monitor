@@ -13,7 +13,7 @@ import { agentAppStatus, bunPath, installReviewCommand, runsOf, shellQuote } fro
 import { listModels, runCoach } from "./coachAgent";
 import { apiKey, configPath, readSettings, select, selected, setApiKey } from "./config";
 import { HttpError } from "./http";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const saved = { ...process.env };
@@ -35,10 +35,11 @@ const ctx: ToolContext = { records: async () => records, dataFolder: "/data" };
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-coach-"));
-  for (const name of ["AI_DIVING_MONITOR_CONFIG", "AI_DIVING_MONITOR_DB", "AI_DIVING_MONITOR_PROVIDER", "AI_DIVING_MONITOR_MODEL", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_HOME"]) {
+  for (const name of ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_HOME"]) {
     delete process.env[name];
   }
-  process.env.AI_DIVING_MONITOR_HOME = home;
+  isolateEnv(home);
+  delete process.env.DIVEDECK_DB;
 });
 
 afterEach(() => {
@@ -57,8 +58,8 @@ describe("settings", () => {
   });
 
   it("uses environment variables until a choice is saved", async () => {
-    process.env.AI_DIVING_MONITOR_PROVIDER = "openai";
-    process.env.AI_DIVING_MONITOR_MODEL = "gpt-5-mini";
+    process.env.DIVEDECK_PROVIDER = "openai";
+    process.env.DIVEDECK_MODEL = "gpt-5-mini";
     expect(selected()).toMatchObject({ provider: { id: "openai" }, model: "gpt-5-mini" });
     await select("anthropic", "claude-sonnet-5-5");
     expect(selected()).toMatchObject({ provider: { id: "anthropic" }, model: "claude-sonnet-5-5" });
@@ -87,11 +88,11 @@ describe("agent apps", () => {
   });
 
   it("gives the command to connect Claude Code, or to switch it from the Python server", () => {
-    process.env.AI_DIVING_MONITOR_DB = "D:\\data\\dives.db";
+    process.env.DIVEDECK_DB = "D:\\data\\dives.db";
     const fresh = agentAppStatus("claude-code", repo, home);
     expect(fresh).toMatchObject({ registered: false, runs: null, reviewCommandInstalled: false });
     expect(fresh.commands).toEqual([
-      `claude mcp add --scope user ai-diving-monitor -e AI_DIVING_MONITOR_HOME=${shellQuote(home)} -e AI_DIVING_MONITOR_DB=${shellQuote("D:\\data\\dives.db")} -- ${shellQuote(bunPath(home))} ${shellQuote(path.join(repo, "mcp", "server.ts"))}`,
+      `claude mcp add --scope user divedeck -e DIVEDECK_HOME=${shellQuote(home)} -e DIVEDECK_DB=${shellQuote("D:\\data\\dives.db")} -- ${shellQuote(bunPath(home))} ${shellQuote(path.join(repo, "mcp", "server.ts"))}`,
     ]);
 
     const python = { command: "py", args: ["-m", "ai_diving_monitor.mcp_server"] };
@@ -100,8 +101,15 @@ describe("agent apps", () => {
     expect(old).toMatchObject({ registered: true, runs: "python" });
     expect(old.commands[0]).toBe("claude mcp remove --scope user ai-diving-monitor");
 
+    // Registered under the AI Diving Monitor name: renamed to divedeck.
     const ts = { command: "bun", args: [path.join(repo, "mcp", "server.ts")] };
     fs.writeFileSync(path.join(home, ".claude.json"), JSON.stringify({ mcpServers: { "ai-diving-monitor": ts } }));
+    const renamed = agentAppStatus("claude-code", repo, home);
+    expect(renamed).toMatchObject({ registered: true, runs: "typescript" });
+    expect(renamed.commands[0]).toBe("claude mcp remove --scope user ai-diving-monitor");
+    expect(renamed.commands[1]).toMatch(/^claude mcp add --scope user divedeck /);
+
+    fs.writeFileSync(path.join(home, ".claude.json"), JSON.stringify({ mcpServers: { divedeck: ts } }));
     expect(agentAppStatus("claude-code", repo, home)).toMatchObject({ registered: true, runs: "typescript", commands: [] });
   });
 

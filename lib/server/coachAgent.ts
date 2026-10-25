@@ -7,6 +7,7 @@ import { SYSTEM_PROMPT } from "../coach";
 import { callCoachTool, COACH_TOOLS, type ToolContext } from "../coachTools";
 import { PROVIDERS, type ProviderId } from "../providers";
 import { apiKey } from "./config";
+import { envVar } from "./paths";
 import { HttpError } from "./http";
 
 export interface ChatMessage {
@@ -26,7 +27,7 @@ const APP_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 Answer in the language the diver writes in, formatted in Markdown, concise enough to read on a phone.`;
 
 /** Claude Opus 5.5 defaults to medium effort; a dive review compares a lot of numbers, so ask for high. */
-const EFFORT = (process.env.AI_DIVING_MONITOR_EFFORT as "low" | "medium" | "high" | "xhigh" | "max" | undefined) || "high";
+const EFFORT = (envVar("EFFORT") as "low" | "medium" | "high" | "xhigh" | "max" | undefined) || "high";
 const MAX_TOOL_ROUNDS = 25;
 
 /** Models that take server-side fallbacks: a request their safety classifiers decline is re-run on another model. */

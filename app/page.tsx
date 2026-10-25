@@ -130,7 +130,7 @@ export default function Dashboard() {
             ))}
           </ul>
           <p className="muted">
-            Fill them in on each dive&apos;s page, or ask your coach in Claude Code: <code>/mcp__ai-diving-monitor__sort-out</code>.
+            Fill them in on each dive&apos;s page, or ask your coach in Claude Code: <code>/mcp__divedeck__sort-out</code>.
           </p>
         </div>
       )}

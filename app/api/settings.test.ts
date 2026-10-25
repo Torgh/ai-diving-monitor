@@ -7,7 +7,7 @@ import { POST as review } from "./coach/review/route";
 import { POST as importSamples } from "./import/samples/route";
 import { POST as models } from "./settings/models/route";
 import { GET as getSettings, PUT as putSettings } from "./settings/route";
-import { restoreEnv } from "../../test-env";
+import { isolateEnv, restoreEnv } from "../../test-env";
 
 const URL_BASE = "http://localhost:3001";
 const saved = { ...process.env };
@@ -19,9 +19,8 @@ const read = async (res: Response) => [res.status, await res.json()] as const;
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "adm-settings-"));
-  for (const name of ["AI_DIVING_MONITOR_CONFIG", "AI_DIVING_MONITOR_PROVIDER", "AI_DIVING_MONITOR_MODEL", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"]) delete process.env[name];
-  process.env.AI_DIVING_MONITOR_HOME = home;
-  process.env.AI_DIVING_MONITOR_DB = path.join(home, "no-such.db");
+  for (const name of ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]) delete process.env[name];
+  isolateEnv(home);
   // os.homedir() reads these: Settings look for ~/.claude.json there, not in the real home.
   process.env.HOME = home;
   process.env.USERPROFILE = home;

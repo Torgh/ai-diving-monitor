@@ -69,7 +69,7 @@ function CoachReview({ data, onSaved }: { data: Data; onSaved: () => void }) {
         </div>
       ) : provider ? (
         <p className="muted">
-          Ask your coach in {provider.app}: <code>/mcp__ai-diving-monitor__dive-review {data.seq}</code>
+          Ask your coach in {provider.app}: <code>/mcp__divedeck__dive-review {data.seq}</code>
         </p>
       ) : null}
       {failure && <div className="error">{failure}</div>}

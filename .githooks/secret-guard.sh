@@ -1,6 +1,6 @@
 #!/bin/sh
 # Refuses to commit or push a secret: a value from .env.local or an API key saved in the app's
-# Settings (~/.ai-diving-monitor/config.json, or AI_DIVING_MONITOR_CONFIG).
+# Settings (config.json in the data folder, or DIVEDECK_CONFIG).
 # Usage: secret-guard.sh <commit|push> < text to scan ; exits 1 when a secret is found.
 mode=$1
 input=$(cat)
@@ -26,8 +26,12 @@ if [ -f "$env_file" ]; then
 fi
 
 # The data folder, found the way the app finds it (lib/server/paths.ts).
-if [ -n "$AI_DIVING_MONITOR_HOME" ]; then data="$AI_DIVING_MONITOR_HOME"
-elif [ -n "$AI_DIVING_MONITOR_DB" ]; then data=$(dirname "$AI_DIVING_MONITOR_DB")
+# DIVEDECK_* first, then the names from the AI Diving Monitor days.
+home_var=${DIVEDECK_HOME:-$AI_DIVING_MONITOR_HOME}
+db_var=${DIVEDECK_DB:-$AI_DIVING_MONITOR_DB}
+if [ -n "$home_var" ]; then data="$home_var"
+elif [ -n "$db_var" ]; then data=$(dirname "$db_var")
+elif [ -d "$HOME/.divedeck" ] || [ ! -d "$HOME/.ai-diving-monitor" ]; then data="$HOME/.divedeck"
 else data="$HOME/.ai-diving-monitor"; fi
 
 # check_pairs <label> <file> <"name": "value" pairs, one per line>
@@ -43,7 +47,7 @@ $3
 EOF
 }
 
-config="${AI_DIVING_MONITOR_CONFIG:-$data/config.json}"
+config="${DIVEDECK_CONFIG:-${AI_DIVING_MONITOR_CONFIG:-$data/config.json}}"
 if [ -f "$config" ]; then
   flat=$(tr -d '\n' < "$config")
   # The keys saved in Settings: every "provider": "key" pair inside "api_keys": { ... }.

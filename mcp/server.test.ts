@@ -39,12 +39,12 @@ const json = async (name: string, args: Record<string, unknown> = {}) => JSON.pa
 describe.skipIf(!bun)("MCP server", () => {
   beforeAll(async () => {
     const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined));
-    client = new Client({ name: "ai-diving-monitor-test", version: "1.0.0" });
+    client = new Client({ name: "divedeck-test", version: "1.0.0" });
     await client.connect(
       new StdioClientTransport({
         command: bun!,
         args: [path.join(ROOT, "mcp", "server.ts")],
-        env: { ...env, AI_DIVING_MONITOR_HOME: home, AI_DIVING_MONITOR_DB: path.join(home, "no-such.db") },
+        env: { ...Object.fromEntries(Object.entries(env).filter(([k]) => !/^(DIVEDECK|AI_DIVING_MONITOR)_/i.test(k))), DIVEDECK_HOME: home, DIVEDECK_DB: path.join(home, "no-such.db") },
         stderr: "pipe",
       }),
     );

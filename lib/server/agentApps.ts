@@ -1,13 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { envVar } from "./paths";
 
 /**
  * The subscription setup: is the dive log's MCP server registered in Claude Code or Codex, which
  * version does it run, and the exact commands to (re)register it on this computer.
  */
 
-export const SERVER_NAME = "ai-diving-monitor";
+export const SERVER_NAME = "divedeck";
+/** The server's name when the app was called AI Diving Monitor: such a registration is replaced. */
+export const LEGACY_SERVER_NAME = "ai-diving-monitor";
 
 export type Runs = "typescript" | "python" | "other";
 
@@ -25,6 +28,8 @@ export interface AppStatus {
 interface Registration {
   command?: string;
   args?: string[];
+  /** The name it is registered under (set by the lookups below). */
+  name?: string;
 }
 
 export function runsOf(reg: Registration): Runs {
@@ -35,12 +40,12 @@ export function runsOf(reg: Registration): Runs {
 }
 
 /** Claude Code keeps user-scope servers at the top of ~/.claude.json and project-scope ones per project. */
-function claudeRegistration(home: string): Registration | null {
+function claudeRegistration(home: string, name: string): Registration | null {
   try {
     const config = JSON.parse(fs.readFileSync(path.join(home, ".claude.json"), "utf8"));
-    if (config.mcpServers?.[SERVER_NAME]) return config.mcpServers[SERVER_NAME];
+    if (config.mcpServers?.[name]) return { ...config.mcpServers[name], name };
     for (const project of Object.values<{ mcpServers?: Record<string, Registration> }>(config.projects ?? {})) {
-      if (project.mcpServers?.[SERVER_NAME]) return project.mcpServers[SERVER_NAME];
+      if (project.mcpServers?.[name]) return { ...project.mcpServers[name], name };
     }
   } catch {
     // No Claude Code configuration yet.
@@ -49,7 +54,7 @@ function claudeRegistration(home: string): Registration | null {
 }
 
 /** Codex keeps servers as [mcp_servers.<name>] tables in config.toml. */
-function codexRegistration(home: string): Registration | null {
+function codexRegistration(home: string, name: string): Registration | null {
   const dir = process.env.CODEX_HOME?.trim() || path.join(home, ".codex");
   let toml: string;
   try {
@@ -57,12 +62,13 @@ function codexRegistration(home: string): Registration | null {
   } catch {
     return null;
   }
-  const start = toml.search(new RegExp(`^\\[mcp_servers\\.(?:"${SERVER_NAME}"|${SERVER_NAME})\\]\\s*$`, "m"));
+  const start = toml.search(new RegExp(`^\\[mcp_servers\\.(?:"${name}"|${name})\\]\\s*$`, "m"));
   if (start < 0) return null;
   const body = toml.slice(start).split(/\n(?=\[)/)[0];
   const command = /^command\s*=\s*"((?:[^"\\]|\\.)*)"/m.exec(body)?.[1];
   const args = /^args\s*=\s*\[([^\]]*)\]/m.exec(body)?.[1];
   return {
+    name,
     command: command?.replace(/\\\\/g, "\\"),
     args: args ? [...args.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\\\/g, "\\")) : [],
   };
@@ -86,15 +92,19 @@ export function shellQuote(s: string, platform: NodeJS.Platform = process.platfo
 
 const quote = (s: string) => shellQuote(s);
 
-/** Environment the server needs to find the same data folder as this app. */
+/** Environment the server needs to find the same data folder as this app (under the DiveDeck names). */
 function envFlags(flag: string): string {
-  return ["AI_DIVING_MONITOR_HOME", "AI_DIVING_MONITOR_DB", "AI_DIVING_MONITOR_CONFIG"]
-    .flatMap((name) => (process.env[name]?.trim() ? [`${flag} ${name}=${quote(process.env[name]!.trim())}`] : []))
+  return ["HOME", "DB", "CONFIG"]
+    .flatMap((name) => {
+      const value = envVar(name);
+      return value ? [`${flag} DIVEDECK_${name}=${quote(value)}`] : [];
+    })
     .join(" ");
 }
 
 export function agentAppStatus(app: "claude-code" | "codex", repo = process.cwd(), home = os.homedir()): AppStatus {
-  const reg = app === "claude-code" ? claudeRegistration(home) : codexRegistration(home);
+  const lookup = app === "claude-code" ? claudeRegistration : codexRegistration;
+  const reg = lookup(home, SERVER_NAME) ?? lookup(home, LEGACY_SERVER_NAME);
   const server = `${quote(bunPath(home))} ${quote(path.join(repo, "mcp", "server.ts"))}`;
   const env = envFlags(app === "claude-code" ? "-e" : "--env");
   // The name goes before the environment flags: `-e` takes several values and would swallow it.
@@ -102,13 +112,15 @@ export function agentAppStatus(app: "claude-code" | "codex", repo = process.cwd(
     app === "claude-code"
       ? `claude mcp add --scope user ${SERVER_NAME} ${env ? `${env} ` : ""}-- ${server}`
       : `codex mcp add ${SERVER_NAME} ${env ? `${env} ` : ""}-- ${server}`;
-  const remove = app === "claude-code" ? `claude mcp remove --scope user ${SERVER_NAME}` : `codex mcp remove ${SERVER_NAME}`;
+  const name = reg?.name ?? SERVER_NAME;
+  const remove = app === "claude-code" ? `claude mcp remove --scope user ${name}` : `codex mcp remove ${name}`;
   const runs = reg ? runsOf(reg) : null;
+  const current = runs === "typescript" && name === SERVER_NAME;
   const status: AppStatus = {
     app,
     registered: reg !== null,
     runs,
-    commands: runs === "typescript" ? [] : reg ? [remove, add] : [add],
+    commands: current ? [] : reg ? [remove, add] : [add],
   };
   if (app === "claude-code") status.reviewCommandInstalled = fs.existsSync(path.join(home, ".claude", "commands", "dive-review.md"));
   return status;

@@ -37,10 +37,10 @@ export default function CoachPage() {
           </p>
           <ul>
             <li>
-              <code>/mcp__ai-diving-monitor__dive-review</code>: a review of your latest dive, saved here
+              <code>/mcp__divedeck__dive-review</code>: a review of your latest dive, saved here
             </li>
             <li>
-              <code>/mcp__ai-diving-monitor__sort-out</code>: go through what your log is still missing
+              <code>/mcp__divedeck__sort-out</code>: go through what your log is still missing
             </li>
             <li>“Is my gas consumption improving? What should I practise before my next deco dive?”</li>
           </ul>

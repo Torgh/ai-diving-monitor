@@ -8,7 +8,7 @@ import { dataDir } from "./paths";
 
 /**
  * Signing in to Google Drive (OAuth with PKCE), as in TripDeck. The app asks only for `drive.file`:
- * the files it created itself (its AiDive folder), never the diver's other files. The
+ * the files it created itself (its DiveDeck folder), never the diver's other files. The
  * refresh token stays in the data folder on this computer.
  */
 export const GOOGLE_DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";

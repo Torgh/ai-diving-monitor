@@ -3,8 +3,9 @@ import { Nav } from "@/components/Nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI Diving Monitor",
+  title: "DiveDeck",
   description: "AI dive coach: data-driven reviews of your dives and your progress over time.",
+  icons: { icon: "/icon-small.svg", apple: "/icon.svg" },
 };
 
 export const viewport: Viewport = {

@@ -18,7 +18,10 @@ export function Nav() {
   return (
     <nav className="nav" aria-label="Main">
       <Link href="/" className="brand">
-        🤿 AI Diving Monitor
+        {/* A small static SVG: next/image would not optimise it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon-small.svg" alt="" width={28} height={28} />
+        DiveDeck
       </Link>
       {LINKS.map((l) => (
         <Link key={l.href} href={l.href} className="link" aria-current={current(l.href) ? "page" : undefined}>
