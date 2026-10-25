@@ -13,8 +13,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
+  camelKeys,
   DESCRIPTIONS,
   diveAnalysis,
+  diveGear,
   divePrep,
   diveProfile,
   listDives,
@@ -22,13 +24,17 @@ import {
   overview,
   progressTrend,
   resolveDive,
+  snakeKeys,
   SUMMARY_REQUEST,
   TRIP_PREP_REQUEST,
   tripCardUrl,
   tripPlans,
 } from "../lib/coach";
 import { analyzeRecord, chronological, parseGas } from "../lib/record";
+import { findSet, KitInputError } from "../lib/kit";
+import { parseKitChange } from "../lib/kitSchema";
 import { DiveStore } from "../lib/server/diveStore";
+import { KitStore } from "../lib/server/kitStore";
 import { migrateFromPython } from "../lib/server/migrate";
 import { pythonDbPath } from "../lib/server/paths";
 import { TripStore } from "../lib/server/tripStore";
@@ -37,6 +43,7 @@ import { UddfParseError } from "../lib/uddf";
 /** The log where Settings say it is stored, looked up on every call so a change applies at once. */
 const store = () => new DiveStore();
 const trips = () => new TripStore();
+const kits = () => new KitStore();
 const server = new McpServer({ name: "divedeck", title: "DiveDeck", version: "0.3.0" }, { instructions: MCP_INSTRUCTIONS });
 
 const text = (value: unknown) => ({
@@ -81,7 +88,7 @@ server.registerTool(
   { title: "Dive analysis", description: DESCRIPTIONS.get_dive_analysis, inputSchema: { dive_id: diveRef }, annotations: READ_ONLY },
   tool(async ({ dive_id }: { dive_id: string | number }) => {
     const { record, seq } = await find(dive_id);
-    return diveAnalysis(record, seq);
+    return { ...diveAnalysis(record, seq), gear: diveGear(record, await kits().get()) };
   }),
 );
 
@@ -172,6 +179,10 @@ server.registerTool(
       notes: optionalText("The diver's notes"),
       tank_volume_l: z.number().positive().max(100).nullable().optional().describe("Water volume of the main tank in litres, e.g. 12, or 24 for twin 12s. null removes it."),
       gas: z.string().max(40).nullable().optional().describe('Gas in the main tank: "air", "EAN32", "Tx 18/45"… null removes it.'),
+      gear_set: z.string().max(100).nullable().optional().describe("The gear set dived with, by id or name (get_kit lists them). null removes it."),
+      ballast_kg: z.number().min(0).max(40).nullable().optional().describe("The lead actually carried, kg. null removes it."),
+      water: z.enum(["fresh", "brackish", "salt"]).nullable().optional().describe("Only when it differs from the site's water (set that with update_kit). null removes it."),
+      weighting: z.enum(["light", "ok", "heavy"]).nullable().optional().describe("How the weighting felt at the safety stop with a nearly empty tank."),
     },
     annotations: WRITES,
   },
@@ -183,8 +194,19 @@ server.registerTool(
     notes?: string | null;
     tank_volume_l?: number | null;
     gas?: string | null;
+    gear_set?: string | null;
+    ballast_kg?: number | null;
+    water?: "fresh" | "brackish" | "salt" | null;
+    weighting?: "light" | "ok" | "heavy" | null;
   }) => {
     const { record, seq } = await find(args.dive_id);
+    const kit = await kits().get();
+    let gearSetId: string | null | undefined = args.gear_set === undefined ? undefined : null;
+    if (args.gear_set) {
+      const set = findSet(kit, args.gear_set);
+      if (!set) throw new KitInputError(`No gear set "${args.gear_set}". Sets: ${kit.sets.map((s) => s.name).join(", ") || "none yet (add one with update_kit)"}.`);
+      gearSetId = set.id;
+    }
     let gas: { o2: number; he: number } | null | undefined = args.gas === undefined ? undefined : null;
     if (args.gas) {
       gas = parseGas(args.gas);
@@ -197,6 +219,10 @@ server.registerTool(
       notes: args.notes,
       tankVolumeL: args.tank_volume_l,
       gas,
+      gearSetId,
+      ballastKg: args.ballast_kg,
+      water: args.water,
+      weighting: args.weighting,
     });
     const { metrics, findings } = analyzeRecord(updated);
     return {
@@ -213,7 +239,75 @@ server.registerTool(
         score: metrics.score,
       },
       finding_titles: findings.map((f) => f.title),
+      gear: diveGear(updated, kit),
     };
+  }),
+);
+
+server.registerTool(
+  "get_kit",
+  { title: "The diver's kit", description: DESCRIPTIONS.get_kit, inputSchema: {}, annotations: READ_ONLY },
+  tool(async () => {
+    const [kit, records] = await Promise.all([kits().get(), store().list()]);
+    const used = (id: string) => records.filter((r) => r.details.gearSetId === id).length;
+    return snakeKeys({ ...kit, sets: kit.sets.map((s) => ({ ...s, divesWithIt: used(s.id) })) });
+  }),
+);
+
+const nullableNumber = (what: string) => z.number().nullable().optional().describe(what);
+server.registerTool(
+  "update_kit",
+  {
+    title: "Change the diver's kit",
+    description: DESCRIPTIONS.update_kit,
+    inputSchema: {
+      diver: z
+        .object({ mass_kg: nullableNumber("Body mass, kg."), height_cm: nullableNumber("Height, cm."), body_fat_percent: nullableNumber("Body fat, %.") })
+        .optional(),
+      items: z
+        .array(
+          z.object({
+            id: z.string().optional().describe("To change an item; leave out to add one (or to change it by its name)."),
+            name: z.string().optional(),
+            kind: z.enum(["suit", "hood", "gloves", "boots", "bcd", "regulator", "tank", "fins", "computer", "light", "camera", "other"]).optional(),
+            brand: z.string().nullable().optional(),
+            notes: z.string().nullable().optional(),
+            buoyancy_kg: nullableNumber("In the water: + floats, − sinks (maker's figure or weighed)."),
+            suit_type: z.enum(["wetsuit", "semidry", "drysuit"]).nullable().optional(),
+            thickness_mm: nullableNumber("Neoprene thickness, mm."),
+            undergarment: z.string().nullable().optional().describe("Under a drysuit."),
+            size: z.string().nullable().optional(),
+            age_years: nullableNumber("How old the neoprene is (old neoprene floats less)."),
+            material: z.enum(["steel", "aluminium", "carbon"]).nullable().optional(),
+            volume_l: nullableNumber("Tank water volume, L."),
+            working_pressure_bar: nullableNumber("Tank working pressure, bar."),
+            empty_buoyancy_kg: nullableNumber("Empty tank with valve, from the maker's sheet."),
+            plate: z.enum(["steel", "aluminium", "none"]).nullable().optional(),
+          }),
+        )
+        .optional(),
+      sets: z
+        .array(
+          z.object({
+            id: z.string().optional(),
+            name: z.string().optional(),
+            items: z.array(z.string()).optional().describe("Gear by id or name; replaces the set's list."),
+            ballast_kg: nullableNumber("The lead usually carried with this set, kg."),
+            water: z.enum(["fresh", "brackish", "salt"]).nullable().optional(),
+            notes: z.string().nullable().optional(),
+          }),
+        )
+        .optional(),
+      sites: z
+        .array(z.object({ name: z.string(), water: z.enum(["fresh", "brackish", "salt"]).nullable(), density: nullableNumber("kg/L, e.g. 1.03 for the Red Sea.") }))
+        .optional(),
+      remove: z.object({ items: z.array(z.string()).optional(), sets: z.array(z.string()).optional() }).optional(),
+    },
+    annotations: WRITES,
+  },
+  tool(async (args: Record<string, unknown>) => {
+    const kit = await kits().update(parseKitChange(camelKeys(args)));
+    return snakeKeys(kit);
   }),
 );
 

@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { diveAnalysis, DiveRefError, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, snake, snakeKeys, tripCardUrl } from "./coach";
+import { camelKeys, diveAnalysis, diveGear, DiveRefError, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, snake, snakeKeys, tripCardUrl } from "./coach";
+import { emptyKit, updateKit } from "./kit";
 import { fingerprint } from "./dive";
 import { type DiveRecord, RECORD_FORMAT } from "./record";
 import { parseUddf } from "./uddf";
@@ -94,3 +95,30 @@ describe("tripCardUrl", () => {
     expect(tripCardUrl("a b", "x#y")).toBe("http://localhost:3001/trips/a%20b#card-x%23y");
   });
 });
+
+describe("the kit for the agent", () => {
+  it("turns the agent's snake_case into the app's names, deeply", () => {
+    expect(camelKeys({ mass_kg: 82, items: [{ volume_l: 12, working_pressure_bar: 232 }], kind: null })).toEqual({
+      massKg: 82,
+      items: [{ volumeL: 12, workingPressureBar: 232 }],
+      kind: null,
+    });
+  });
+
+  it("says what a dive was dived with, and the water from its site", () => {
+    const kit = updateKit(
+      emptyKit(),
+      { items: [{ name: "Fins", kind: "fins" }], sets: [{ name: "Lake", items: ["Fins", "fins"] }], sites: [{ name: "Koparki", water: "fresh" }] },
+      "T",
+    );
+    const dive = { ...records[0], details: { gearSetId: "lake", ballastKg: 8, weighting: "ok" as const, site: "Koparki" } };
+    expect(diveGear(dive, kit)).toEqual({
+      gear_set: { id: "lake", name: "Lake", items: ["Fins"] },
+      ballast_kg: 8,
+      water: { water: "fresh", density_kg_l: 1, from: "site" },
+      weighting: "ok",
+    });
+    expect(diveGear({ ...records[0], details: { gearSetId: "gone" } }, kit)).toMatchObject({ gear_set: null, ballast_kg: null, weighting: null });
+  });
+});
+

@@ -58,8 +58,8 @@ describe.skipIf(!bun)("MCP server", () => {
   it("offers the coach tools and prompts", async () => {
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
-      "get_dive_analysis", "get_dive_profile", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
-      "list_dives", "migrate_from_python", "prepare_dive", "save_dive_summary", "save_trip_plan", "update_dive",
+      "get_dive_analysis", "get_dive_profile", "get_kit", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
+      "list_dives", "migrate_from_python", "prepare_dive", "save_dive_summary", "save_trip_plan", "update_dive", "update_kit",
     ]);
     expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "sort-out", "trip-prep"]);
     expect(client.getInstructions()).toContain("save it with update_dive");
@@ -121,6 +121,35 @@ describe.skipIf(!bun)("MCP server", () => {
     expect((await json("list_dives"))[1].has_review).toBe(true);
     const prompt = await client.getPrompt({ name: "dive-review", arguments: {} });
     expect(JSON.stringify(prompt.messages)).toContain("Review dive #10");
+  });
+
+  it("keeps the kit and puts the gear, lead, water and weighting on a dive", async () => {
+    expect(await json("get_kit")).toMatchObject({ format: "divedeck/kit", diver: {}, items: [], sets: [] });
+    const kit = await json("update_kit", {
+      diver: { mass_kg: 82, height_cm: 183 },
+      items: [
+        { name: "Pianka 7 mm", kind: "suit", suit_type: "wetsuit", thickness_mm: 7 },
+        { name: "Stal 12 L", kind: "tank", material: "steel", volume_l: 12, working_pressure_bar: 232, empty_buoyancy_kg: -1.4 },
+      ],
+      sets: [{ name: "Jezioro", items: ["Pianka 7 mm", "Stal 12 L"], ballast_kg: 8 }],
+      sites: [{ name: "Koparki", water: "fresh" }],
+    });
+    expect(kit.diver).toEqual({ mass_kg: 82, height_cm: 183 });
+    expect(kit.items[1]).toMatchObject({ id: "stal-12-l", volume_l: 12, working_pressure_bar: 232, empty_buoyancy_kg: -1.4 });
+    expect(kit.sets[0]).toMatchObject({ id: "jezioro", item_ids: ["pianka-7-mm", "stal-12-l"], ballast_kg: 8 });
+
+    const updated = await json("update_dive", { dive_id: 1, gear_set: "jezioro", ballast_kg: 8, weighting: "heavy" });
+    expect(updated.gear).toEqual({
+      gear_set: { id: "jezioro", name: "Jezioro", items: ["Pianka 7 mm", "Stal 12 L"] },
+      ballast_kg: 8,
+      water: { water: "fresh", density_kg_l: 1, from: "site" },
+      weighting: "heavy",
+    });
+    expect((await json("get_dive_analysis", { dive_id: 1 })).gear.gear_set.name).toBe("Jezioro");
+    expect((await json("get_kit")).sets[0].dives_with_it).toBe(1);
+    expect((await call("update_dive", { dive_id: 1, gear_set: "Morze" })).text).toContain('No gear set "Morze"');
+    expect((await call("update_kit", { items: [{ name: "Thing" }] })).text).toContain("needs a kind");
+    expect(client.getInstructions()).toContain("update_kit");
   });
 
   it("prepares for a planned dive from the log", async () => {

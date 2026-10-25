@@ -4,6 +4,7 @@ import { DiveRefError } from "../coach";
 import { UddfParseError } from "../uddf";
 import { DiveNotFoundError } from "./diveStore";
 import { LockTimeoutError } from "./files";
+import { KitInputError } from "../kit";
 
 /** An error with an HTTP status, turned into a `{ error }` answer by handle(). */
 export class HttpError extends Error {
@@ -64,6 +65,7 @@ export function assertSameOrigin(req: Request) {
 
 function statusOf(err: unknown): number {
   if (err instanceof HttpError) return err.status;
+  if (err instanceof KitInputError) return 400;
   if (err instanceof DiveNotFoundError || err instanceof DiveRefError) return 404;
   if (err instanceof UddfParseError) return 422;
   if (err instanceof LockTimeoutError) return 503;

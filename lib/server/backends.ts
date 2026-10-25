@@ -15,7 +15,7 @@ import { CLOUD_FOLDER, dataDir, envVar, LEGACY_CLOUD_FOLDERS } from "./paths";
  * on Google Drive.
  */
 export type StorageKind = "local" | "onedrive" | "google";
-export type Area = "dives" | "originals" | "trips";
+export type Area = "dives" | "originals" | "trips" | "kit";
 
 export interface StoredFile {
   name: string;
