@@ -1,5 +1,5 @@
 /**
- * Parser for UDDF (Universal Dive Data Format) files, ported from src/ai_diving_monitor/uddf.py.
+ * Parser for UDDF (Universal Dive Data Format) files, ported from the Python version (tag v0.1-python).
  *
  * UDDF stores values in SI units: depth in metres, time in seconds, temperature in kelvin, pressure
  * in pascal and volume in cubic metres. Everything is converted here to diver units (m, s, °C, bar,

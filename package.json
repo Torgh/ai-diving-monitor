@@ -11,6 +11,7 @@
     "start": "next start -H 127.0.0.1 -p 3001",
     "mcp": "bun mcp/server.ts",
     "migrate": "bun scripts/migrate-from-python.ts",
+    "golden": "bun scripts/export-golden.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

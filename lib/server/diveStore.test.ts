@@ -163,7 +163,7 @@ describe("paths", () => {
   });
 });
 
-/** A database with the Python version's schema (src/ai_diving_monitor/storage.py). */
+/** A database with the Python version's schema (storage.py, tag v0.1-python). */
 function pythonDatabase(file: string, files: { name: string; content: Uint8Array; summaries?: Record<number, string> }[]) {
   const db = new DatabaseSync(file);
   db.exec(`

@@ -11,9 +11,10 @@ Your dives stay yours: on this PC, in OneDrive or on Google Drive.
 
 AI Diving Monitor works like its companion trip planner [TripDeck](https://github.com/Torgh/tripdeck):
 the coach in Claude Code or Codex works on your log directly through an MCP server, and the web app
-shows its changes within seconds. It was rewritten from Python to TypeScript; the Python version is
-still in the repository until stage 5 of the [Roadmap](#roadmap) and is tagged
-[`v0.1-python`](https://github.com/Torgh/ai-diving-monitor/tree/v0.1-python).
+shows its changes within seconds. It was rewritten from Python to TypeScript; the Python version
+(a Streamlit app on SQLite) is kept under the tag
+[`v0.1-python`](https://github.com/Torgh/ai-diving-monitor/tree/v0.1-python), and its log can be
+copied over.
 
 ## Features
 
@@ -170,7 +171,7 @@ Everything is set in **Settings**; environment variables still work, and a saved
 |---|---|---|
 | `AI_DIVING_MONITOR_HOME` | the folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor` | Data folder: settings, sign-in, locks, and the dives when they're stored on this PC |
 | `AI_DIVING_MONITOR_DB` | `~/.ai-diving-monitor/dives.db` | The Python version's database (for the migration) |
-| `AI_DIVING_MONITOR_CONFIG` | `config.json` in the data folder | Settings file, shared with the Python version |
+| `AI_DIVING_MONITOR_CONFIG` | `config.json` in the data folder | Settings file (the same one the Python version used) |
 | `AI_DIVING_MONITOR_ONEDRIVE_FOLDER` | found automatically | Your OneDrive folder |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | – | API keys for the in-app coach |
 | `AI_DIVING_MONITOR_PROVIDER`, `AI_DIVING_MONITOR_MODEL` | Claude, `claude-opus-5-5` | How the coach runs, when nothing is chosen in Settings |
@@ -246,32 +247,21 @@ bun run test         # Vitest
 bun run check        # everything CI runs: typecheck, lint, tests with coverage, build
 bun run mcp          # run the MCP server manually (normally Claude Code or Codex starts it)
 bun run migrate      # copy the Python version's log into dive files (safe to run again)
+bun run golden       # rewrite fixtures/golden/ (see below)
 ```
 
 Tests never touch your real dives or home folder: each suite uses its own temporary data folder and
 home, and Google Drive is replaced with an in-memory fake. Change parsing? Bump `PARSER_VERSION` in
-`lib/uddf.ts` (and `uddf.py` while it's here), so stored dives are parsed again.
-
-### The Python version (until stage 5)
-
-The Streamlit app in `src/` still works on its SQLite database and is tested in CI, so the golden
-fixtures below stay honest:
-
-```bash
-python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"   # macOS/Linux: .venv/bin/pip
-pytest
-ai-diving-monitor            # the old web UI on http://localhost:8501
-```
+`lib/uddf.ts`, so stored dives are parsed again.
 
 ### CI
 
-On every pull request and every commit to `main`, CI runs `bun run check` on Linux, the TypeScript
-tests on Windows, and `pytest` on Python 3.10 and 3.12 (Linux) and 3.12 (Windows). It fails when test
-coverage of the TypeScript code drops below the thresholds in `vitest.config.mts`. A new push to a
-pull request cancels the run for the previous one. CodeQL scans the Python, TypeScript and workflow
-code on every pull request, on `main` and weekly. Dependabot opens grouped update pull requests for
-Bun, pip and GitHub Actions every Monday, and security fixes as soon as they are published. Actions
-are pinned to a commit, and `main` only takes pull requests whose checks pass.
+On every pull request and every commit to `main`, CI runs `bun run check` on Linux and the tests on
+Windows. It fails when test coverage drops below the thresholds in `vitest.config.mts`. A new push to
+a pull request cancels the run for the previous one. CodeQL scans the TypeScript and workflow code on
+every pull request, on `main` and weekly. Dependabot opens grouped update pull requests for Bun and
+GitHub Actions every Monday, and security fixes as soon as they are published. Actions are pinned to
+a commit, and `main` only takes pull requests whose checks pass.
 
 `bun install` points git at the hooks in `.githooks/`: they refuse a commit or push that contains a
 secret from `.env.local`, an API key or the Google client secret saved in Settings, or the Google
@@ -279,10 +269,11 @@ sign-in tokens.
 
 ### Golden fixtures
 
-`fixtures/golden/` holds what the Python version parses and computes for every test file: the parsed
+`fixtures/golden/` holds what the Python version parsed and computed for every test file: the parsed
 dive, its metrics, findings and score, and for the sample log the dive list, trends and progress
-insights. The TypeScript version is tested against these files, so it produces the same numbers.
-The inputs are `examples/*.uddf` and `fixtures/uddf/*.uddf`:
+insights. The TypeScript version was ported against these files and is still tested against them,
+so a change that moves any number shows up. The inputs are `examples/*.uddf` and
+`fixtures/uddf/*.uddf`:
 
 - `shearwater-style.uddf`: a fictional dive shaped like a Shearwater export, with CNS in whole percent
   and unused tank slots
@@ -291,14 +282,11 @@ The inputs are `examples/*.uddf` and `fixtures/uddf/*.uddf`:
   a rocket ascent after a sawtooth, a hypoxic gas, CNS as fractions, a dive without a date and a single
   sample. The file also covers UDDF 2.x dates, time zones, mixed-content notes and ISO-8859-1.
 
-```bash
-python scripts/generate_edge_cases.py   # rewrite fixtures/uddf/edge-cases.uddf
-python scripts/export_golden.py         # rewrite fixtures/golden/ after changing parsing or analysis
-```
-
-`pytest` fails when the golden files are out of date, and `lib/golden.test.ts` fails when the
-TypeScript version parses or analyses any of these files differently: every number, finding, text,
-fingerprint, trend and progress insight must match.
+`lib/golden.test.ts` fails when the app parses or analyses any of these files differently: every
+number, finding, text, fingerprint, trend and progress insight must match. When a change is meant to
+alter them (a fixed parser bug, a new metric), `bun run golden` rewrites the files from the current
+code; check the diff, since from then on it is the new reference. The scripts that generated the
+inputs and the first golden files are in the Python version.
 
 ## Roadmap
 
@@ -317,8 +305,8 @@ rewrite in TypeScript, one pull request per stage:
    - 4b. Settings and the coach: a Claude or ChatGPT API key in the app, and the subscription through
      Claude Code or Codex. The TypeScript MCP server replaces the Python one. ✅
    - 4c. Where the dives are stored: this PC, OneDrive or Google Drive. ✅
-5. **Python retired.** The Streamlit app, the SQLite storage and the Python tests leave the repository;
-   the golden fixtures stay.
+5. **Python retired.** The Streamlit app, the SQLite storage and the Python tests left the repository;
+   the golden fixtures and the copy of an old log stayed. ✅
 6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
    and let the coach prepare you for each site from your own history.
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
