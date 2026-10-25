@@ -33,7 +33,7 @@ How to work with the dive log:
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
 - Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the DiveDeck app.
-- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation through save_trip_plan, so the app shows them. Then put the verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
+- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation, your verdict for each and the trip's flights through save_trip_plan, so the app shows them. Then put the same verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
 export const SUMMARY_REQUEST = `Review dive {dive} for me. Structure the answer as:
 
@@ -92,7 +92,9 @@ export const DESCRIPTIONS = {
     "time since the last dive, gas consumption at the planned depth, ppO2 / MOD / best nitrox mix, recurring problems, and notes worth raising. Read-only.",
   save_trip_plan:
     "Save a TripDeck trip's dive cards in the dive log with your preparation for each card (Markdown) and optional notes for the whole trip, so the app shows them. " +
-    "Send every dive card of the trip as it is now: cards not sent are removed; a card's preparation and logged dives are kept unless new ones are sent (\"\" removes a text).",
+    "Send every dive card of the trip as it is now: cards not sent are removed; a card's preparation, verdict and logged dives are kept unless new ones are sent (\"\" removes a text or a verdict). " +
+    "Give each card the same verdict you save on the TripDeck card (ready, or check with a one-line summary), and the trip's flights from TripDeck (date, departure time, from, to), " +
+    "so the app shows the break before the trip and the time from the last dive to the flight.",
   get_trip_plans:
     "The trips saved with save_trip_plan. Without trip_id: each trip with its dates and how many cards are prepared. With trip_id: its cards, preparation, " +
     "linked logged dives, and the dives logged on each card's day that aren't linked yet.",
@@ -265,6 +267,7 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
       end_date: p.endDate ?? null,
       dive_cards: p.dives.length,
       prepared: p.dives.filter((d) => d.prep).length,
+      to_check: p.dives.filter((d) => d.verdict?.status === "check").length,
       logged_dives: p.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
       updated_at: p.updatedAt,
     }));
@@ -281,10 +284,13 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
     start_date: plan.startDate ?? null,
     end_date: plan.endDate ?? null,
     summary: plan.summary?.markdown ?? null,
-    cards: plan.dives.map(({ prep, loggedDiveIds, ...card }) => ({
+    flights: plan.flights ?? [],
+    cards: plan.dives.map(({ prep, loggedDiveIds, verdict, ...card }) => ({
       ...(snakeKeys(card) as object),
       prep: prep?.markdown ?? null,
       prep_saved_at: prep?.savedAt ?? null,
+      verdict: verdict?.status ?? null,
+      verdict_summary: verdict?.summary ?? null,
       logged_dives: loggedDiveIds.map(dive),
       logged_that_day: card.date
         ? log.filter((r) => r.dive.start?.slice(0, 10) === card.date && !linked.has(r.id)).map((r) => dive(r.id))
@@ -299,8 +305,8 @@ export const TRIP_PREP_REQUEST = `Prepare me for the dives of my TripDeck trip {
 2. For every dive card, call prepare_dive with its site, location, max depth, gas, number of dives and date. If a card says only nitrox or trimix, or has no depth, ask me.
 3. For each card write a short preparation: how ready I am from my log (comparable dives, time since my last dive), the gas plan (my RMV at that depth, ppO2 and MOD), what keeps going wrong in my dives and one or two drills for it, and what to check or ask the dive centre.
 4. Write notes for the whole trip: what to practise before it, the order of the dives, gear, and the no-fly time before the flight home.
-5. Save everything with save_trip_plan (all the dive cards, with your preparation).
-6. On each TripDeck dive card, save the verdict with TripDeck's save_dive_prep: ready, or check when something is still to sort out, a one-line summary, and the card's url from save_trip_plan. Save any gas mix I told you on the card too (update_item with dive.mix).
+5. Save everything with save_trip_plan: all the dive cards with your preparation and your verdict for each (ready, or check when something is still to sort out, with a one-line summary), and the trip's flights from TripDeck (date, departure time, from, to).
+6. On each TripDeck dive card, save the same verdict with TripDeck's save_dive_prep: the status, the one-line summary, and the card's url from save_trip_plan. Save any gas mix I told you on the card too (update_item with dive.mix).
 7. Give me the trip notes and the cards that need my attention.`;
 
 /** The web app (package.json runs it on this port). */

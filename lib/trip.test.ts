@@ -49,6 +49,35 @@ describe("mergeTripPlan", () => {
     expect(mergeTripPlan(again, { id: "malta-27", name: "Malta", summaryMarkdown: "", dives: [] }, "T3").summary).toBeNull();
   });
 
+  it("keeps a card's verdict until a new one or \"\" is sent", () => {
+    const first = mergeTripPlan(undefined, input({ dives: [{ itemId: "a", title: "A", verdict: "check", verdictSummary: " Ask the mix. " }] }), "T1");
+    expect(first.dives[0].verdict).toEqual({ status: "check", summary: "Ask the mix.", savedAt: "T1" });
+    const kept = mergeTripPlan(first, input({ dives: [{ itemId: "a", title: "A" }] }), "T2");
+    expect(kept.dives[0].verdict).toEqual({ status: "check", summary: "Ask the mix.", savedAt: "T1" });
+    expect(mergeTripPlan(kept, input({ dives: [{ itemId: "a", title: "A", verdict: "ready" }] }), "T3").dives[0].verdict).toEqual({
+      status: "ready",
+      summary: "",
+      savedAt: "T3",
+    });
+    expect(mergeTripPlan(kept, input({ dives: [{ itemId: "a", title: "A", verdict: "" }] }), "T3").dives[0]).not.toHaveProperty("verdict");
+  });
+
+  it("keeps the flights in order until new ones or [] are sent", () => {
+    const flights = [
+      { date: "2027-05-15", time: "13:35", from: "MLA", to: "WAW", note: "" },
+      { date: "2027-05-08", from: "WAW", to: "MLA" },
+    ];
+    const first = mergeTripPlan(undefined, input({ flights }), "T1");
+    expect(first.flights).toEqual([
+      { date: "2027-05-08", from: "WAW", to: "MLA" },
+      { date: "2027-05-15", time: "13:35", from: "MLA", to: "WAW" },
+    ]);
+    expect(mergeTripPlan(first, input(), "T2").flights).toEqual(first.flights);
+    expect(mergeTripPlan(first, input({ flights: [] }), "T2")).not.toHaveProperty("flights");
+    expect(() => mergeTripPlan(undefined, input({ flights: [{ date: "2027-05-15", time: "1:35 pm" }] }), "T")).toThrow("HH:MM");
+    expect(() => mergeTripPlan(undefined, input({ flights: [{ date: "15.05.2027" }] }), "T")).toThrow("YYYY-MM-DD");
+  });
+
   it("refuses a bad id, a missing name, a wrong date and a card sent twice", () => {
     expect(() => mergeTripPlan(undefined, input({ id: "../x" }), "T")).toThrow(TripInputError);
     expect(() => mergeTripPlan(undefined, input({ name: " " }), "T")).toThrow("needs a name");

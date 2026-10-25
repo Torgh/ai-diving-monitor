@@ -34,8 +34,27 @@ export interface TripDive {
   dives?: number;
   /** The coach's preparation for this dive. */
   prep: SavedText | null;
+  /** The verdict also saved on the TripDeck card (older files have none). */
+  verdict?: CardVerdict;
   /** Logged dives this card turned into (record ids). */
   loggedDiveIds: string[];
+}
+
+/** Ready, or something still to sort out before the dive, in one line: the badge on the TripDeck card. */
+export interface CardVerdict {
+  status: "ready" | "check";
+  summary: string;
+  savedAt: string;
+}
+
+/** A flight of the trip, as TripDeck has it, in local time: what the no-fly time is counted to. */
+export interface TripFlight {
+  /** "YYYY-MM-DD". */
+  date: string;
+  /** "HH:MM", the departure. */
+  time?: string;
+  from?: string;
+  to?: string;
 }
 
 export interface TripPlan {
@@ -51,6 +70,8 @@ export interface TripPlan {
   updatedAt: string;
   /** The coach's notes for the whole trip: what to practise before it, gear, the order of the dives. */
   summary: SavedText | null;
+  /** The trip's flights, for the time between the last dive and flying (older files have none). */
+  flights?: TripFlight[];
   dives: TripDive[];
 }
 
@@ -63,9 +84,15 @@ export interface TripPlanInput {
   endDate?: string;
   /** Omitted: keep the saved one. "": remove it. */
   summaryMarkdown?: string;
-  dives: (Omit<TripDive, "prep" | "loggedDiveIds"> & {
+  /** Omitted: keep the saved ones. [] removes them. */
+  flights?: TripFlight[];
+  dives: (Omit<TripDive, "prep" | "loggedDiveIds" | "verdict"> & {
     /** Omitted: keep the saved one. "": remove it. */
     prepMarkdown?: string;
+    /** Omitted: keep the saved verdict. "": remove it. */
+    verdict?: CardVerdict["status"] | "";
+    /** The verdict's one line. */
+    verdictSummary?: string;
     /** Omitted: keep the saved links. */
     loggedDiveIds?: string[];
   })[];
@@ -73,6 +100,7 @@ export interface TripPlanInput {
 
 const ID_RE = /^[\w-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
 
 export class TripInputError extends Error {}
 
@@ -93,20 +121,24 @@ function text(saved: SavedText | null, markdown: string | undefined, now: string
 export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput, now: string): TripPlan {
   assertTripId(input.id);
   if (!input.name.trim()) throw new TripInputError("The trip needs a name.");
-  for (const d of [input.startDate, input.endDate, ...input.dives.map((c) => c.date)])
+  for (const d of [input.startDate, input.endDate, ...input.dives.map((c) => c.date), ...(input.flights ?? []).map((f) => f.date)])
     if (d !== undefined && !DATE_RE.test(d)) throw new TripInputError(`Dates are written YYYY-MM-DD, not "${d}".`);
+  for (const f of input.flights ?? [])
+    if (f.time !== undefined && !TIME_RE.test(f.time)) throw new TripInputError(`Flight times are written HH:MM, not "${f.time}".`);
   const ids = input.dives.map((c) => c.itemId);
   const dup = ids.find((id, i) => ids.indexOf(id) !== i);
   if (dup) throw new TripInputError(`The card ${dup} is sent twice.`);
 
   const before = new Map(saved?.dives.map((c) => [c.itemId, c]));
-  const dives: TripDive[] = input.dives.map(({ prepMarkdown, loggedDiveIds, ...card }) => {
+  const dives: TripDive[] = input.dives.map(({ prepMarkdown, loggedDiveIds, verdict, verdictSummary, ...card }) => {
     const old = before.get(card.itemId);
-    const clean = Object.fromEntries(Object.entries(card).filter(([, v]) => v !== undefined && v !== "")) as Omit<TripDive, "prep" | "loggedDiveIds">;
+    const clean = Object.fromEntries(Object.entries(card).filter(([, v]) => v !== undefined && v !== "")) as unknown as Omit<TripDive, "prep" | "loggedDiveIds" | "verdict">;
+    const kept = verdict === undefined ? old?.verdict : verdict === "" ? undefined : { status: verdict, summary: verdictSummary?.trim() ?? "", savedAt: now };
     return {
       ...clean,
       title: card.title.trim() || card.site?.trim() || "Dive",
       prep: text(old?.prep ?? null, prepMarkdown, now),
+      ...(kept ? { verdict: kept } : {}),
       loggedDiveIds: loggedDiveIds ? [...new Set(loggedDiveIds)] : (old?.loggedDiveIds ?? []),
     };
   });
@@ -125,6 +157,10 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
   if (input.destination?.trim()) plan.destination = input.destination.trim();
   if (input.startDate) plan.startDate = input.startDate;
   if (input.endDate) plan.endDate = input.endDate;
+  const flights = (input.flights ?? saved?.flights ?? [])
+    .map((f) => Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== "")) as unknown as TripFlight)
+    .sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`));
+  if (flights.length) plan.flights = flights;
   return plan;
 }
 

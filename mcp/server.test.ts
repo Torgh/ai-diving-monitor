@@ -140,9 +140,10 @@ describe.skipIf(!bun)("MCP server", () => {
       trip_name: "Dahab",
       start_date: "2026-07-10",
       summary_markdown: "Practise stops.",
-      dives: [{ ...card, prep_markdown: "## Ready" }, { item_id: "c2", title: "Canyon", date: "2026-07-12" }],
+      flights: [{ date: "2026-07-14", time: "13:35", from: "SSH", to: "WAW" }],
+      dives: [{ ...card, prep_markdown: "## Ready", verdict: "check", verdict_summary: "Ask for the mix." }, { item_id: "c2", title: "Canyon", date: "2026-07-12" }],
     });
-    expect(saved).toMatchObject({ saved: true, dive_cards: 2, prepared: 1, without_prep: ["c2"] });
+    expect(saved).toMatchObject({ saved: true, dive_cards: 2, prepared: 1, to_check: ["c1"], without_prep: ["c2"] });
     expect(saved.urls).toEqual({ c1: "http://localhost:3001/trips/dahab-2026#card-c1", c2: "http://localhost:3001/trips/dahab-2026#card-c2" });
     expect(client.getInstructions()).toContain("save_dive_prep");
 
@@ -151,16 +152,17 @@ describe.skipIf(!bun)("MCP server", () => {
     const sameDay = dives.filter((d: { start: string }) => d.start?.startsWith("2026-07-11"));
     await ok("save_trip_plan", { trip_id: "dahab-2026", trip_name: "Dahab", dives: [card] });
     const plan = await json("get_trip_plans", { trip_id: "dahab-2026" });
-    expect(plan).toMatchObject({ name: "Dahab", summary: "Practise stops.", start_date: null });
+    expect(plan).toMatchObject({ name: "Dahab", summary: "Practise stops.", start_date: null, flights: [{ date: "2026-07-14", time: "13:35", from: "SSH", to: "WAW" }] });
     expect(plan.cards).toHaveLength(1);
-    expect(plan.cards[0]).toMatchObject({ item_id: "c1", prep: "## Ready", logged_dives: [] });
+    expect(plan.cards[0]).toMatchObject({ item_id: "c1", prep: "## Ready", verdict: "check", verdict_summary: "Ask for the mix.", logged_dives: [] });
     expect(plan.cards[0].logged_that_day.map((d: { id: string }) => d.id)).toEqual(sameDay.map((d: { id: string }) => d.id));
 
     await ok("save_trip_plan", { trip_id: "dahab-2026", trip_name: "Dahab", dives: [{ ...card, logged_dives: [sameDay[0].seq] }] });
     const linked = (await json("get_trip_plans", { trip_id: "dahab-2026" })).cards[0];
     expect(linked.logged_dives).toEqual([{ id: sameDay[0].id, seq: sameDay[0].seq, start: sameDay[0].start, site: sameDay[0].site }]);
     expect(linked.logged_that_day).toHaveLength(sameDay.length - 1);
-    expect(await json("get_trip_plans")).toEqual([expect.objectContaining({ trip_id: "dahab-2026", dive_cards: 1, prepared: 1, logged_dives: 1 })]);
+    expect(await json("get_trip_plans")).toEqual([expect.objectContaining({ trip_id: "dahab-2026", dive_cards: 1, prepared: 1, to_check: 1, logged_dives: 1 })]);
+    expect((await call("save_trip_plan", { trip_id: "x", trip_name: "X", flights: [{ date: "2026-07-14", time: "1 pm" }], dives: [] })).isError).toBe(true);
 
     expect((await call("save_trip_plan", { trip_id: "../x", trip_name: "X", dives: [] })).text).toContain("Invalid trip id");
     expect((await call("save_trip_plan", { trip_id: "x", trip_name: "X", dives: [{ ...card, logged_dives: [99] }] })).text).toContain("There is no dive 99");
