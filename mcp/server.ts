@@ -1,6 +1,6 @@
 /**
  * DiveDeck MCP server: turns Claude Code / Claude Desktop (or Codex with a ChatGPT plan) into
- * your dive coach, on your own subscription. No API key needed: the client's model does the coaching,
+ * your AI dive companion, on your own subscription. No API key needed: the client's model does the work,
  * this server exposes your dive log, the analytics, and tools to fill in what the computer doesn't record.
  *
  * It reads and writes the dive files in the data folder (see lib/server/paths.ts).
@@ -363,7 +363,7 @@ server.registerPrompt(
   "dive-review",
   {
     title: "Dive review",
-    description: "Coaching review of a dive (default: the latest one)",
+    description: "Debrief of a dive (default: the latest one)",
     argsSchema: { dive: z.string().optional().describe("The dive's number in the log or its id (default: the latest)") },
   },
   async ({ dive }) => {

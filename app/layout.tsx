@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DiveDeck",
-  description: "AI dive coach: data-driven reviews of your dives and your progress over time.",
+  description: "Your AI dive companion: data-driven debriefs of your dives and your progress over time.",
   icons: { icon: "/icon-small.svg", apple: "/icon.svg" },
 };
 

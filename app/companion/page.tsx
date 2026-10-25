@@ -10,13 +10,13 @@ import { useSettings } from "@/components/useSettings";
 type Message = { role: "user" | "assistant"; content: string };
 
 const STARTERS = [
-  "Review my latest dive.",
+  "Debrief my latest dive.",
   "Is my gas consumption improving?",
   "What should I practise before my next deep dive?",
   "What is still missing in my dive log?",
 ];
 
-export default function CoachPage() {
+export default function CompanionPage() {
   const { settings, error } = useSettings();
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -30,14 +30,14 @@ export default function CoachPage() {
   if (!provider.usesApi) {
     return (
       <div className="stack">
-        <h1>AI coach</h1>
+        <h1>Companion</h1>
         <div className="card stack">
           <p>
-            Your coach runs in <strong>{provider.app}</strong> on your {provider.plan}. Ask there, for example:
+            Your companion runs in <strong>{provider.app}</strong> on your {provider.plan}. Ask there, for example:
           </p>
           <ul>
             <li>
-              <code>/mcp__divedeck__dive-review</code>: a review of your latest dive, saved here
+              <code>/mcp__divedeck__dive-review</code>: a debrief of your latest dive, saved here
             </li>
             <li>
               <code>/mcp__divedeck__sort-out</code>: go through what your log is still missing
@@ -45,7 +45,7 @@ export default function CoachPage() {
             <li>“Is my gas consumption improving? What should I practise before my next deco dive?”</li>
           </ul>
           <p className="muted">
-            Reviews and the details your coach fills in show up in this app within seconds. To chat here instead, choose an API key in{" "}
+            Debriefs and the details your companion fills in show up in this app within seconds. To chat here instead, choose an API key in{" "}
             <Link href="/settings">Settings</Link>.
           </p>
         </div>
@@ -56,9 +56,9 @@ export default function CoachPage() {
   if (!provider.key) {
     return (
       <div className="stack">
-        <h1>AI coach</h1>
+        <h1>Companion</h1>
         <div className="notice">
-          Add your {provider.name} in <Link href="/settings">Settings</Link> to talk to the coach here, or choose your Claude or ChatGPT subscription
+          Add your {provider.name} in <Link href="/settings">Settings</Link> to talk to your companion here, or choose your Claude or ChatGPT subscription
           there to ask in Claude Code or Codex instead.
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function CoachPage() {
   return (
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>AI coach</h1>
+        <h1>Companion</h1>
         <span className="muted">
           {provider.name} · <code>{settings.model}</code> · billed per use
         </span>
@@ -112,11 +112,11 @@ export default function CoachPage() {
           {m.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown> : m.content}
         </div>
       ))}
-      {busy && <p className="muted">The coach is reading your log…</p>}
+      {busy && <p className="muted">Your companion is reading your log…</p>}
       {failure && <div className="error">{failure}</div>}
       <form className="form" onSubmit={submit}>
         <label className="wide">
-          Ask your coach
+          Ask your companion
           <textarea
             rows={3}
             value={draft}

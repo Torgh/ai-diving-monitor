@@ -11,7 +11,7 @@ import { type PlannedDive, prepareDive } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive, logTodos } from "./record";
 import type { TripPlan } from "./trip";
 
-export const SYSTEM_PROMPT = `You are an experienced technical diving instructor acting as a personal dive coach.
+export const SYSTEM_PROMPT = `You are DiveDeck, the diver's AI dive companion, with the knowledge of an experienced technical diving instructor.
 You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
 become a safer, more efficient diver.
 

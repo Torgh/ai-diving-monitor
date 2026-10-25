@@ -76,7 +76,7 @@ describe("coach tool answers", () => {
     const text = overview(records, "/data");
     expect(text).toMatch(/^Dive log: 9 dives, from 2026-03-14 to /);
     expect(text).toContain("Gas consumption (RMV, L/min) improving");
-    expect(text).toContain("No coach review yet.");
+    expect(text).toContain("No debrief yet.");
     expect(overview([], "/data")).toContain("The dive log is empty (data folder: /data)");
   });
 

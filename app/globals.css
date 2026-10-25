@@ -113,13 +113,13 @@ select {
 
 .app {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   min-height: 100vh;
 }
 
 .nav {
   border-right: 1px solid var(--border);
-  padding: 1.25rem 0.75rem;
+  padding: 1.25rem 0.875rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -131,19 +131,27 @@ select {
 .nav .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.1rem;
+  gap: 0.6rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  padding: 0 0.5rem 1rem;
+  padding: 0.25rem 0.5rem 1.1rem;
   color: var(--fg);
   text-decoration: none;
 }
 
 .nav a.link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
   color: var(--fg-2);
   text-decoration: none;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
+  padding: 0 0.6rem;
+  border-radius: 8px;
+}
+
+.nav a.link svg {
+  flex: none;
 }
 
 .nav a.link:hover {
@@ -156,11 +164,23 @@ select {
   font-weight: 600;
 }
 
+.nav a.link[aria-current="page"] svg {
+  color: var(--accent);
+}
+
 .nav .live {
   margin-top: auto;
-  font-size: 0.8rem;
-  color: var(--muted);
-  padding: 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--fg-2);
+  padding: 0.75rem 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.nav .live strong {
+  color: var(--good-text);
 }
 
 main.page {
@@ -171,7 +191,8 @@ main.page {
 
 @media (max-width: 760px) {
   .app {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): wide content scrolls in its own box instead of widening the page. */
+    grid-template-columns: minmax(0, 1fr);
   }
   .nav {
     position: static;
@@ -186,6 +207,9 @@ main.page {
     padding: 0.4rem 0.5rem;
     width: 100%;
   }
+  .nav a.link {
+    padding: 0 0.75rem;
+  }
   .nav .live {
     display: none;
   }
@@ -197,8 +221,8 @@ main.page {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
 }
 
 .grid {
@@ -253,17 +277,24 @@ main.page {
 }
 
 .button {
-  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--axis);
   background: var(--raised);
-  border-radius: 8px;
-  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  padding: 0 1rem;
   cursor: pointer;
+  text-decoration: none;
+  color: var(--fg);
 }
 
 .button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  font-weight: 600;
 }
 
 .button:disabled {
@@ -392,10 +423,14 @@ table.log tbody tr:hover {
 
 .form input,
 .form textarea {
-  border: 1px solid var(--border);
+  border: 1px solid var(--axis);
   background: var(--raised);
-  border-radius: 6px;
-  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+}
+
+.form input {
+  min-height: 44px;
 }
 
 .form .wide {

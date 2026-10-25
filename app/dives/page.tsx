@@ -40,7 +40,7 @@ export default function DiveLog() {
                 <th>Gas</th>
                 <th className="num">Score</th>
                 <th>Status</th>
-                <th>Review</th>
+                <th>Debrief</th>
               </tr>
             </thead>
             <tbody>

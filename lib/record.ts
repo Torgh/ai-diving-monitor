@@ -146,7 +146,7 @@ export function logTodos(records: DiveRecord[]): Todo[] {
     {
       kind: "review",
       dives: dives((r) => r.review === null),
-      text: "No coach review yet. Offer a review (the dive-review prompt) and save it with save_dive_summary.",
+      text: "No debrief yet. Offer one (the dive-review prompt) and save it with save_dive_summary.",
     },
   ];
   return todos.filter((t) => t.dives.length > 0);
