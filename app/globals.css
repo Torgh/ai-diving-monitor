@@ -874,3 +874,83 @@ a.trip-card:hover {
   color: var(--fg);
   border-bottom-color: var(--accent);
 }
+
+.card.warn {
+  border-color: var(--warning);
+}
+
+/* Trip page */
+.day-card {
+  display: flex;
+  gap: 1rem;
+}
+
+.date-col {
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.date-col .num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.day-card details summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  min-height: 32px;
+}
+
+.gap-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0 1rem;
+}
+
+.gap-divider::before,
+.gap-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--grid);
+}
+
+ul.logged {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+ul.logged li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 520px) {
+  .day-card {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .date-col {
+    flex: none;
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+}
