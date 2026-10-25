@@ -32,9 +32,13 @@ export interface GearItem {
   notes?: string;
   /** In the water: positive floats, negative sinks (from the maker, or weighed). */
   buoyancyKg?: number;
+  /** On land, kg: for the set's total. Not its buoyancy (steel sinks with almost all of it, neoprene floats). */
+  weightKg?: number;
   /** Suits: what kind, how thick, what is worn under a drysuit, the size and how old the neoprene is. */
   suitType?: "wetsuit" | "semidry" | "drysuit";
   thicknessMm?: number;
+  /** A suit's arms and legs, when thinner than its torso (a 3/2 mm suit: 3 on the torso, 2 here). */
+  thicknessLimbsMm?: number;
   undergarment?: string;
   size?: string;
   ageYears?: number;
@@ -134,6 +138,8 @@ const RANGES: Record<string, [number, number]> = {
   bodyFatPercent: [3, 60],
   buoyancyKg: [-30, 30],
   thicknessMm: [0.5, 12],
+  thicknessLimbsMm: [0.5, 12],
+  weightKg: [0, 60],
   ageYears: [0, 40],
   volumeL: [0.2, 40],
   workingPressureBar: [50, 400],

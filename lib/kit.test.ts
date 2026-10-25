@@ -53,6 +53,12 @@ describe("updateKit", () => {
     expect(updateKit(base(), { remove: { sets: ["Jezioro"] } }, "T2").sets).toEqual([]);
   });
 
+  it("keeps a 3/2 suit's two thicknesses and the weight on land", () => {
+    const kit = updateKit(base(), { items: [{ name: "Revel", kind: "suit", thicknessMm: 3, thicknessLimbsMm: 2, weightKg: 0.9 }] }, "T2");
+    expect(kit.items.find((i) => i.name === "Revel")).toMatchObject({ thicknessMm: 3, thicknessLimbsMm: 2, weightKg: 0.9 });
+    expect(() => updateKit(base(), { items: [{ name: "Lead", kind: "other", weightKg: 99 }] }, "T")).toThrow("weightKg must be a number from 0 to 60");
+  });
+
   it("refuses what it can't use", () => {
     expect(() => updateKit(base(), { items: [{ name: "Thing" }] }, "T")).toThrow(KitInputError);
     expect(() => updateKit(base(), { items: [{ kind: "fins" }] }, "T")).toThrow("needs a name");
