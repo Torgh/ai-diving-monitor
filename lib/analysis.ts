@@ -499,7 +499,8 @@ function trendWithAverages(
   const half = Math.max(1, Math.floor(values.length / 2));
   const early = pyMean(values.slice(0, half));
   const recent = pyMean(values.slice(-half));
-  const changePct = early ? ((recent - early) / early) * 100 : 0;
+  // From 0 (e.g. no safety stop at first) any change is the whole of it: count it as ±100 %.
+  const changePct = early ? ((recent - early) / early) * 100 : recent ? Math.sign(recent) * 100 : 0;
   let verdict: Trend["verdict"];
   if (better === "neutral" || Math.abs(changePct) < 5) verdict = "stable";
   else verdict = changePct < 0 === (better === "lower") ? "improving" : "worsening";

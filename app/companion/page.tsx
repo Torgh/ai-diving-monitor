@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/components/useLive";
 import { useSettings } from "@/components/useSettings";
+import { Command } from "@/components/Command";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -22,6 +23,12 @@ export default function CompanionPage() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const end = useRef<HTMLDivElement>(null);
+
+  // Keep the newest message in view.
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [messages.length, busy]);
 
   if (error) return <div className="error">{error}</div>;
   if (!settings) return <p className="muted">Loading…</p>;
@@ -37,10 +44,10 @@ export default function CompanionPage() {
           </p>
           <ul>
             <li>
-              <code>/mcp__divedeck__dive-review</code>: a debrief of your latest dive, saved here
+              <Command text="/mcp__divedeck__dive-review" />: a debrief of your latest dive, saved here
             </li>
             <li>
-              <code>/mcp__divedeck__sort-out</code>: go through what your log is still missing
+              <Command text="/mcp__divedeck__sort-out" />: go through what your log is still missing
             </li>
             <li>“Is my gas consumption improving? What should I practise before my next deco dive?”</li>
           </ul>
@@ -92,53 +99,67 @@ export default function CompanionPage() {
 
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="page-head">
         <h1>Companion</h1>
         <span className="muted">
           {provider.name} · <code>{settings.model}</code> · billed per use
         </span>
       </div>
       {messages.length === 0 && (
-        <div className="row">
-          {STARTERS.map((s) => (
-            <button key={s} className="button" disabled={busy} onClick={() => send(s)}>
-              {s}
-            </button>
-          ))}
+        <div className="stack" style={{ gap: "0.6rem" }}>
+          <p className="secondary" style={{ margin: 0 }}>
+            Ask about your dives. Your companion reads your log through the same tools as in Claude Code, so its answers rest on your numbers.
+          </p>
+          <div className="chips">
+            {STARTERS.map((s) => (
+              <button key={s} type="button" className="chip" disabled={busy} onClick={() => send(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      {messages.map((m, i) => (
-        <div key={i} className={m.role === "assistant" ? "card review" : "notice"}>
-          {m.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown> : m.content}
-        </div>
-      ))}
-      {busy && <p className="muted">Your companion is reading your log…</p>}
+      <div className="chat" aria-live="polite">
+        {messages.map((m, i) =>
+          m.role === "assistant" ? (
+            <div key={i} className="bubble assistant review">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+            </div>
+          ) : (
+            <div key={i} className="bubble user">
+              {m.content}
+            </div>
+          ),
+        )}
+        {busy && <p className="typing">Your companion is reading your log…</p>}
+        <div ref={end} />
+      </div>
       {failure && <div className="error">{failure}</div>}
-      <form className="form" onSubmit={submit}>
-        <label className="wide">
+      <form className="composer" onSubmit={submit}>
+        <label className="visually-hidden" htmlFor="ask">
           Ask your companion
-          <textarea
-            rows={3}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send(draft);
-              }
-            }}
-          />
         </label>
-        <div className="row wide">
-          <button className="button primary" type="submit" disabled={busy || !draft.trim()}>
-            Send
+        <textarea
+          id="ask"
+          rows={2}
+          value={draft}
+          placeholder="Ask your companion… (Enter sends, Shift+Enter for a new line)"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void send(draft);
+            }
+          }}
+        />
+        <button className="button primary" type="submit" disabled={busy || !draft.trim()}>
+          Send
+        </button>
+        {messages.length > 0 && (
+          <button className="button" type="button" disabled={busy} onClick={() => setMessages([])}>
+            New
           </button>
-          {messages.length > 0 && (
-            <button className="button" type="button" disabled={busy} onClick={() => setMessages([])}>
-              New conversation
-            </button>
-          )}
-        </div>
+        )}
       </form>
     </div>
   );

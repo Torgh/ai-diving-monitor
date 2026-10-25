@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "./useLive";
+import { Command } from "./Command";
 
 interface StorageView {
   active: "local" | "onedrive" | "google";
@@ -136,7 +137,7 @@ export function StorageSettings() {
             <>
               <p className="muted" style={{ margin: 0 }}>
                 Google needs your own OAuth client, once: in Google Cloud enable the Google Drive API, set the audience to External and publish the app,
-                then create an OAuth client of type Web application with the redirect URI <code>http://localhost:3001/api/auth/google/callback</code>. The
+                then create an OAuth client of type Web application with the redirect URI <Command text="http://localhost:3001/api/auth/google/callback" />. The
                 app only asks for the files it creates.
               </p>
               <div className="form">

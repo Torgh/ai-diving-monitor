@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fingerprint } from "./dive";
 import { type DiveRecord, RECORD_FORMAT } from "./record";
 import { parseUddf } from "./uddf";
-import { diveView, logView } from "./views";
+import { diveView, logView, sparkline } from "./views";
 
 const ROOT = path.resolve(__dirname, "..");
 const records = (...files: string[]): DiveRecord[] =>
@@ -70,5 +70,17 @@ describe("diveView", () => {
     const rocket = diveView(edge, edge[1].id)!;
     expect(rocket.fastAscents.length).toBeGreaterThan(0);
     expect(rocket.fastAscents.every((a) => a.toMin > a.fromMin)).toBe(true);
+  });
+});
+
+describe("sparkline", () => {
+  it("keeps the deepest depth of each stretch, from and to the surface", () => {
+    const samples = [0, 60, 120, 180, 240, 300].map((timeS, i) => ({ timeS, depthM: [0, 18, 30, 12, 5, 0][i] }));
+    expect(sparkline(samples, 3)).toEqual([0, 18, 30, 5, 0]);
+    expect(sparkline([], 3)).toEqual([]);
+  });
+
+  it("fills a stretch without samples with the depth before it", () => {
+    expect(sparkline([{ timeS: 0, depthM: 10 }, { timeS: 100, depthM: 4 }], 4)).toEqual([0, 10, 10, 10, 4, 0]);
   });
 });

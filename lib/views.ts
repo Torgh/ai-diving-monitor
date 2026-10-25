@@ -35,6 +35,8 @@ export interface DiveRow {
   findingTitles: string[];
   worstSeverity: Severity;
   hasReview: boolean;
+  /** The depth profile in a few points, for a thumbnail. */
+  sparkline: number[];
 }
 
 /** A metric over the dives in the log, for a progress chart. */
@@ -54,6 +56,23 @@ export interface LogView {
   todos: (Todo & { seqs: number[] })[];
   insights: Finding[];
   progress: ProgressSeries[];
+}
+
+/**
+ * The profile squeezed into `points` equal stretches of time, keeping the deepest depth of each, so a
+ * thumbnail still shows the bottom and the stops. Starts and ends at the surface.
+ */
+export function sparkline(samples: { timeS: number; depthM: number }[], points = 40): number[] {
+  if (!samples.length) return [];
+  const end = samples[samples.length - 1].timeS || 1;
+  const deepest = new Array<number>(points).fill(-1);
+  for (const s of samples) {
+    const i = Math.min(points - 1, Math.floor((s.timeS / end) * points));
+    deepest[i] = Math.max(deepest[i], s.depthM);
+  }
+  // A stretch without samples takes the depth before it.
+  for (let i = 0; i < points; i++) if (deepest[i] < 0) deepest[i] = i ? deepest[i - 1] : 0;
+  return [0, ...deepest.map((d) => Math.round(d * 10) / 10), 0];
 }
 
 const CHARTED: ProgressMetric[] = ["rmvLMin", "maxAscentRateMMin", "safetyStopS", "score"];
@@ -90,6 +109,7 @@ export function logView(records: DiveRecord[]): LogView {
       findingTitles: findings.map((f) => f.title),
       worstSeverity: findings[0]?.severity ?? "good",
       hasReview: r.review !== null,
+      sparkline: sparkline(dive.samples),
     };
   });
   const seqOf = new Map(dives.map((d) => [d.id, d.seq]));
