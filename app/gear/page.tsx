@@ -3,9 +3,11 @@
 import { type FormEvent, useState } from "react";
 import { useUnits } from "@/components/Units";
 import { api, useLive } from "@/components/useLive";
+import { Command } from "@/components/Command";
 import { GEAR_KINDS, type GearItem, type GearKind, type GearSet, type Kit, type KitChange, type Water, WATERS } from "@/lib/kit";
+import type { WeightingEstimate } from "@/lib/weighting";
 
-type Data = Kit & { version: string; siteNames: string[] };
+type Data = Kit & { version: string; siteNames: string[]; estimates: Record<string, Record<Water, WeightingEstimate>> };
 
 const KIND_LABEL: Record<GearKind, string> = {
   suit: "Suit",
@@ -456,6 +458,95 @@ function SetsCard({ kit, onSaved }: { kit: Kit; onSaved: () => void }) {
   );
 }
 
+/** The lead one set needs in one water, part by part. */
+function Estimate({ e }: { e: WeightingEstimate }) {
+  const { show } = useUnits();
+  const signed = (kg: number) => `${kg > 0 ? "+" : kg < 0 ? "−" : ""}${show("weight", Math.abs(kg))}`;
+  return (
+    <details>
+      <summary>
+        <strong>{WATER_LABEL[e.water]}</strong>: {e.leadKg === null ? "your body mass is needed" : show("weight", e.leadKg)}
+      </summary>
+      <ul className="parts">
+        {e.parts.map((p) => (
+          <li key={p.label}>
+            <span>
+              {p.label}
+              {p.assumed && <span className="badge" style={{ marginLeft: "0.4rem" }}>typical</span>}
+              <div className="muted" style={{ fontSize: "0.85rem" }}>
+                {p.why}
+              </div>
+            </span>
+            <strong>{signed(p.kg)}</strong>
+          </li>
+        ))}
+        {e.calibration && (
+          <li>
+            <span>
+              Your dives
+              <div className="muted" style={{ fontSize: "0.85rem" }}>
+                {e.calibration.dives} dive{e.calibration.dives === 1 ? "" : "s"} with the lead you carried and how it felt
+              </div>
+            </span>
+            <strong>{signed(e.calibration.offsetKg)} lead</strong>
+          </li>
+        )}
+      </ul>
+    </details>
+  );
+}
+
+function WeightingCard({ data }: { data: Data }) {
+  if (!data.sets.length) return null;
+  // About you once; about a set's gear or dives with the set's name.
+  const missing = [
+    ...new Set(
+      data.sets.flatMap((s) =>
+        (data.estimates[s.id]?.salt.missing ?? []).map((m) => (m.startsWith("your ") || m.includes(": ") ? m : `${s.name}: ${m}`)),
+      ),
+    ),
+  ];
+  return (
+    <section className="card stack" aria-labelledby="lead-h">
+      <h2 id="lead-h">How much lead</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        Neutral at the safety stop with an empty BCD and 50 bar left. Everything that floats or sinks is added up, then corrected by your dives with the
+        set: log the lead you carried and how it felt on each dive. A starting point: the check in the water decides.
+      </p>
+      <ul className="gear-list">
+        {data.sets.map((set) => (
+          <li key={set.id} style={{ alignItems: "flex-start" }}>
+            <div style={{ flex: "1 1 220px" }}>
+              <strong>{set.name}</strong>
+              <div className="muted" style={{ fontSize: "0.85rem" }}>
+                {data.estimates[set.id]?.fresh.calibration
+                  ? `corrected by ${data.estimates[set.id].fresh.calibration!.dives} of your dives`
+                  : "not corrected by your dives yet"}
+              </div>
+            </div>
+            <div className="stack" style={{ flex: "2 1 320px", gap: "0.3rem" }}>
+              {WATERS.map((w) => data.estimates[set.id]?.[w] && <Estimate key={w} e={data.estimates[set.id][w]} />)}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {missing.length > 0 && (
+        <div className="notice">
+          <strong>Would make it better:</strong>
+          <ul style={{ margin: "0.3rem 0 0", paddingLeft: "1.2rem" }}>
+            {missing.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="muted" style={{ margin: 0 }}>
+        Ask your companion to go through it: <Command text="How much lead do I need with my set in salt water?" />
+      </p>
+    </section>
+  );
+}
+
 function SitesCard({ data, onSaved }: { data: Data; onSaved: () => void }) {
   const { save, failure } = useSave();
   const names = [...new Set([...data.siteNames, ...data.sites.map((s) => s.name)])].sort((a, b) => a.localeCompare(b));
@@ -509,6 +600,7 @@ export default function GearPage() {
       <DiverCard key={JSON.stringify(data.diver)} kit={data} onSaved={reload} />
       <GearCard kit={data} onSaved={reload} />
       <SetsCard kit={data} onSaved={reload} />
+      <WeightingCard data={data} />
       <SitesCard data={data} onSaved={reload} />
     </div>
   );

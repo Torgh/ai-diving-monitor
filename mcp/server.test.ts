@@ -58,7 +58,7 @@ describe.skipIf(!bun)("MCP server", () => {
   it("offers the coach tools and prompts", async () => {
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
-      "get_dive_analysis", "get_dive_profile", "get_kit", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
+      "estimate_weighting", "get_dive_analysis", "get_dive_profile", "get_kit", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
       "list_dives", "migrate_from_python", "prepare_dive", "save_dive_summary", "save_trip_plan", "update_dive", "update_kit",
     ]);
     expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "sort-out", "trip-prep"]);
@@ -150,6 +150,17 @@ describe.skipIf(!bun)("MCP server", () => {
     expect((await call("update_dive", { dive_id: 1, gear_set: "Morze" })).text).toContain('No gear set "Morze"');
     expect((await call("update_kit", { items: [{ name: "Thing" }] })).text).toContain("needs a kind");
     expect(client.getInstructions()).toContain("update_kit");
+
+    const estimate = await json("estimate_weighting", { gear_set: "Jezioro", site: "Koparki" });
+    expect(estimate).toMatchObject({ set: { id: "jezioro" }, water: "fresh", density: 1 });
+    expect(estimate.parts.map((p: { label: string }) => p.label)).toEqual(["You", "Pianka 7 mm", "Stal 12 L"]);
+    expect(estimate.calibration).toEqual({ dives: 1, offset_kg: expect.any(Number) });
+    expect(estimate.how_to_check).toContain("hover");
+    expect((await json("estimate_weighting", { gear_set: "jezioro", water: "salt" })).density).toBe(1.025);
+    expect((await call("estimate_weighting", { gear_set: "Morze", water: "salt" })).text).toContain('No gear set "Morze"');
+    expect((await call("estimate_weighting", { gear_set: "Jezioro", site: "Dahab" })).text).toContain("isn't known");
+    expect((await call("estimate_weighting", {})).text).toContain("Say the water");
+    expect(client.getInstructions()).toContain("estimate_weighting");
   });
 
   it("prepares for a planned dive from the log", async () => {

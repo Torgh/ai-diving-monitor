@@ -17,6 +17,9 @@ import {
   DESCRIPTIONS,
   diveAnalysis,
   diveGear,
+  kitAnswer,
+  weightingAnswer,
+  weightingInput,
   divePrep,
   diveProfile,
   listDives,
@@ -249,8 +252,16 @@ server.registerTool(
   { title: "The diver's kit", description: DESCRIPTIONS.get_kit, inputSchema: {}, annotations: READ_ONLY },
   tool(async () => {
     const [kit, records] = await Promise.all([kits().get(), store().list()]);
-    const used = (id: string) => records.filter((r) => r.details.gearSetId === id).length;
-    return snakeKeys({ ...kit, sets: kit.sets.map((s) => ({ ...s, divesWithIt: used(s.id) })) });
+    return kitAnswer(kit, records);
+  }),
+);
+
+server.registerTool(
+  "estimate_weighting",
+  { title: "Estimate the lead", description: DESCRIPTIONS.estimate_weighting, inputSchema: weightingInput, annotations: READ_ONLY },
+  tool(async (args: { gear_set?: string; water?: "fresh" | "brackish" | "salt"; site?: string; density?: number }) => {
+    const [kit, records] = await Promise.all([kits().get(), store().list()]);
+    return weightingAnswer(kit, records, { gearSet: args.gear_set, water: args.water, site: args.site, density: args.density });
   }),
 );
 
