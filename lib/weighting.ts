@@ -1,0 +1,187 @@
+/**
+ * How much lead a diver needs with a gear set in a given water: neutral at the safety stop (5 m) with
+ * an empty BCD, a normal breath and the tank down to its reserve. Each part's buoyancy is estimated
+ * from what the kit says (a measured figure always wins), then corrected by the diver's own dives: the
+ * lead they carried and how it felt. A planning aid, not a replacement for a weight check in the water.
+ */
+
+import type { DiveRecord } from "./record";
+import { effectiveDive } from "./record";
+import { type GearItem, type GearSet, type Kit, WATER_DENSITY, type Water, waterOf } from "./kit";
+
+/** kg/L. Body fat and fat-free mass (Siri), neoprene's solid rubber, lead. */
+const FAT_DENSITY = 0.9007;
+const LEAN_DENSITY = 1.1;
+const RUBBER_DENSITY = 1.23;
+const LEAD_DENSITY = 11.34;
+/** Air at the surface, kg/L. */
+const AIR_KG_PER_L = 0.001225;
+/** Share of a wetsuit's foam that is gas when new; old neoprene loses some of it. */
+const FOAM_GAS = 0.75;
+const FOAM_LOSS_PER_YEAR = 0.03;
+const FOAM_LOSS_MAX = 0.3;
+/** The weight check: the safety stop, the tank at its reserve. */
+export const CHECK_DEPTH_M = 5;
+export const RESERVE_BAR = 50;
+/** Body fat when it isn't known, flagged as assumed. */
+const DEFAULT_BODY_FAT = 0.2;
+/** How much a dive's feeling moves the lead it should have had, kg. */
+const FEEL_KG = { light: 1.5, ok: 0, heavy: -1.5 } as const;
+
+/** Share of the body's surface each piece of neoprene covers. */
+const COVER: Partial<Record<GearItem["kind"], number>> = { suit: 0.8, hood: 0.06, gloves: 0.05, boots: 0.06 };
+
+export interface Part {
+  label: string;
+  /** Buoyancy at the check: positive floats, negative sinks. */
+  kg: number;
+  /** Taken from a typical value, not from the diver's kit. */
+  assumed: boolean;
+  why: string;
+}
+
+export interface WeightingEstimate {
+  set: { id: string; name: string } | null;
+  water: Water;
+  density: number;
+  /** Lead to carry, rounded to 0.5 kg; null without the diver's body mass. */
+  leadKg: number | null;
+  /** Before rounding and before the diver's own correction; negative when the kit alone sinks. */
+  modelKg: number | null;
+  parts: Part[];
+  /** From the diver's dives with this kind of kit: how far the model was off, on average. */
+  calibration: { dives: number; offsetKg: number } | null;
+  /** What would make the estimate better, most useful first. */
+  missing: string[];
+}
+
+const round = (v: number, step = 0.1) => Math.round(v / step) * step;
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+/** Mosteller: body surface area, m², from height (cm) and mass (kg). */
+export const bodySurface = (heightCm: number, massKg: number) => Math.sqrt((heightCm * massKg) / 3600);
+
+/** Average air in the lungs while breathing from a regulator, L: the functional residual capacity by height, plus half a breath. */
+const lungAir = (heightCm: number) => Math.max(2.2, 0.035 * heightCm - 3);
+
+/** Neoprene: foam whose gas shrinks with pressure (Boyle), on part of the body's surface. */
+function neoprene(item: GearItem, surfaceM2: number, density: number, pressureBar: number): Part | null {
+  const cover = COVER[item.kind];
+  if (!cover || !item.thicknessMm) return null;
+  const volumeL = surfaceM2 * cover * item.thicknessMm; // m² × mm = L
+  const gas = FOAM_GAS * (1 - Math.min(FOAM_LOSS_MAX, (item.ageYears ?? 0) * FOAM_LOSS_PER_YEAR));
+  const mass = volumeL * (1 - gas) * RUBBER_DENSITY;
+  const squeezed = volumeL * (1 - gas) + (volumeL * gas) / pressureBar;
+  return {
+    label: item.name,
+    kg: squeezed * density - mass,
+    assumed: false,
+    why: `${item.thicknessMm} mm neoprene on about ${Math.round(cover * 100)} % of your body${item.ageYears ? `, ${item.ageYears} years old` : ""}, squeezed at ${CHECK_DEPTH_M} m`,
+  };
+}
+
+/** One piece of gear's buoyancy at the check. */
+function part(item: GearItem, surfaceM2: number | null, density: number, pressureBar: number): Part {
+  if (item.kind === "tank") {
+    const volume = item.volumeL;
+    const empty =
+      item.emptyBuoyancyKg ?? (volume ? (item.material === "aluminium" ? 0.16 : item.material === "carbon" ? 0.25 : -0.12) * volume : null);
+    const gas = volume ? volume * RESERVE_BAR * AIR_KG_PER_L : 0;
+    return {
+      label: item.name,
+      kg: (empty ?? -1.5) - gas,
+      assumed: item.emptyBuoyancyKg === undefined,
+      why:
+        `${item.emptyBuoyancyKg !== undefined ? "empty, from your kit" : `empty, typical for ${item.material ?? "a"} ${volume ?? "?"} L tank`}` +
+        (volume ? `, with ${r1(gas)} kg of gas left at ${RESERVE_BAR} bar` : ""),
+    };
+  }
+  if (item.buoyancyKg !== undefined) return { label: item.name, kg: item.buoyancyKg, assumed: false, why: "measured, from your kit" };
+  if (item.kind === "suit" && item.suitType === "drysuit") {
+    const thick = /thick|heavy|400|300|gruby/i.test(item.undergarment ?? "");
+    return { label: item.name, kg: thick ? 7 : 4, assumed: true, why: `a drysuit with ${thick ? "a thick" : "a light"} undergarment, typical air in it` };
+  }
+  if (COVER[item.kind] && surfaceM2) {
+    const n = neoprene(item, surfaceM2, density, pressureBar);
+    if (n) return n;
+  }
+  if (item.kind === "bcd") {
+    const kg = item.plate === "steel" ? -2.5 : item.plate === "aluminium" ? -1 : 1;
+    return { label: item.name, kg, assumed: true, why: item.plate === "steel" ? "a steel backplate" : item.plate === "aluminium" ? "an aluminium backplate" : "a jacket's padding" };
+  }
+  if (item.kind === "regulator") return { label: item.name, kg: -1, assumed: true, why: "a typical regulator set" };
+  return { label: item.name, kg: 0, assumed: true, why: "no buoyancy figure" };
+}
+
+/** The model alone: everything that floats or sinks, without the lead. */
+export function estimateParts(kit: Kit, set: GearSet | null, density: number): { parts: Part[]; missing: string[] } {
+  const { massKg, heightCm, bodyFatPercent } = kit.diver;
+  const pressure = 1 + CHECK_DEPTH_M / 10;
+  const surface = massKg && heightCm ? bodySurface(heightCm, massKg) : null;
+  const parts: Part[] = [];
+  const missing: string[] = [];
+  if (massKg) {
+    const fat = (bodyFatPercent ?? DEFAULT_BODY_FAT * 100) / 100;
+    const bodyDensity = 1 / (fat / FAT_DENSITY + (1 - fat) / LEAN_DENSITY);
+    const lungs = lungAir(heightCm ?? 175);
+    parts.push({
+      label: "You",
+      kg: (massKg / bodyDensity) * density - massKg + lungs * density,
+      assumed: bodyFatPercent === undefined || heightCm === undefined,
+      why: `${massKg} kg at ${Math.round(fat * 100)} % body fat${bodyFatPercent === undefined ? " (assumed)" : ""}, with about ${r1(lungs)} L of air in your lungs`,
+    });
+  } else missing.push("your body mass");
+  if (bodyFatPercent === undefined) missing.push("your body fat (it moves the estimate by about 1 kg per 5 %)");
+  if (heightCm === undefined) missing.push("your height (for your suit's area and your lungs)");
+
+  const items = set ? set.itemIds.map((id) => kit.items.find((i) => i.id === id)).filter((i): i is GearItem => !!i) : [];
+  for (const item of items) parts.push(part(item, surface, density, pressure));
+  if (!items.some((i) => i.kind === "suit")) missing.push("the suit you dive in");
+  if (!items.some((i) => i.kind === "tank")) missing.push("the tank");
+  for (const item of items) {
+    if (item.kind === "tank" && item.emptyBuoyancyKg === undefined) missing.push(`${item.name}: its empty buoyancy from the maker's sheet`);
+    if (item.kind === "suit" && item.suitType !== "drysuit" && !item.thicknessMm) missing.push(`${item.name}: its neoprene thickness`);
+    if (item.kind === "camera" && item.buoyancyKg === undefined) missing.push(`${item.name}: its buoyancy (housings often float by a kilogram or more)`);
+  }
+  return { parts, missing };
+}
+
+/** Lead for this much buoyancy; negative when the diver would sink without any (clamped only at the end, so a correction keeps the difference between waters). */
+const leadFor = (buoyancy: number, density: number) => buoyancy / (1 - density / LEAD_DENSITY);
+
+/** What each logged dive says the lead should have been, against what the model says for it. */
+function calibrate(kit: Kit, records: DiveRecord[], forSet: GearSet | null): WeightingEstimate["calibration"] {
+  const offsets: number[] = [];
+  for (const r of records) {
+    const { gearSetId, ballastKg, weighting } = r.details;
+    if (!gearSetId || ballastKg === undefined || !weighting) continue;
+    const set = kit.sets.find((s) => s.id === gearSetId);
+    const water = waterOf(kit, r.details, effectiveDive(r).site);
+    if (!set || !water) continue;
+    // The same set counts; another set counts too when it shares the suit (the biggest part).
+    const suitOf = (s: GearSet) => s.itemIds.find((id) => kit.items.find((i) => i.id === id)?.kind === "suit");
+    if (forSet && set.id !== forSet.id && suitOf(set) !== suitOf(forSet)) continue;
+    const { parts } = estimateParts(kit, set, water.density);
+    const model = leadFor(parts.reduce((s, p) => s + p.kg, 0), water.density);
+    offsets.push(ballastKg + FEEL_KG[weighting] - model);
+  }
+  if (!offsets.length) return null;
+  return { dives: offsets.length, offsetKg: r1(offsets.reduce((a, b) => a + b, 0) / offsets.length) };
+}
+
+export function estimateWeighting(kit: Kit, records: DiveRecord[], setRef: GearSet | null, water: Water, density = WATER_DENSITY[water]): WeightingEstimate {
+  const { parts, missing } = estimateParts(kit, setRef, density);
+  const calibration = calibrate(kit, records, setRef);
+  if (!calibration) missing.push("a few dives with this set, the lead you carried and how it felt (they correct the estimate to you)");
+  const model = kit.diver.massKg ? leadFor(parts.reduce((s, p) => s + p.kg, 0), density) : null;
+  return {
+    set: setRef ? { id: setRef.id, name: setRef.name } : null,
+    water,
+    density,
+    leadKg: model === null ? null : round(Math.max(0, model + (calibration?.offsetKg ?? 0)), 0.5),
+    modelKg: model === null ? null : r1(model),
+    parts: parts.map((p) => ({ ...p, kg: r1(p.kg) })),
+    calibration,
+    missing,
+  };
+}

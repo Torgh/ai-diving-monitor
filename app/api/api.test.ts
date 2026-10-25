@@ -113,6 +113,9 @@ describe("API", () => {
     );
     expect(status).toBe(200);
     expect(kit.sets[0]).toMatchObject({ id: "lake", itemIds: ["wetsuit-7-mm"] });
+    const [, withLead] = await read(await getKit(req("/api/kit"), {}));
+    expect(Object.keys(withLead.estimates.lake)).toEqual(["fresh", "brackish", "salt"]);
+    expect(withLead.estimates.lake.salt.leadKg).toBeGreaterThan(withLead.estimates.lake.fresh.leadKg);
     expect((await putKit(json("/api/kit", "PUT", { items: [{ name: "Mystery" }] }), {})).status).toBe(400);
     expect((await putKit(json("/api/kit", "PUT", { diver: { massKg: "heavy" } }), {})).status).toBe(400);
 

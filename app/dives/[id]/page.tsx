@@ -12,7 +12,8 @@ import { useUnits } from "@/components/Units";
 import { useSettings } from "@/components/useSettings";
 import { RESERVE_WARN_BAR } from "@/lib/analysis";
 import { formatDate, formatNumber, formatSeconds } from "@/lib/format";
-import type { Kit } from "@/lib/kit";
+import type { Kit, Water } from "@/lib/kit";
+import type { WeightingEstimate } from "@/lib/weighting";
 import type { DiveView } from "@/lib/views";
 import { Command } from "@/components/Command";
 
@@ -222,7 +223,7 @@ export default function DivePage() {
   const { id } = useParams<{ id: string }>();
   const { show } = useUnits();
   const { data, error, loading, reload } = useLive<Data>(`/api/dives/${id}`);
-  const kit = useLive<Kit & { version: string }>("/api/kit").data;
+  const kit = useLive<Kit & { version: string; estimates: Record<string, Record<Water, WeightingEstimate>> }>("/api/kit").data;
   if (error && !data) return <div className="error">{error}</div>;
   if (!data) return <p className="muted">Loading the dive…</p>;
   const { dive, metrics } = data;

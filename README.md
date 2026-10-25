@@ -37,6 +37,12 @@ directly through an MCP server, and the web app shows every change within second
   site. Kept with the log, so every device and your companion see the same.
 - **On each dive:** the set you dived with, the lead you carried, the water (from its site unless the
   dive says otherwise) and how the weighting felt: too light, right or too heavy.
+- **How much lead:** for each set in fresh, brackish and salt water, neutral at the safety stop with an
+  empty BCD and 50 bar left. It adds up your own buoyancy (body mass, body fat, the air in your lungs),
+  the neoprene squeezed at 5 m (thickness, area, age), the tank with the gas still in it, the plate and
+  the rest, then corrects it by your dives with the set: the lead you carried and how it felt. Each
+  part says whether it is your figure or a typical one, and the page lists what would make the
+  estimate better. Your companion explains it and ends with a weight check in the water.
 
 **Analysis** (rule-based, offline, no AI needed)
 
@@ -159,6 +165,7 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `update_dive` | Fill in the site, location, buddy, notes, the main tank's size and gas (`air`, `EAN32`, `Tx 18/45`…), the gear set, the lead carried, the water and how the weighting felt |
 | `get_kit` | You, your gear, your sets (with how many dives each was used on) and the water at your dive sites |
 | `update_kit` | Add or change your body data, gear, sets and the water at dive sites; remove gear or sets |
+| `estimate_weighting` | The lead for a set in a water (or at a site), part by part, corrected by your dives, with what is missing and how to check it |
 | `save_dive_summary` | Store the debrief so the app shows it |
 | `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from the log: experience, gas plan, ppO2/MOD, recurring problems |
 | `save_trip_plan` | Store a TripDeck trip's dive cards with the preparation and verdict for each, the trip's flights, and the logged dives the cards turned into; answers each card's link for TripDeck |
@@ -275,6 +282,7 @@ lib/
   prep.ts        getting ready for a planned dive: experience, gas plan, ppO2/MOD, recurring problems
   trip.ts        a TripDeck trip's dive cards with the preparation and the logged dives
   kit.ts, kitSchema.ts   you, your gear, sets and the water at dive sites; checking changes to them
+  weighting.ts   the lead for a set in a water: every part's buoyancy, corrected by your dives
   coach.ts       the companion's instructions, prompts and tool answers
   coachTools.ts  the in-app companion's tools (the MCP server's read-only tools)
   views.ts       what the pages show: the log, totals, trends, to-do list, profile thumbnails; one dive

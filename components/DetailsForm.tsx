@@ -2,12 +2,15 @@
 
 import { type FormEvent, useState } from "react";
 import { gasLabel } from "@/lib/dive";
-import { type Kit, waterOf } from "@/lib/kit";
+import { type Kit, type Water, waterOf } from "@/lib/kit";
+import type { WeightingEstimate } from "@/lib/weighting";
 import type { DiveDetails } from "@/lib/record";
 import { api } from "./useLive";
 
 /** What the dive computer doesn't record, filled in by the diver. Empty fields are removed. */
-export function DetailsForm({ id, details, site, kit, onSaved }: { id: string; details: DiveDetails; site: string | null; kit: Kit | null; onSaved: () => void }) {
+type KitView = Kit & { estimates?: Record<string, Record<Water, WeightingEstimate>> };
+
+export function DetailsForm({ id, details, site, kit, onSaved }: { id: string; details: DiveDetails; site: string | null; kit: KitView | null; onSaved: () => void }) {
   const initial = {
     site: details.site ?? "",
     location: details.location ?? "",
@@ -25,6 +28,8 @@ export function DetailsForm({ id, details, site, kit, onSaved }: { id: string; d
   const [saving, setSaving] = useState(false);
   // The site's water, shown as what an unset dive takes.
   const siteWater = kit ? (waterOf(kit, {}, site)?.water ?? null) : null;
+  const water = (form.water || siteWater) as Water | null;
+  const estimate = form.gearSetId && water ? kit?.estimates?.[form.gearSetId]?.[water] : undefined;
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
 
   async function save(e: FormEvent) {
@@ -107,6 +112,12 @@ export function DetailsForm({ id, details, site, kit, onSaved }: { id: string; d
           })()}
         />
       </label>
+      {estimate && (
+        <p className="wide muted" style={{ margin: "-0.3rem 0 0" }}>
+          Estimated for this set in {estimate.water} water: <strong>{estimate.leadKg === null ? "–" : `${estimate.leadKg} kg`}</strong>
+          {estimate.calibration ? `, corrected by ${estimate.calibration.dives} of your dives` : ""} (details on the Gear page).
+        </p>
+      )}
       <label>
         Water
         <select value={form.water} onChange={set("water")}>

@@ -14,6 +14,7 @@ import { listModels, runCoach } from "./coachAgent";
 import { apiKey, configPath, readSettings, select, selected, setApiKey } from "./config";
 import { HttpError } from "./http";
 import { isolateEnv, restoreEnv } from "../../test-env";
+import { emptyKit, updateKit } from "../kit";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const saved = { ...process.env };
@@ -243,6 +244,28 @@ function fakeChatGpt(finish = "stop") {
   return { requests, make: () => client as unknown as OpenAI };
 }
 
+describe("the kit tools in the app", () => {
+  it("answer the kit and the lead, with the dive's gear in its analysis", async () => {
+    const kit = updateKit(
+      emptyKit(),
+      {
+        diver: { massKg: 80 },
+        items: [{ name: "Wetsuit 5", kind: "suit", suitType: "wetsuit", thicknessMm: 5 }],
+        sets: [{ name: "Sea", items: ["Wetsuit 5"], ballastKg: 6 }],
+      },
+      "T",
+    );
+    const withKit: ToolContext = { ...ctx, kit: async () => kit };
+    expect(JSON.parse(await callCoachTool("get_kit", {}, withKit)).sets[0]).toMatchObject({ id: "sea", dives_with_it: 0 });
+    const lead = JSON.parse(await callCoachTool("estimate_weighting", { gear_set: "Sea", water: "salt" }, withKit));
+    expect(lead).toMatchObject({ set: { name: "Sea" }, water: "salt" });
+    expect(lead.lead_kg).toBeGreaterThan(0);
+    expect(JSON.parse(await callCoachTool("estimate_weighting", { water: "salt" }, ctx))).toMatchObject({ lead_kg: null });
+    expect(JSON.parse(await callCoachTool("get_dive_analysis", { dive_id: 1 }, withKit)).gear).toMatchObject({ gear_set: null });
+    expect(JSON.parse(await callCoachTool("get_kit", {}, ctx)).items).toEqual([]);
+  });
+});
+
 describe("runCoach", () => {
   const ask = [{ role: "user" as const, content: "How many dives?" }];
 
@@ -256,7 +279,7 @@ describe("runCoach", () => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
     });
-    expect(seen[0].tools.map((t) => t.name)).toEqual(["list_dives", "get_overview", "get_dive_analysis", "get_dive_profile", "get_progress_trend", "prepare_dive", "get_trip_plans"]);
+    expect(seen[0].tools.map((t) => t.name)).toEqual(["list_dives", "get_overview", "get_dive_analysis", "get_dive_profile", "get_progress_trend", "prepare_dive", "get_trip_plans", "get_kit", "estimate_weighting"]);
   });
 
   it("leaves fallbacks out for models without them, and marks declined or cut-off answers", async () => {

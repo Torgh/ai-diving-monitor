@@ -4,7 +4,23 @@
  */
 
 import { z } from "zod";
-import { DESCRIPTIONS, diveAnalysis, divePrep, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, tripPlans } from "./coach";
+import {
+  DESCRIPTIONS,
+  diveAnalysis,
+  diveGear,
+  divePrep,
+  diveProfile,
+  kitAnswer,
+  listDives,
+  METRIC_NAMES,
+  overview,
+  progressTrend,
+  resolveDive,
+  tripPlans,
+  weightingAnswer,
+  weightingInput,
+} from "./coach";
+import { emptyKit, type Kit } from "./kit";
 import type { DiveRecord } from "./record";
 import type { TripPlan } from "./trip";
 
@@ -16,6 +32,8 @@ export interface ToolContext {
   records: () => Promise<DiveRecord[]>;
   /** The saved trips (none when not given). */
   trips?: () => Promise<TripPlan[]>;
+  /** The diver's kit (empty when not given). */
+  kit?: () => Promise<Kit>;
   dataFolder: string;
 }
 
@@ -48,7 +66,7 @@ export const COACH_TOOLS: CoachTool[] = [
     schema: z.object({ dive_id: diveRef }),
     run: async ({ dive_id }, ctx) => {
       const { record, seq } = resolveDive(await ctx.records(), dive_id);
-      return diveAnalysis(record, seq);
+      return { ...diveAnalysis(record, seq), gear: diveGear(record, (await ctx.kit?.()) ?? emptyKit()) };
     },
   }),
   tool({
@@ -85,6 +103,19 @@ export const COACH_TOOLS: CoachTool[] = [
     description: DESCRIPTIONS.get_trip_plans,
     schema: z.object({ trip_id: z.string().max(64).optional() }),
     run: async ({ trip_id }, ctx) => tripPlans((await ctx.trips?.()) ?? [], await ctx.records(), trip_id?.trim() || undefined),
+  }),
+  tool({
+    name: "get_kit",
+    description: DESCRIPTIONS.get_kit,
+    schema: z.object({}),
+    run: async (_, ctx) => kitAnswer((await ctx.kit?.()) ?? emptyKit(), await ctx.records()),
+  }),
+  tool({
+    name: "estimate_weighting",
+    description: DESCRIPTIONS.estimate_weighting,
+    schema: z.object(weightingInput),
+    run: async (a, ctx) =>
+      weightingAnswer((await ctx.kit?.()) ?? emptyKit(), await ctx.records(), { gearSet: a.gear_set, water: a.water, site: a.site, density: a.density }),
   }),
 ];
 

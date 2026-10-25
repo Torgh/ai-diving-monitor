@@ -1313,6 +1313,26 @@ a.dive-row:hover {
 }
 
 /* Gear */
+ul.parts {
+  list-style: none;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+ul.parts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+ul.parts strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 ul.gear-list {
   list-style: none;
   margin: 0;

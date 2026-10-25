@@ -4,13 +4,15 @@
  * version's snake_case names (`rmv_l_min`), so prompts and slash commands written for it keep working.
  */
 
+import { z } from "zod";
 import { PROGRESS_METRICS, type ProgressMetric, trend } from "./analysis";
 import { gasLabel } from "./dive";
 import { pyRound } from "./py";
 import { type PlannedDive, prepareDive } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive, logTodos } from "./record";
 import type { TripPlan } from "./trip";
-import { type Kit, waterOf } from "./kit";
+import { findSet, type Kit, KitInputError, WATER_DENSITY, type Water, waterOf } from "./kit";
+import { CHECK_DEPTH_M, estimateWeighting, RESERVE_BAR } from "./weighting";
 
 export const SYSTEM_PROMPT = `You are DiveDeck, the diver's AI dive companion, with the knowledge of an experienced technical diving instructor.
 You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
@@ -34,6 +36,7 @@ How to work with the dive log:
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
 - The diver's kit (get_kit / update_kit) holds their body (mass, height, body fat), their gear, gear sets with the usual lead, and the water (fresh, brackish, salt) at each dive site. When the diver tells you about gear, a set or a site's water, save it with update_kit; when they tell you what they dived with, how much lead they carried and how the weighting felt (light, ok, heavy), save it on the dive with update_dive. Never invent a buoyancy figure for a piece of gear: ask, or leave it out.
+- When the diver asks how much lead to carry, call estimate_weighting for the set and the water. Give the number, the two or three parts that decide it, how sure it is (typical figures, how many of their dives corrected it), ask for what is missing, and end with the weight check. Compare with the lead they carried on similar dives and how it felt. It is an estimate: the check in the water decides.
 - Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the DiveDeck app.
 - Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation, your verdict for each and the trip's flights through save_trip_plan, so the app shows them. Then put the same verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
@@ -62,6 +65,38 @@ export function camelKeys(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(camelKeys);
   if (value === null || typeof value !== "object") return value;
   return Object.fromEntries(Object.entries(value).map(([k, v]) => [k.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()), camelKeys(v)]));
+}
+
+/** The kit for the agent, with how many dives each set was used on. */
+export function kitAnswer(kit: Kit, records: DiveRecord[]) {
+  const used = (id: string) => records.filter((r) => r.details.gearSetId === id).length;
+  return snakeKeys({ ...kit, sets: kit.sets.map((s) => ({ ...s, divesWithIt: used(s.id) })) });
+}
+
+const WEIGHT_CHECK =
+  `Check it in the water: at ${CHECK_DEPTH_M} m with about ${RESERVE_BAR} bar left and an empty BCD, you should hover on a normal breath ` +
+  "without finning; add or take off 0.5–1 kg until you do.";
+
+/** The arguments of estimate_weighting, shared by the MCP server and the in-app companion. */
+export const weightingInput = {
+  gear_set: z.string().max(100).optional().describe("The set, by id or name (get_kit lists them). Without it: the diver alone."),
+  water: z.enum(["fresh", "brackish", "salt"]).optional().describe("The water; or give a site instead."),
+  site: z.string().max(200).optional().describe("A dive site whose water is in the kit."),
+  density: z.number().min(0.99).max(1.25).optional().describe("kg/L, when the water is known better (the Red Sea is about 1.03)."),
+};
+
+/** The answer of estimate_weighting: the lead for a set in a water, part by part, with what is missing. */
+export function weightingAnswer(kit: Kit, records: DiveRecord[], args: { gearSet?: string; water?: Water; site?: string; density?: number }) {
+  const set = args.gearSet ? findSet(kit, args.gearSet) : null;
+  if (args.gearSet && !set) throw new KitInputError(`No gear set "${args.gearSet}". Sets: ${kit.sets.map((s) => s.name).join(", ") || "none yet (add one with update_kit)"}.`);
+  const fromSite = args.site ? waterOf(kit, {}, args.site) : null;
+  const water = args.water ?? fromSite?.water ?? set?.water;
+  if (!water)
+    throw new KitInputError(
+      args.site ? `The water at ${args.site} isn't known: ask (fresh, brackish or salt) and save it with update_kit.` : "Say the water: fresh, brackish or salt (or a site whose water is known).",
+    );
+  const density = args.density ?? (args.water ? WATER_DENSITY[water] : (fromSite?.density ?? WATER_DENSITY[water]));
+  return { ...(snakeKeys(estimateWeighting(kit, records, set ?? null, water, density)) as object), how_to_check: WEIGHT_CHECK };
 }
 
 /** What a dive was dived with: the set and its gear, the lead, the water and how the weighting felt. */
@@ -113,6 +148,10 @@ export const DESCRIPTIONS = {
     "The diver's kit: body (mass, height, body fat), every piece of gear with what matters for buoyancy (suit type and thickness, tank material, " +
     "volume, working pressure and empty buoyancy, backplate…), the gear sets with their usual lead, the water (fresh, brackish, salt) at each dive site, " +
     "and how many dives each set was used on. Read-only.",
+  estimate_weighting:
+    "Estimate the lead the diver needs with a gear set in fresh, brackish or salt water (or at a site whose water is known): neutral at the safety stop " +
+    "with an empty BCD and the tank at its reserve. Answers each part's buoyancy (the diver, the suit, the tank with its gas, the plate…), which figures are " +
+    "typical values rather than the diver's own, a correction from the diver's logged dives (lead carried and how it felt), and what would make it better. Read-only.",
   update_kit:
     "Change the diver's kit: the diver's body, gear items (added when the name is new, changed by id or name), gear sets (gear by id or name, " +
     "usual lead in kg), the water at dive sites (null forgets a site), and items or sets to remove. Only what is sent changes; a null field removes it. " +

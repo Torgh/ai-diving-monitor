@@ -4,6 +4,7 @@ import { selected } from "@/lib/server/config";
 import { DiveStore } from "@/lib/server/diveStore";
 import { assertLocal, handle, readBody } from "@/lib/server/http";
 import { TripStore } from "@/lib/server/tripStore";
+import { KitStore } from "@/lib/server/kitStore";
 
 const chat = z.object({
   messages: z
@@ -23,6 +24,7 @@ export const POST = handle(async (req) => {
     const { text } = await runCoach(provider.id, model, messages, {
       records: () => store.list(),
       trips: () => new TripStore(store.backend).list(),
+      kit: () => new KitStore(store.backend).get(),
       dataFolder: store.backend.location,
     });
     return { answer: text };
