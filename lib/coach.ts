@@ -7,7 +7,9 @@
 import { PROGRESS_METRICS, type ProgressMetric, trend } from "./analysis";
 import { gasLabel } from "./dive";
 import { pyRound } from "./py";
+import { type PlannedDive, prepareDive } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive, logTodos } from "./record";
+import type { TripPlan } from "./trip";
 
 export const SYSTEM_PROMPT = `You are an experienced technical diving instructor acting as a personal dive coach.
 You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
@@ -30,7 +32,8 @@ How to work with the dive log:
 - Dives are referred to by their number in the log (seq: 1 = the oldest dive) or by their id. list_dives shows both.
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
-- Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the AI Diving Monitor app.`;
+- Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the AI Diving Monitor app.
+- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation through save_trip_plan, so the app shows them. After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
 export const SUMMARY_REQUEST = `Review dive {dive} for me. Structure the answer as:
 
@@ -84,6 +87,15 @@ export const DESCRIPTIONS = {
   update_dive:
     "Fill in what the dive computer doesn't record: dive site, location, buddy, notes, the main tank's volume (litres) " +
     "and gas (e.g. air, EAN32, Tx 18/45). Only the fields given change; an empty text or null removes one. Returns the dive's new headline metrics.",
+  prepare_dive:
+    "Get ready for a planned dive (e.g. a dive card of a TripDeck trip) from the diver's own log: comparable experience (depth, gas, the same site), " +
+    "time since the last dive, gas consumption at the planned depth, ppO2 / MOD / best nitrox mix, recurring problems, and notes worth raising. Read-only.",
+  save_trip_plan:
+    "Save a TripDeck trip's dive cards in the dive log with your preparation for each card (Markdown) and optional notes for the whole trip, so the app shows them. " +
+    "Send every dive card of the trip as it is now: cards not sent are removed; a card's preparation and logged dives are kept unless new ones are sent (\"\" removes a text).",
+  get_trip_plans:
+    "The trips saved with save_trip_plan. Without trip_id: each trip with its dates and how many cards are prepared. With trip_id: its cards, preparation, " +
+    "linked logged dives, and the dives logged on each card's day that aren't linked yet.",
   migrate_from_python:
     "Copy the dive log of the Python version of AI Diving Monitor (its SQLite database) into this one: every dive and saved review. " +
     "Safe to run again; nothing is added twice and the database is only read.",
@@ -224,3 +236,67 @@ export function overview(records: DiveRecord[], dataFolder: string): string {
   }
   return lines.join("\n");
 }
+
+/** The answer of prepare_dive. */
+export function divePrep(records: DiveRecord[], plan: PlannedDive, today = new Date()) {
+  return snakeKeys(prepareDive(records, plan, today));
+}
+
+const shortDive = (records: DiveRecord[]) => {
+  const log = chronological(records);
+  const seqOf = new Map(log.map((r, i) => [r.id, i + 1]));
+  return (id: string) => {
+    const seq = seqOf.get(id);
+    if (!seq) return { id, missing: true };
+    const dive = effectiveDive(log[seq - 1]);
+    return { id, seq, start: dive.start, site: dive.site };
+  };
+};
+
+/** The answer of get_trip_plans: every trip in brief, or one trip in full. */
+export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: string) {
+  if (!tripId) {
+    if (!plans.length) return "No trips saved yet. Read a trip with TripDeck's get_trip and save its dive cards with save_trip_plan.";
+    return plans.map((p) => ({
+      trip_id: p.id,
+      name: p.name,
+      destination: p.destination ?? null,
+      start_date: p.startDate ?? null,
+      end_date: p.endDate ?? null,
+      dive_cards: p.dives.length,
+      prepared: p.dives.filter((d) => d.prep).length,
+      logged_dives: p.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
+      updated_at: p.updatedAt,
+    }));
+  }
+  const plan = plans.find((p) => p.id === tripId);
+  if (!plan) throw new DiveRefError(`No saved trip with id "${tripId}". Use get_trip_plans without trip_id to list them.`);
+  const dive = shortDive(records);
+  const linked = new Set(plan.dives.flatMap((d) => d.loggedDiveIds));
+  const log = chronological(records);
+  return {
+    trip_id: plan.id,
+    name: plan.name,
+    destination: plan.destination ?? null,
+    start_date: plan.startDate ?? null,
+    end_date: plan.endDate ?? null,
+    summary: plan.summary?.markdown ?? null,
+    cards: plan.dives.map(({ prep, loggedDiveIds, ...card }) => ({
+      ...(snakeKeys(card) as object),
+      prep: prep?.markdown ?? null,
+      prep_saved_at: prep?.savedAt ?? null,
+      logged_dives: loggedDiveIds.map(dive),
+      logged_that_day: card.date
+        ? log.filter((r) => r.dive.start?.slice(0, 10) === card.date && !linked.has(r.id)).map((r) => dive(r.id))
+        : [],
+    })),
+  };
+}
+
+export const TRIP_PREP_REQUEST = `Prepare me for the dives of my TripDeck trip {trip}.
+
+1. Read the trip with TripDeck's get_trip (list_trips if you need its id). Note its no-fly and altitude warnings.
+2. For every dive card, call prepare_dive with its site, location, max depth, gas, number of dives and date. If a card says only nitrox or trimix, or has no depth, ask me.
+3. For each card write a short preparation: how ready I am from my log (comparable dives, time since my last dive), the gas plan (my RMV at that depth, ppO2 and MOD), what keeps going wrong in my dives and one or two drills for it, and what to check or ask the dive centre.
+4. Write notes for the whole trip: what to practise before it, the order of the dives, gear, and the no-fly time before the flight home.
+5. Save everything with save_trip_plan (all the dive cards, with your preparation), then give me the trip notes and the cards that need my attention.`;

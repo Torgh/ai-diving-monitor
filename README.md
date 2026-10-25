@@ -41,6 +41,11 @@ copied over.
   writes a review: *dive summary → what went well → what to watch → compared with your history → focus
   for your next dive*. It runs in Claude Code or Codex on your own subscription (through the MCP
   server), or in the app with a Claude or ChatGPT API key.
+- **Ready for your next trip.** With [TripDeck](https://github.com/Torgh/tripdeck) connected to the
+  same agent, the coach reads a trip's dive cards and prepares you for each one from your own log:
+  comparable dives (the same site first, then the closest depth), time since your last dive, your gas
+  consumption at the planned depth, ppO2, MOD and the richest nitrox for it, and the problems that
+  keep coming back. After the trip, the logged dives are linked to their cards.
 - **Live dashboard.** Dives logged, time underwater, the deepest dive, the latest score, progress
   insights such as "Gas consumption: improving, 23.5 → 16.2 L/min", and charts of RMV, peak ascent
   rate, safety stop time and score across your dives, each with its trend line. Every page updates
@@ -99,6 +104,7 @@ Then ask in plain language, or use the prompts:
 /mcp__ai-diving-monitor__dive-review      # review of your latest dive, compared with your history
 /mcp__ai-diving-monitor__dive-review 7    # review of dive 7 (1 = your oldest dive)
 /mcp__ai-diving-monitor__sort-out         # go through what your log is still missing, one dive at a time
+/mcp__ai-diving-monitor__trip-prep Dahab  # get ready for the dives of a TripDeck trip
 > Import my dives from D:\Shearwater\export.uddf
 > Dive 2 was at Koparki with a 12 L tank of EAN32.
 > Is my gas consumption improving? What should I practise before my next deco dive?
@@ -116,10 +122,19 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `import_uddf` | Import a `.uddf` file or a folder of them |
 | `update_dive` | Fill in the site, location, buddy, notes, the main tank's volume and gas (`air`, `EAN32`, `Tx 18/45`…) |
 | `save_dive_summary` | Store the coach's review so the app shows it |
+| `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from your log: experience, gas plan, ppO2/MOD, recurring problems |
+| `save_trip_plan` | Store a TripDeck trip's dive cards with the coach's preparation for each, and the logged dives they turned into |
+| `get_trip_plans` | The saved trips; one trip's cards with the dives logged on each card's day |
 | `migrate_from_python` | Copy the Python version's log, as `bun run migrate` does |
 
 Dives are referred to by their number in the log (`1` = the oldest) or by their id. The coach is told
 to save what you tell it with `update_dive` and never to invent a tank size or a gas.
+
+**Trips.** Connect TripDeck's MCP server to the same Claude Code or Codex, then run `trip-prep`. The
+coach reads the trip with TripDeck's `get_trip` and stores its dive cards and the preparation here,
+one `*.trip.json` file per trip next to your dives; TripDeck stays where the trip is planned, so
+running it again after a change in TripDeck updates the cards and keeps the preparation of the ones
+that stayed. The app never reads TripDeck's files itself, so it works wherever TripDeck keeps them.
 
 ### 2. Coach in the app with an API key (optional)
 
@@ -141,10 +156,10 @@ Completions. A declined, cut-off or empty answer is shown, never saved as a dive
 ### 3. Where your dives are stored
 
 *Settings → Where your dives are stored* chooses **This PC**, **OneDrive** or **Google Drive**.
-Switching copies your dives to the new place (the dive with the newer changes wins); the old place
-keeps its copy. The MCP server follows the choice at once.
+Switching copies your dives and trips to the new place (the copy with the newer changes wins); the
+old place keeps its copy. The MCP server follows the choice at once.
 
-- **This PC**: `dives/` and `originals/` in the data folder (`AI_DIVING_MONITOR_HOME`, else the
+- **This PC**: `dives/`, `originals/` and `trips/` in the data folder (`AI_DIVING_MONITOR_HOME`, else the
   folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor`).
 - **OneDrive**: an *AI Diving Monitor* folder inside your OneDrive folder on this PC (on Windows
   `%OneDrive%`, on macOS under `~/Library/CloudStorage/OneDrive-…`), synced by the OneDrive app. No
@@ -207,6 +222,8 @@ lib/
   dive.ts        dive, tank, sample and gas types; gas labels; the fingerprint that spots duplicates
   analysis.ts    metrics, findings, score, trends and progress insights
   record.ts      a stored dive: what the computer recorded, what the diver filled in, the review; "to sort out"
+  prep.ts        getting ready for a planned dive from the log: experience, gas plan, ppO2/MOD, recurring problems
+  trip.ts        a TripDeck trip's dive cards with the preparation and the logged dives; following TripDeck's changes
   coach.ts       the coach's instructions and tool answers (snake_case JSON, as the Python version answered)
   coachTools.ts  the in-app coach's tools (the MCP server's read-only tools), with argument checks
   views.ts       what the pages show: the log, its totals, trends and to-do list; one dive and its profile
@@ -215,9 +232,10 @@ lib/
   server/
     diveStore.ts one *.dive.json file per dive and the original UDDF files, on any backend; parsing
                  again after parser upgrades; a cache of parsed dives; copying the log between places
+    tripStore.ts one *.trip.json file per trip, next to the dives
     backends.ts  where the log lives: a folder (this PC, OneDrive) or Google Drive
     googleDrive.ts, cloudAuth.ts   Google Drive files, and the Google sign-in (OAuth with PKCE)
-    storage.ts   switching the place, copying the log over
+    storage.ts   switching the place, copying the dives and trips over
     files.ts     atomic writes, and a lock per dive shared by the MCP server and the web app
     config.ts    settings and API keys, in the same config.json as the Python version
     coachAgent.ts the in-app coach: Claude (tool runner) or ChatGPT (Chat Completions)
@@ -307,8 +325,11 @@ rewrite in TypeScript, one pull request per stage:
    - 4c. Where the dives are stored: this PC, OneDrive or Google Drive. ✅
 5. **Python retired.** The Streamlit app, the SQLite storage and the Python tests left the repository;
    the golden fixtures and the copy of an old log stayed. ✅
-6. **Prepare for trips.** Link the dive cards of a TripDeck trip to dive sites and your logged dives,
-   and let the coach prepare you for each site from your own history.
+6. **Prepare for trips**, in three pull requests:
+   - 6a. The coach prepares you for each dive card of a TripDeck trip from your own history, stores
+     the trip with its preparation, and links your logged dives to the cards after the trip. ✅
+   - 6b. A *Trips* page in the app with the preparation of each dive.
+   - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app.
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis

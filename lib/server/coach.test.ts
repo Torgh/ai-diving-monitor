@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { callCoachTool, type ToolContext } from "../coachTools";
 import { fingerprint } from "../dive";
 import { type DiveRecord, RECORD_FORMAT } from "../record";
+import { mergeTripPlan } from "../trip";
 import { parseUddf } from "../uddf";
 import { agentAppStatus, bunPath, installReviewCommand, runsOf, shellQuote } from "./agentApps";
 import { listModels, runCoach } from "./coachAgent";
@@ -140,6 +141,45 @@ describe("coach tools", () => {
     expect(JSON.parse(await callCoachTool("get_progress_trend", { metric: "nope" }, ctx)).error).toContain("Invalid arguments");
     expect(JSON.parse(await callCoachTool("get_dive_analysis", { dive_id: 42 }, ctx)).error).toContain("the log has 5 dives");
   });
+
+  it("prepares for a dive and reads the saved trips", async () => {
+    const prep = JSON.parse(await callCoachTool("prepare_dive", { site: "Koparki", max_depth_m: 20, gas: "air", date: "2026-06-01" }, ctx));
+    expect(prep).toMatchObject({ experience: { dives: 4, days_since_last_dive: 23 }, gas_plan: { ppo2_at_max_depth: 0.63 } });
+    expect(prep.at_this_site).toHaveLength(2);
+    expect(JSON.parse(await callCoachTool("prepare_dive", { date: "1.6.2026" }, ctx)).error).toContain("Invalid arguments");
+
+    expect(await callCoachTool("get_trip_plans", {}, ctx)).toContain("No trips saved yet");
+    const koparki = records[1];
+    const plan = mergeTripPlan(
+      undefined,
+      {
+        id: "pl",
+        name: "Poland",
+        destination: "Koparki",
+        summaryMarkdown: "Stops.",
+        dives: [
+          { itemId: "c1", title: "Koparki", date: koparki.dive.start!.slice(0, 10), maxDepthM: 20, prepMarkdown: "## Go", loggedDiveIds: ["gone"] },
+          { itemId: "c2", title: "Undated" },
+        ],
+      },
+      "2026-10-25T00:00:00.000Z",
+    );
+    const withTrips: ToolContext = { ...ctx, trips: async () => [plan] };
+    expect(JSON.parse(await callCoachTool("get_trip_plans", {}, withTrips))).toEqual([
+      { trip_id: "pl", name: "Poland", destination: "Koparki", start_date: null, end_date: null, dive_cards: 2, prepared: 1, logged_dives: 1, updated_at: plan.updatedAt },
+    ]);
+    const full = JSON.parse(await callCoachTool("get_trip_plans", { trip_id: "pl" }, withTrips));
+    expect(full).toMatchObject({ trip_id: "pl", summary: "Stops." });
+    expect(full.cards[0]).toMatchObject({
+      item_id: "c1",
+      max_depth_m: 20,
+      prep: "## Go",
+      logged_dives: [{ id: "gone", missing: true }],
+      logged_that_day: [{ id: koparki.id, seq: 2, start: koparki.dive.start }],
+    });
+    expect(full.cards[1]).toMatchObject({ item_id: "c2", prep: null, prep_saved_at: null, logged_that_day: [] });
+    expect(JSON.parse(await callCoachTool("get_trip_plans", { trip_id: "x" }, withTrips)).error).toContain('No saved trip with id "x"');
+  });
 });
 
 type Params = Record<string, unknown> & { tools: { name: string; run: (args: unknown) => Promise<string> }[] };
@@ -208,7 +248,7 @@ describe("runCoach", () => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
     });
-    expect(seen[0].tools.map((t) => t.name)).toEqual(["list_dives", "get_overview", "get_dive_analysis", "get_dive_profile", "get_progress_trend"]);
+    expect(seen[0].tools.map((t) => t.name)).toEqual(["list_dives", "get_overview", "get_dive_analysis", "get_dive_profile", "get_progress_trend", "prepare_dive", "get_trip_plans"]);
   });
 
   it("leaves fallbacks out for models without them, and marks declined or cut-off answers", async () => {

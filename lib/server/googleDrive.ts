@@ -50,7 +50,8 @@ const query = (params: Record<string, string>) => `${DRIVE}?${new URLSearchParam
 
 /**
  * The dive log on Google Drive: a visible "AI Diving Monitor" folder in My Drive with the dive files
- * in `dives` and the original UDDF files in `originals`. The app can only see files it created there.
+ * in `dives`, the original UDDF files in `originals` and the trips in `trips`. The app can only see
+ * files it created there.
  */
 export class GoogleDriveBackend implements Backend {
   readonly kind = "google" as const;
