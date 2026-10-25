@@ -23,6 +23,8 @@ const FOAM_LOSS_MAX = 0.3;
 /** The weight check: the safety stop, the tank at its reserve. */
 export const CHECK_DEPTH_M = 5;
 export const RESERVE_BAR = 50;
+/** Height when it isn't known (for the body's surface and the lungs), flagged as assumed. */
+const DEFAULT_HEIGHT_CM = 175;
 /** Body fat when it isn't known, flagged as assumed. */
 const DEFAULT_BODY_FAT = 0.2;
 /** How much a dive's feeling moves the lead it should have had, kg. */
@@ -65,7 +67,7 @@ export const bodySurface = (heightCm: number, massKg: number) => Math.sqrt((heig
 const lungAir = (heightCm: number) => Math.max(2.2, 0.035 * heightCm - 3);
 
 /** Neoprene: foam whose gas shrinks with pressure (Boyle), on part of the body's surface. */
-function neoprene(item: GearItem, surfaceM2: number, density: number, pressureBar: number): Part | null {
+function neoprene(item: GearItem, surfaceM2: number, density: number, pressureBar: number, heightAssumed: boolean): Part | null {
   const cover = COVER[item.kind];
   if (!cover || !item.thicknessMm) return null;
   const volumeL = surfaceM2 * cover * item.thicknessMm; // m² × mm = L
@@ -75,13 +77,13 @@ function neoprene(item: GearItem, surfaceM2: number, density: number, pressureBa
   return {
     label: item.name,
     kg: squeezed * density - mass,
-    assumed: false,
+    assumed: heightAssumed,
     why: `${item.thicknessMm} mm neoprene on about ${Math.round(cover * 100)} % of your body${item.ageYears ? `, ${item.ageYears} years old` : ""}, squeezed at ${CHECK_DEPTH_M} m`,
   };
 }
 
 /** One piece of gear's buoyancy at the check. */
-function part(item: GearItem, surfaceM2: number | null, density: number, pressureBar: number): Part {
+function part(item: GearItem, surfaceM2: number | null, density: number, pressureBar: number, heightAssumed: boolean): Part {
   if (item.kind === "tank") {
     const volume = item.volumeL;
     const empty =
@@ -102,7 +104,7 @@ function part(item: GearItem, surfaceM2: number | null, density: number, pressur
     return { label: item.name, kg: thick ? 7 : 4, assumed: true, why: `a drysuit with ${thick ? "a thick" : "a light"} undergarment, typical air in it` };
   }
   if (COVER[item.kind] && surfaceM2) {
-    const n = neoprene(item, surfaceM2, density, pressureBar);
+    const n = neoprene(item, surfaceM2, density, pressureBar, heightAssumed);
     if (n) return n;
   }
   if (item.kind === "bcd") {
@@ -117,13 +119,14 @@ function part(item: GearItem, surfaceM2: number | null, density: number, pressur
 export function estimateParts(kit: Kit, set: GearSet | null, density: number): { parts: Part[]; missing: string[] } {
   const { massKg, heightCm, bodyFatPercent } = kit.diver;
   const pressure = 1 + CHECK_DEPTH_M / 10;
-  const surface = massKg && heightCm ? bodySurface(heightCm, massKg) : null;
+  // Without a height, a typical one: the neoprene still counts, flagged as assumed.
+  const surface = massKg ? bodySurface(heightCm ?? DEFAULT_HEIGHT_CM, massKg) : null;
   const parts: Part[] = [];
   const missing: string[] = [];
   if (massKg) {
     const fat = (bodyFatPercent ?? DEFAULT_BODY_FAT * 100) / 100;
     const bodyDensity = 1 / (fat / FAT_DENSITY + (1 - fat) / LEAN_DENSITY);
-    const lungs = lungAir(heightCm ?? 175);
+    const lungs = lungAir(heightCm ?? DEFAULT_HEIGHT_CM);
     parts.push({
       label: "You",
       kg: (massKg / bodyDensity) * density - massKg + lungs * density,
@@ -135,7 +138,7 @@ export function estimateParts(kit: Kit, set: GearSet | null, density: number): {
   if (heightCm === undefined) missing.push("your height (for your suit's area and your lungs)");
 
   const items = set ? set.itemIds.map((id) => kit.items.find((i) => i.id === id)).filter((i): i is GearItem => !!i) : [];
-  for (const item of items) parts.push(part(item, surface, density, pressure));
+  for (const item of items) parts.push(part(item, surface, density, pressure, heightCm === undefined));
   if (!items.some((i) => i.kind === "suit")) missing.push("the suit you dive in");
   if (!items.some((i) => i.kind === "tank")) missing.push("the tank");
   for (const item of items) {
