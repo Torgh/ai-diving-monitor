@@ -26,4 +26,4 @@ export function pythonDbPath(): string {
 }
 
 /** The folder name people see in OneDrive and Google Drive. */
-export const CLOUD_FOLDER = "AI Diving Monitor";
+export const CLOUD_FOLDER = "AiDive";

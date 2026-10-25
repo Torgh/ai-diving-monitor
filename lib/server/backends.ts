@@ -25,7 +25,7 @@ export interface StoredFile {
 
 export interface Backend {
   kind: StorageKind;
-  /** Where the files are, for people: a folder, or "My Drive › AI Diving Monitor". */
+  /** Where the files are, for people: a folder, or "My Drive › AiDive". */
   location: string;
   list(area: Area): Promise<StoredFile[]>;
   read(area: Area, name: string): Promise<Uint8Array | undefined>;
@@ -35,7 +35,7 @@ export interface Backend {
 
 export const STORAGE_LABEL: Record<StorageKind, string> = { local: "This PC", onedrive: "OneDrive", google: "Google Drive" };
 
-/** Files in a folder: the data folder on this PC, or AI Diving Monitor in the folder OneDrive syncs. */
+/** Files in a folder: the data folder on this PC, or AiDive in the folder OneDrive syncs. */
 export class FolderBackend implements Backend {
   constructor(
     readonly kind: "local" | "onedrive",
@@ -92,7 +92,7 @@ export function oneDriveRoot(): string | undefined {
   return undefined;
 }
 
-/** AI Diving Monitor inside OneDrive, if OneDrive was found on this PC. */
+/** AiDive inside OneDrive, if OneDrive was found on this PC. */
 export function oneDriveFolder(): string | undefined {
   const root = oneDriveRoot();
   return root && path.join(root, CLOUD_FOLDER);

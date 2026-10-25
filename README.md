@@ -167,19 +167,20 @@ old place keeps its copy. The MCP server follows the choice at once.
 
 - **This PC**: `dives/`, `originals/` and `trips/` in the data folder (`AI_DIVING_MONITOR_HOME`, else the
   folder of `AI_DIVING_MONITOR_DB`, else `~/.ai-diving-monitor`).
-- **OneDrive**: an *AI Diving Monitor* folder inside your OneDrive folder on this PC (on Windows
+- **OneDrive**: an *AiDive* folder inside your OneDrive folder on this PC (on Windows
   `%OneDrive%`, on macOS under `~/Library/CloudStorage/OneDrive-…`), synced by the OneDrive app. No
   sign-in needed. If it isn't found, enter the folder in Settings or set
   `AI_DIVING_MONITOR_ONEDRIVE_FOLDER`. When two computers change the same dive offline, OneDrive keeps
   both files and the newer one wins; the next save removes the other.
-- **Google Drive**: *My Drive › AI Diving Monitor*. The app asks only for `drive.file`: the files it
+- **Google Drive**: *My Drive › AiDive*. The app asks only for `drive.file`: the files it
   created, never your other files. It needs your own OAuth client, once, and Settings walks you
   through it:
   1. In Google Cloud, enable the **Google Drive API**.
   2. Under *Google Auth Platform*, set the audience to *External* and **publish the app** (apps left in
      testing mode get logged out every 7 days).
   3. Create an OAuth client of type *Web application* with the redirect URI
-     `http://localhost:3001/api/auth/google/callback`.
+     `http://localhost:3001/api/auth/google/callback`. Already using TripDeck on Google Drive? Add
+     this redirect URI to TripDeck's client and use the same client ID and secret here.
   4. Paste the client ID and secret into Settings and click **Connect Google Drive**.
 
 Settings, API keys, the Google sign-in and the locks always stay in the data folder on this computer.

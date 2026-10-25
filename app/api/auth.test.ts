@@ -96,7 +96,7 @@ describe("Google sign-in routes", () => {
     const res = await callback(get(`${BASE}/api/auth/google/callback?code=c&state=s1`, { adm_oauth_state: "s1", adm_oauth_verifier: "v" }));
     expect(backTo(res)).toEqual({ google: "connected", copied: "1" });
     expect(readSettings().storage).toBe("google");
-    expect([...drive.values()].map((f) => f.name)).toEqual(expect.arrayContaining(["AI Diving Monitor", "dives", "originals"]));
+    expect([...drive.values()].map((f) => f.name)).toEqual(expect.arrayContaining(["AiDive", "dives", "originals"]));
 
     expect(await (await disconnect(post(`${BASE}/api/auth/google/disconnect`), {})).json()).toEqual({ ok: true, copied: 0 });
     expect(readSettings().storage).toBe("local");

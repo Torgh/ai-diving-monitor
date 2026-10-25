@@ -49,7 +49,7 @@ async function driveFetch(url: string, init: RequestInit = {}): Promise<Response
 const query = (params: Record<string, string>) => `${DRIVE}?${new URLSearchParams(params)}`;
 
 /**
- * The dive log on Google Drive: a visible "AI Diving Monitor" folder in My Drive with the dive files
+ * The dive log on Google Drive: a visible "AiDive" folder in My Drive with the dive files
  * in `dives`, the original UDDF files in `originals` and the trips in `trips`. The app can only see
  * files it created there.
  */
