@@ -1,5 +1,5 @@
 /**
- * Deterministic dive analytics, ported from src/ai_diving_monitor/analysis.py.
+ * Deterministic dive analytics, ported from the Python version (tag v0.1-python).
  *
  * Computes gas consumption, ascent rates, oxygen exposure, safety-stop and deco compliance, and
  * turns them into findings a diver can act on. Works without any AI; the coach builds on these

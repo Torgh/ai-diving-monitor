@@ -1,7 +1,7 @@
 /**
  * UDDF stores values in SI units: pressure in pascal, temperature in kelvin, volume in cubic metres.
  * These helpers turn them into diver units (bar, °C, litres), tolerating exporters that don't follow
- * the spec. They match the Python version (src/ai_diving_monitor/uddf.py).
+ * the spec. They match the Python version (tag v0.1-python).
  */
 
 export const PA_PER_BAR = 100_000;

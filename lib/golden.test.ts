@@ -1,6 +1,7 @@
 /**
  * The TypeScript port against the Python version: every test file must parse and analyse to the
- * same numbers and texts as in fixtures/golden/ (written by scripts/export_golden.py).
+ * same numbers and texts as in fixtures/golden/, written by the Python version (tag v0.1-python).
+ * After a change meant to alter them, `bun run golden` rewrites the files from this version.
  */
 
 import { readdirSync, readFileSync } from "node:fs";
