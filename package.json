@@ -2,7 +2,7 @@
   "name": "divedeck",
   "version": "0.3.0",
   "private": true,
-  "description": "AI dive coach: import UDDF dive computer logs, get data-driven dive reviews and track your progress.",
+  "description": "Your AI dive companion: import UDDF dive computer logs, get data-driven dive reviews and track your progress.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",

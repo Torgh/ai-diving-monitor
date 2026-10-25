@@ -4,6 +4,11 @@
     <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
   </defs>
   <g clip-path="url(#tile)"><rect width="512" height="512" fill="url(#depth)"/></g>
-  <path d="M96 156 L170 372 L300 372 L350 214 L400 214 L422 162" stroke="#fff" stroke-width="36" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="402" y="58" width="42" height="106" rx="21" fill="#f97316"/>
+  <!-- Fewer, bigger bubbles so the two trails still read at 16 px. -->
+  <circle cx="186" cy="384" r="54" fill="#fff"/>
+  <circle cx="170" cy="252" r="38" fill="#fff"/>
+  <circle cx="192" cy="146" r="26" fill="#fff"/>
+  <circle cx="326" cy="366" r="48" fill="#f97316"/>
+  <circle cx="344" cy="240" r="34" fill="#f97316"/>
+  <circle cx="320" cy="140" r="24" fill="#f97316"/>
 </svg>

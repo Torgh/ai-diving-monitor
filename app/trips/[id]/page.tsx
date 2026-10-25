@@ -113,7 +113,7 @@ function Card({ card, tripId, onChange }: { card: TripCardView; tripId: string; 
       )}
 
       <div className="review">
-        <h3>Coach&apos;s preparation</h3>
+        <h3>Your companion&apos;s preparation</h3>
         {card.prep ? (
           <>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{card.prep.markdown}</ReactMarkdown>

@@ -27,8 +27,8 @@ const TILES: { key: keyof DiveMetrics; label: string; format: (v: number) => str
   { key: "score", label: "Dive score", format: (v) => formatNumber(v, 0) },
 ];
 
-/** The coach's review, and a way to ask for one: here with an API key, or in Claude Code / Codex. */
-function CoachReview({ data, onSaved }: { data: Data; onSaved: () => void }) {
+/** The companion's debrief, and a way to ask for one: here with an API key, or in Claude Code / Codex. */
+function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
   const { settings } = useSettings();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -49,19 +49,19 @@ function CoachReview({ data, onSaved }: { data: Data; onSaved: () => void }) {
 
   return (
     <div className="card review">
-      <h2>Coach review</h2>
+      <h2>Debrief</h2>
       {data.review ? (
         <>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.review.markdown}</ReactMarkdown>
           <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
         </>
       ) : (
-        <p className="muted">No review yet.</p>
+        <p className="muted">No debrief yet.</p>
       )}
       {provider?.usesApi ? (
         <div className="row">
           <button className="button" disabled={busy} onClick={ask}>
-            {busy ? "The coach is reviewing the dive…" : data.review ? "Ask for a new review" : "Ask the coach for a review"}
+            {busy ? "Your companion is debriefing the dive…" : data.review ? "Get a new debrief" : "Get a debrief"}
           </button>
           <span className="muted">
             {provider.name}, billed per use
@@ -69,7 +69,7 @@ function CoachReview({ data, onSaved }: { data: Data; onSaved: () => void }) {
         </div>
       ) : provider ? (
         <p className="muted">
-          Ask your coach in {provider.app}: <code>/mcp__divedeck__dive-review {data.seq}</code>
+          Ask your companion in {provider.app}: <code>/mcp__divedeck__dive-review {data.seq}</code>
         </p>
       ) : null}
       {failure && <div className="error">{failure}</div>}
@@ -137,7 +137,7 @@ export default function DivePage() {
           <h2>Findings</h2>
           <Findings findings={data.findings} />
         </div>
-        <CoachReview data={data} onSaved={reload} />
+        <Debrief data={data} onSaved={reload} />
       </div>
 
       <div className="card">
@@ -147,7 +147,7 @@ export default function DivePage() {
 
       <div className="card" id="details">
         <h2>Details</h2>
-        <p className="muted">What the dive computer doesn&apos;t record. Your coach can fill these in too.</p>
+        <p className="muted">What the dive computer doesn&apos;t record. Your companion can fill these in too.</p>
         <DetailsForm key={JSON.stringify(data.details)} id={data.id} details={data.details} onSaved={reload} />
         {data.tanks.length > 0 && (
           <p className="muted">

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "DiveDeck – AI dive coach",
+    name: "DiveDeck – your AI dive companion",
     short_name: "DiveDeck",
-    description: "Data-driven reviews of your dives, your progress over time, and preparation for the dives of your trips.",
+    description: "Data-driven debriefs of your dives, your progress over time, and preparation for the dives of your trips.",
     start_url: "/",
     display: "standalone",
     background_color: "#082f49",

@@ -1,9 +1,9 @@
 ---
-description: AI dive coach review of a dive from your DiveDeck log (default: latest dive)
+description: AI dive companion debrief of a dive from your DiveDeck log (default: latest dive)
 argument-hint: "[dive id]"
 ---
 
-Act as my technical diving coach using the `divedeck` MCP tools.
+Act as my AI dive companion, with the knowledge of a technical diving instructor, using the `divedeck` MCP tools.
 
 Dive to review: $ARGUMENTS (if empty, use the most recent dive from `list_dives`).
 

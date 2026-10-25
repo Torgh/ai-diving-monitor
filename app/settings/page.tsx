@@ -111,13 +111,13 @@ export default function SettingsPage() {
     <div className="stack">
       <h1>Settings</h1>
       <div className="card stack">
-        <h2>AI coach</h2>
+        <h2>AI companion</h2>
         <p className="secondary">
-          The coach reads your dives through tools that return the parsed numbers, so its advice rests on your data. With your subscription it runs
+          Your companion reads your dives through tools that return the parsed numbers, so its advice rests on your data. With your subscription it runs
           in Claude Code or Codex at no extra cost; with an API key it runs here and the provider bills each use.
         </p>
         <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0, gap: "0.4rem" }}>
-          <legend className="muted">How should the coach run?</legend>
+          <legend className="muted">How should your companion run?</legend>
           {settings.providers.map((p) => (
             <label key={p.id} className="row" style={{ gap: "0.5rem" }}>
               <input type="radio" name="provider" checked={p.id === settings.provider} onChange={() => save({ provider: p.id })} />
@@ -157,7 +157,7 @@ export default function SettingsPage() {
               </div>
             )}
             <p className="muted">
-              Then ask in {active.app}: “Review my latest dive and save the review”, or run <code>/mcp__divedeck__dive-review</code>. Reviews
+              Then ask in {active.app}: “Debrief my latest dive and save it”, or run <code>/mcp__divedeck__dive-review</code>. Debriefs
               appear here within seconds.
             </p>
           </>
