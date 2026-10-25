@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Findings } from "@/components/Findings";
+import { Icon } from "@/components/Icons";
 import { LineChart } from "@/components/LineChart";
 import { api, useLive } from "@/components/useLive";
 import { useSettings } from "@/components/useSettings";
@@ -15,31 +16,6 @@ type Data = LogView & { version: string; dataFolder: string };
 type Todo = Data["todos"][number];
 
 const UNIT: Record<string, string> = { rmvLMin: "L/min", maxAscentRateMMin: "m/min", safetyStopS: "s", score: "" };
-
-/** Small status icons; a status is never told by colour alone. */
-const Icon = {
-  alert: (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <path d="M12 8v5M12 17h.01" />
-      <circle cx="12" cy="12" r="9" />
-    </svg>
-  ),
-  check: (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12l5 5 9-10" />
-    </svg>
-  ),
-  up: (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <path d="M12 19V5M6 11l6-6 6 6" />
-    </svg>
-  ),
-  down: (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <path d="M12 5v14M6 13l6 6 6-6" />
-    </svg>
-  ),
-};
 
 /** The trips under way or coming, each with how far its preparation is. */
 function UpcomingTrips() {

@@ -55,7 +55,8 @@ copied over.
   or the gas saved for every dive that misses it in one go. Charts of RMV, peak ascent rate, safety
   stop time and score across your dives, each with its trend line and its direction
   ("worsening · 4.2 → 9.6 m/min"). Every page updates within seconds when your companion changes the log.
-- **Dive details.** The metrics beside your average, the findings, the companion's debrief, and the
+- **Dive details.** The score on a ring with the findings as badges, the metrics in three cards
+  (profile beside your average, gas, safety), the companion's debrief and the findings as tabs, and the
   profile: depth with the computer's deco stops, gas switches and fast ascents, and tank pressure,
   ppO2 (1.4 and 1.6 bar lines) and water temperature below it on the same time axis. Every chart has a
   crosshair, works with the arrow keys and has a table view. Light and dark mode follow your system.
@@ -347,7 +348,7 @@ rewrite in TypeScript, one pull request per stage:
    - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app. ✅
    - Then the new design, in four pull requests: (a) the *buddy bubbles* logo, a menu with icons
      that shows where the log is stored, and the AI as your companion ✅; (b) the
-     dashboard ✅ (this one); (c) the dive page; (d) the trip page.
+     dashboard ✅; (c) the dive page ✅ (this one); (d) the trip page.
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis
