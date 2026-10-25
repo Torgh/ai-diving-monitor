@@ -13,6 +13,7 @@ import { useSettings } from "@/components/useSettings";
 import { RESERVE_WARN_BAR } from "@/lib/analysis";
 import { formatDate, formatNumber, formatSeconds } from "@/lib/format";
 import type { DiveView } from "@/lib/views";
+import { Command } from "@/components/Command";
 
 type Data = DiveView & { version: string };
 
@@ -92,7 +93,7 @@ function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
         </div>
       ) : provider ? (
         <p className="muted">
-          Ask your companion in {provider.app}: <code>/mcp__divedeck__dive-review {data.seq}</code>
+          Ask your companion in {provider.app}: <Command text={`/mcp__divedeck__dive-review ${data.seq}`} />
         </p>
       ) : null}
       {failure && <div className="error">{failure}</div>}

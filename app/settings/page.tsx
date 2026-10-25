@@ -5,6 +5,7 @@ import { StorageSettings } from "@/components/StorageSettings";
 import { type ProviderView, useSettings } from "@/components/useSettings";
 import { api } from "@/components/useLive";
 import type { AppStatus } from "@/lib/server/agentApps";
+import { Command } from "@/components/Command";
 
 function Commands({ status }: { status: AppStatus }) {
   const name = status.app === "claude-code" ? "Claude Code" : "Codex";
@@ -18,9 +19,7 @@ function Commands({ status }: { status: AppStatus }) {
             ? `⚠️ ${name} has a server called divedeck that isn't this app's. Replace it in a terminal:`
             : `Connect the dive log to ${name} once, in a terminal:`}
       </p>
-      <pre className="card" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", margin: 0 }}>
-        <code>{status.commands.join("\n")}</code>
-      </pre>
+      <Command block text={status.commands.join("\n")} />
       <p className="muted">Then restart {name}. Your settings and the data folder carry over through the environment variables above.</p>
     </div>
   );
@@ -157,7 +156,7 @@ export default function SettingsPage() {
               </div>
             )}
             <p className="muted">
-              Then ask in {active.app}: “Debrief my latest dive and save it”, or run <code>/mcp__divedeck__dive-review</code>. Debriefs
+              Then ask in {active.app}: “Debrief my latest dive and save it”, or run <Command text="/mcp__divedeck__dive-review" />. Debriefs
               appear here within seconds.
             </p>
           </>

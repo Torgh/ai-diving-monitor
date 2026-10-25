@@ -1,20 +1,36 @@
 "use client";
 
-import Link from "next/link";
+import { TripCard } from "@/components/TripCard";
 import { TripPrepHint } from "@/components/TripPrepHint";
 import { useLive } from "@/components/useLive";
-import { formatDateRange, formatTripWhen } from "@/lib/format";
 import type { TripRow } from "@/lib/tripViews";
 
 type Data = { version: string; trips: TripRow[]; next: TripRow | null };
+
+function Group({ title, trips }: { title: string; trips: TripRow[] }) {
+  if (!trips.length) return null;
+  return (
+    <section className="stack" style={{ gap: "0.75rem" }} aria-label={title}>
+      <h2 style={{ margin: 0 }}>{title}</h2>
+      <div className="trip-cards">
+        {trips.map((t) => (
+          <TripCard key={t.id} trip={t} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function Trips() {
   const { data, error, loading } = useLive<Data>("/api/trips");
   if (error && !data) return <div className="error">Couldn&apos;t load the trips: {error}</div>;
   if (!data) return <p className="muted">Loading the trips…</p>;
+  const of = (...when: TripRow["when"][]) => data.trips.filter((t) => when.includes(t.when));
   return (
-    <div className={`stack ${loading ? "loading" : ""}`}>
-      <h1>Trips</h1>
+    <div className={`stack ${loading ? "loading" : ""}`} style={{ gap: "1.25rem" }}>
+      <div className="page-head">
+        <h1>Trips</h1>
+      </div>
       {!data.trips.length ? (
         <div className="notice">
           No trips yet.
@@ -22,37 +38,9 @@ export default function Trips() {
         </div>
       ) : (
         <>
-          <div className="card table-scroll">
-            <table className="log">
-              <thead>
-                <tr>
-                  <th>Trip</th>
-                  <th>Dates</th>
-                  <th>When</th>
-                  <th className="num">Dive cards</th>
-                  <th className="num">Prepared</th>
-                  <th className="num">Logged dives</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.trips.map((t) => (
-                  <tr key={t.id}>
-                    <td>
-                      <Link href={`/trips/${t.id}`}>{t.name}</Link>
-                      {t.destination && <div className="secondary">{t.destination}</div>}
-                    </td>
-                    <td className="nowrap">{formatDateRange(t.startDate, t.endDate)}</td>
-                    <td className="nowrap">{formatTripWhen(t)}</td>
-                    <td className="num">{t.cards}</td>
-                    <td className="num">
-                      {t.prepared} of {t.cards}
-                    </td>
-                    <td className="num">{t.loggedDives || <span className="muted">–</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Group title="Coming up" trips={of("now", "upcoming")} />
+          <Group title="No dates yet" trips={of("undated")} />
+          <Group title="Past" trips={of("past")} />
           <TripPrepHint />
         </>
       )}

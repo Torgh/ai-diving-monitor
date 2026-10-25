@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { Findings } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
+import { TripCard } from "@/components/TripCard";
 import { LineChart } from "@/components/LineChart";
 import { api, useLive } from "@/components/useLive";
 import { useSettings } from "@/components/useSettings";
-import { formatDate, formatDateRange, formatMinutes, formatNumber, formatTripWhen } from "@/lib/format";
+import { formatDate, formatMinutes, formatNumber } from "@/lib/format";
 import type { TodoKind } from "@/lib/record";
 import type { TripRow } from "@/lib/tripViews";
 import type { LogView, ProgressSeries } from "@/lib/views";
+import { Command } from "@/components/Command";
 
 type Data = LogView & { version: string; dataFolder: string };
 type Todo = Data["todos"][number];
@@ -24,41 +26,9 @@ function UpcomingTrips() {
   if (!trips.length) return null;
   return (
     <section className="trip-cards" aria-label="Upcoming trips">
-      {trips.map((t) => {
-        const left = t.cards - t.prepared;
-        return (
-          <Link key={t.id} href={`/trips/${t.id}`} className="card trip-card">
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <span className="eyebrow">{formatTripWhen(t)}</span>
-              {t.cards > 0 &&
-                (left > 0 ? (
-                  <span className="badge warning">
-                    {Icon.alert}
-                    {left} to prepare
-                  </span>
-                ) : (
-                  <span className="badge good">{Icon.check}All prepared</span>
-                ))}
-            </div>
-            <h2>{t.name}</h2>
-            <span className="secondary">
-              {[formatDateRange(t.startDate, t.endDate), t.destination?.toLowerCase() === t.name.toLowerCase() ? null : t.destination, t.diveDays ? `${t.diveDays} dive day${t.diveDays === 1 ? "" : "s"}` : null]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-            {t.cards > 0 && (
-              <div className="stack" style={{ gap: "0.35rem" }}>
-                <div className="meter" role="img" aria-label={`${t.prepared} of ${t.cards} dive cards prepared`}>
-                  <span style={{ width: `${(100 * t.prepared) / t.cards}%` }} />
-                </div>
-                <span className="muted" style={{ fontSize: "0.85rem" }}>
-                  {t.prepared} of {t.cards} dive cards prepared
-                </span>
-              </div>
-            )}
-          </Link>
-        );
-      })}
+      {trips.map((t) => (
+        <TripCard key={t.id} trip={t} />
+      ))}
     </section>
   );
 }
@@ -139,7 +109,7 @@ function DebriefAction({ todo, onSaved }: { todo: Todo; onSaved: () => void }) {
   if (!provider.usesApi || !provider.key) {
     return (
       <span className="muted">
-        In {provider.app}: <code>/mcp__divedeck__dive-review {todo.seqs[last]}</code>
+        In {provider.app}: <Command text={`/mcp__divedeck__dive-review ${todo.seqs[last]}`} />
       </span>
     );
   }
@@ -191,7 +161,7 @@ function SortOut({ todos, onSaved }: { todos: Todo[]; onSaved: () => void }) {
         </div>
       ))}
       <p className="muted" style={{ marginBottom: 0 }}>
-        Or ask your companion in Claude Code: <code>/mcp__divedeck__sort-out</code>.
+        Or ask your companion in Claude Code: <Command text="/mcp__divedeck__sort-out" />
       </p>
     </section>
   );
@@ -215,7 +185,9 @@ function TrendNote({ p }: { p: ProgressSeries }) {
 function ProgressChart({ p }: { p: ProgressSeries }) {
   const x = p.points.map((pt) => pt.seq);
   const fit = p.fit;
-  const fitAt = (seq: number) => (fit ? fit[0].value + ((fit[1].value - fit[0].value) * (seq - fit[0].seq)) / (fit[1].seq - fit[0].seq || 1) : null);
+  // The score can't leave 0–100, so neither does its trend line (nor the axis with it).
+  const clamp = (v: number) => (p.metric === "score" ? Math.min(100, Math.max(0, v)) : v);
+  const fitAt = (seq: number) => (fit ? clamp(fit[0].value + ((fit[1].value - fit[0].value) * (seq - fit[0].seq)) / (fit[1].seq - fit[0].seq || 1)) : null);
   const unit = UNIT[p.metric];
   return (
     <div className="card">

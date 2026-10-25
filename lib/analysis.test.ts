@@ -71,6 +71,9 @@ describe("progress", () => {
   it("needs at least three dives", () => {
     expect(progressInsights([{}])[0].title).toBe("Not enough history yet");
     expect(trend([{ score: 90 }, { score: 80 }], "score")).toBeNull();
+    // From no safety stop at all to a long one is an improvement, not "stable".
+    const stops = trend([0, 600, 510].map((safetyStopS) => ({ safetyStopS })), "safetyStopS");
+    expect(stops).toMatchObject({ verdict: "improving", changePct: 100 });
   });
 
   it("prints whole-number averages like Python and flags recurring issues", () => {

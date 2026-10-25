@@ -2,9 +2,62 @@
 
 import Link from "next/link";
 import { type DragEvent, useEffect, useState } from "react";
+import { Icon } from "@/components/Icons";
 import { api } from "@/components/useLive";
+import type { LogView } from "@/lib/views";
 
 type Result = { file: string; added?: number; duplicates?: number; error?: string };
+
+/** What the import did, file by file, and where to go next. */
+function ImportSummary({ results, after }: { results: Result[]; after: { dives: number; toSortOut: number } | null }) {
+  const added = results.reduce((n, r) => n + (r.added ?? 0), 0);
+  const known = results.reduce((n, r) => n + (r.duplicates ?? 0), 0);
+  const failed = results.filter((r) => r.error).length;
+  return (
+    <section className="card import-summary" aria-live="polite" aria-labelledby="imported-h">
+      <h2 id="imported-h" style={{ margin: 0 }}>
+        Imported
+      </h2>
+      <div>
+        <span className="big">
+          {added} new dive{added === 1 ? "" : "s"}
+        </span>
+        <span className="muted">
+          {known ? ` · ${known} already in the log` : ""}
+          {failed ? ` · ${failed} file${failed === 1 ? "" : "s"} couldn't be read` : ""}
+        </span>
+      </div>
+      <ul>
+        {results.map((r) => (
+          <li key={r.file}>
+            <span className={`severity ${r.error ? "critical" : "good"}`} role="img" aria-label={r.error ? "Failed" : "Read"}>
+              {r.error ? Icon.stop : Icon.check}
+            </span>
+            <span>
+              {r.file}: {r.error ? <span style={{ color: "var(--critical)" }}>{r.error}</span> : `${r.added} new, ${r.duplicates} already in the log`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {after && after.toSortOut > 0 && (
+        <div className="notice">
+          {after.toSortOut} of your {after.dives} dives miss a detail (tank size, gas, site or a debrief). Filling them in gives you gas consumption and
+          the ppO2 checks.
+        </div>
+      )}
+      <div className="row">
+        {after && after.toSortOut > 0 && (
+          <Link className="button primary" href="/">
+            Sort them out
+          </Link>
+        )}
+        <Link className="button" href="/dives">
+          Open the dive log
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 export default function ImportPage() {
   const [results, setResults] = useState<Result[] | null>(null);
@@ -12,6 +65,19 @@ export default function ImportPage() {
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
   const [python, setPython] = useState<{ database: string; available: boolean } | null>(null);
+  /** The log after an import: how many dives, and how many of them miss something. */
+  const [after, setAfter] = useState<{ dives: number; toSortOut: number } | null>(null);
+
+  async function refreshLog() {
+    try {
+      const res = await fetch("/api/dives", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const log: LogView = await res.json();
+      setAfter({ dives: log.dives.length, toSortOut: new Set(log.todos.flatMap((t) => t.dives)).size });
+    } catch {
+      setAfter(null);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/migrate")
@@ -32,6 +98,7 @@ export default function ImportPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
       setResults(body.results);
+      await refreshLog();
     } catch (err) {
       setMessage((err as Error).message);
     } finally {
@@ -53,6 +120,7 @@ export default function ImportPage() {
             (r.failed.length ? `; couldn't read ${r.failed.map((f) => f.fileName).join(", ")}.` : "."),
         );
       }
+      await refreshLog();
     } catch (err) {
       setMessage((err as Error).message);
     } finally {
@@ -68,7 +136,9 @@ export default function ImportPage() {
 
   return (
     <div className="stack">
-      <h1>Import dives</h1>
+      <div className="page-head">
+        <h1>Import dives</h1>
+      </div>
       <div
         className={`card dropzone ${over ? "over" : ""}`}
         onDragOver={(e) => {
@@ -86,19 +156,7 @@ export default function ImportPage() {
         <p className="muted">Dives already in your log are skipped. The original files are kept, so dives are parsed again when the parser improves.</p>
       </div>
 
-      {results && (
-        <div className="card">
-          <h2>Imported</h2>
-          <ul>
-            {results.map((r) => (
-              <li key={r.file}>
-                {r.file}: {r.error ? <span style={{ color: "var(--critical)" }}>⛔ {r.error}</span> : `${r.added} new, ${r.duplicates} already in the log`}
-              </li>
-            ))}
-          </ul>
-          <Link href="/dives">Open the dive log →</Link>
-        </div>
-      )}
+      {results && <ImportSummary results={results} after={after} />}
       {message && (
         <div className="notice" role="status">
           {message}
