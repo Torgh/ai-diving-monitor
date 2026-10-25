@@ -125,7 +125,7 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `update_dive` | Fill in the site, location, buddy, notes, the main tank's volume and gas (`air`, `EAN32`, `Tx 18/45`…) |
 | `save_dive_summary` | Store the coach's review so the app shows it |
 | `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from your log: experience, gas plan, ppO2/MOD, recurring problems |
-| `save_trip_plan` | Store a TripDeck trip's dive cards with the coach's preparation for each, and the logged dives they turned into |
+| `save_trip_plan` | Store a TripDeck trip's dive cards with the coach's preparation for each, and the logged dives they turned into; answers each card's link for TripDeck |
 | `get_trip_plans` | The saved trips; one trip's cards with the dives logged on each card's day |
 | `migrate_from_python` | Copy the Python version's log, as `bun run migrate` does |
 
@@ -136,7 +136,10 @@ to save what you tell it with `update_dive` and never to invent a tank size or a
 coach reads the trip with TripDeck's `get_trip` and stores its dive cards and the preparation here,
 one `*.trip.json` file per trip next to your dives; TripDeck stays where the trip is planned, so
 running it again after a change in TripDeck updates the cards and keeps the preparation of the ones
-that stayed. The app never reads TripDeck's files itself, so it works wherever TripDeck keeps them.
+that stayed. The coach then puts its verdict on each TripDeck card (TripDeck's `save_dive_prep`):
+the board shows ✅ *Prepared* or ⚠️ *Check prep* with a one-line summary, linking to the card's
+preparation here, and a gas mix you told the coach is saved on the card too. The app never reads
+TripDeck's files itself, so it works wherever TripDeck keeps them.
 *Forget this trip* on its page removes it here only; the trip stays in TripDeck.
 
 ### 2. Coach in the app with an API key (optional)
@@ -333,7 +336,7 @@ rewrite in TypeScript, one pull request per stage:
    - 6a. The coach prepares you for each dive card of a TripDeck trip from your own history, stores
      the trip with its preparation, and links your logged dives to the cards after the trip. ✅
    - 6b. A *Trips* page in the app with the preparation of each dive, and the next trip on the dashboard. ✅
-   - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app.
+   - 6c. TripDeck shows on its dive cards whether you are prepared, with a link to the app. ✅
 7. **On the road.** A logbook export (PDF, JSON) and a phone app that works offline.
 
 Also planned: import of other formats (Subsurface XML, FIT, Shearwater CSV), CCR setpoint analysis

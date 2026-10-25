@@ -143,6 +143,8 @@ describe.skipIf(!bun)("MCP server", () => {
       dives: [{ ...card, prep_markdown: "## Ready" }, { item_id: "c2", title: "Canyon", date: "2026-07-12" }],
     });
     expect(saved).toMatchObject({ saved: true, dive_cards: 2, prepared: 1, without_prep: ["c2"] });
+    expect(saved.urls).toEqual({ c1: "http://localhost:3001/trips/dahab-2026#card-c1", c2: "http://localhost:3001/trips/dahab-2026#card-c2" });
+    expect(client.getInstructions()).toContain("save_dive_prep");
 
     // The cards again, as TripDeck has them now: c2 was removed; c1 keeps its preparation.
     const dives = await json("list_dives");

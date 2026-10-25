@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { diveAnalysis, DiveRefError, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, snake, snakeKeys } from "./coach";
+import { diveAnalysis, DiveRefError, diveProfile, listDives, METRIC_NAMES, overview, progressTrend, resolveDive, snake, snakeKeys, tripCardUrl } from "./coach";
 import { fingerprint } from "./dive";
 import { type DiveRecord, RECORD_FORMAT } from "./record";
 import { parseUddf } from "./uddf";
@@ -85,5 +85,12 @@ describe("coach tool answers", () => {
       "rmv_l_min", "max_ascent_rate_m_min", "max_ppo2", "min_ndl_min", "uddf_id",
     ]);
     expect(snakeKeys([{ earlyAvg: 1, nested: { slopePerDive: 2 } }])).toEqual([{ early_avg: 1, nested: { slope_per_dive: 2 } }]);
+  });
+});
+
+describe("tripCardUrl", () => {
+  it("opens a dive card's preparation in the app", () => {
+    expect(tripCardUrl("dahab-2027", "c1")).toBe("http://localhost:3001/trips/dahab-2027#card-c1");
+    expect(tripCardUrl("a b", "x#y")).toBe("http://localhost:3001/trips/a%20b#card-x%23y");
   });
 });
