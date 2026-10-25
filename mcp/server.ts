@@ -24,6 +24,7 @@ import {
   resolveDive,
   SUMMARY_REQUEST,
   TRIP_PREP_REQUEST,
+  tripCardUrl,
   tripPlans,
 } from "../lib/coach";
 import { analyzeRecord, chronological, parseGas } from "../lib/record";
@@ -324,6 +325,8 @@ server.registerTool(
       dive_cards: plan.dives.length,
       prepared: plan.dives.filter((d) => d.prep).length,
       without_prep: plan.dives.filter((d) => !d.prep).map((d) => d.itemId),
+      // For TripDeck's save_dive_prep: where each card's preparation opens.
+      urls: Object.fromEntries(plan.dives.map((d) => [d.itemId, tripCardUrl(plan.id, d.itemId)])),
       stored_in: target.backend.location,
     };
   }),

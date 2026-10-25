@@ -33,7 +33,7 @@ How to work with the dive log:
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
 - Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the AI Diving Monitor app.
-- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation through save_trip_plan, so the app shows them. After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
+- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation through save_trip_plan, so the app shows them. Then put the verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
 export const SUMMARY_REQUEST = `Review dive {dive} for me. Structure the answer as:
 
@@ -299,4 +299,14 @@ export const TRIP_PREP_REQUEST = `Prepare me for the dives of my TripDeck trip {
 2. For every dive card, call prepare_dive with its site, location, max depth, gas, number of dives and date. If a card says only nitrox or trimix, or has no depth, ask me.
 3. For each card write a short preparation: how ready I am from my log (comparable dives, time since my last dive), the gas plan (my RMV at that depth, ppO2 and MOD), what keeps going wrong in my dives and one or two drills for it, and what to check or ask the dive centre.
 4. Write notes for the whole trip: what to practise before it, the order of the dives, gear, and the no-fly time before the flight home.
-5. Save everything with save_trip_plan (all the dive cards, with your preparation), then give me the trip notes and the cards that need my attention.`;
+5. Save everything with save_trip_plan (all the dive cards, with your preparation).
+6. On each TripDeck dive card, save the verdict with TripDeck's save_dive_prep: ready, or check when something is still to sort out, a one-line summary, and the card's url from save_trip_plan. Save any gas mix I told you on the card too (update_item with dive.mix).
+7. Give me the trip notes and the cards that need my attention.`;
+
+/** The web app (package.json runs it on this port). */
+export const APP_URL = "http://localhost:3001";
+
+/** A dive card's preparation in the app, for TripDeck to link to. */
+export function tripCardUrl(tripId: string, itemId: string): string {
+  return `${APP_URL}/trips/${encodeURIComponent(tripId)}#card-${encodeURIComponent(itemId)}`;
+}
