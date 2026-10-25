@@ -72,6 +72,11 @@ directly through an MCP server, and the web app shows every change within second
   repetitive or multi-day diving), and the cards to check. Then the dive days by date with the days
   off between them; each card with its verdict, a one-line note and the full preparation.
 - **Companion** chat (with an API key), **Import** with a summary of what came in, and **Settings**.
+- **Get started** on the dashboard until the first steps are done: where the log lives, the first
+  dives, and connecting your companion.
+- **Metric or imperial** (m, bar, °C, L or ft, psi, °F, cu ft) for everything the pages show; the
+  log, the analysis and the texts stay metric, and ppO2 stays in bar.
+- A long debrief folds into its sections; saving a tank size or gas for several dives can be undone.
 - Updates live, light and dark mode, works at phone width; every command has a copy button.
 
 ## Quick start
@@ -264,6 +269,8 @@ lib/
   tripViews.ts   the trips: which is next, and each dive card with its preparation and logged dives
   providers.ts   how the companion runs: Claude Code, Codex, or a Claude or ChatGPT API key
   format.ts, units.ts, py.ts, sha256.ts   formatting; SI units; Python-compatible rounding; SHA-256
+  measure.ts     metric or imperial for what the pages show
+  sections.ts    a long Markdown text split at its main headings, to fold
   server/
     diveStore.ts, tripStore.ts   the dive and trip files on any backend; parsing again after parser upgrades
     backends.ts  where the log lives: a folder (this PC, OneDrive) or Google Drive
@@ -280,7 +287,8 @@ proxy.ts         the localhost and same-origin guard in front of the API
 app/             the web app (Next.js): dashboard, dive log, a dive, trips, a trip, import,
                  companion, settings; api/
 components/      Nav, LineChart (SVG, shared crosshair, keyboard, table view), ProfileCharts,
-                 Sparkline, TripCard, Findings, Icons, Command (copy button), DetailsForm, StorageSettings
+                 Sparkline, TripCard, Findings, Icons, Command (copy button), DetailsForm, StorageSettings,
+                 Units (the chosen units), FoldedMarkdown, GetStarted
 scripts/         migrate-from-python.ts, export-golden.ts
 ```
 

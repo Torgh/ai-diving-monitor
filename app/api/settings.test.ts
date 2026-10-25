@@ -7,6 +7,7 @@ import { POST as review } from "./coach/review/route";
 import { POST as importSamples } from "./import/samples/route";
 import { POST as models } from "./settings/models/route";
 import { GET as getSettings, PUT as putSettings } from "./settings/route";
+import { GET as getUnits } from "./settings/units/route";
 import { isolateEnv, restoreEnv } from "../../test-env";
 
 const URL_BASE = "http://localhost:3001";
@@ -40,6 +41,15 @@ describe("settings API", () => {
     expect(body.providers.find((p: { id: string }) => p.id === "anthropic").key).toEqual({ source: "saved", masked: "…1234" });
     expect(JSON.stringify(body)).not.toContain("secret");
     expect(body.apps.claudeCode).toHaveProperty("commands");
+  });
+
+  it("keeps the units, metric until imperial is chosen", async () => {
+    const units = async () => (await read(await getUnits(new Request(`${URL_BASE}/api/settings/units`, { headers: { host: "localhost:3001" } }), {})))[1];
+    expect(await units()).toEqual({ units: "metric" });
+    const [, body] = await read(await putSettings(json("/api/settings", "PUT", { units: "imperial" }), {}));
+    expect(body.units).toBe("imperial");
+    expect(await units()).toEqual({ units: "imperial" });
+    expect((await putSettings(json("/api/settings", "PUT", { units: "nautical" }), {})).status).toBe(400);
   });
 
   it("switches the coach and its model", async () => {

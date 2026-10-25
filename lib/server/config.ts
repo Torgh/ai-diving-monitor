@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isUnitSystem, type UnitSystem } from "../measure";
 import { DEFAULT_PROVIDER, isProviderId, PROVIDERS, type Provider, type ProviderId } from "../providers";
 import { writeFileAtomic } from "./files";
 import { dataDir, envVar } from "./paths";
@@ -20,6 +21,8 @@ export interface Settings {
   /** The OAuth client for Google Drive (each diver creates their own; see the README). */
   googleClientId?: string;
   googleClientSecret?: string;
+  /** How the pages show depths, pressures and temperatures: "metric" (default) or "imperial". */
+  units?: string;
 }
 
 export function configPath(): string {
@@ -91,4 +94,16 @@ export async function updateSettings(patch: Partial<Record<"storage" | "oneDrive
     else settings[key] = value.trim();
   }
   await writeSettings(settings as Settings);
+}
+
+/** The units the pages use: metric unless imperial was chosen. */
+export function units(): UnitSystem {
+  const saved = readSettings().units;
+  return isUnitSystem(saved) ? saved : "metric";
+}
+
+export async function setUnits(system: UnitSystem): Promise<void> {
+  const settings = readSettings();
+  settings.units = system;
+  await writeSettings(settings);
 }

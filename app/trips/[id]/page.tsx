@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import { Findings } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
 import { TripPrepHint } from "@/components/TripPrepHint";
+import { useUnits } from "@/components/Units";
 import { api, useLive } from "@/components/useLive";
 import { formatDate, formatDateRange, formatNumber, formatTripWhen } from "@/lib/format";
 import { REFRESHER_DAYS } from "@/lib/prep";
@@ -16,6 +17,7 @@ import type { LoggedDiveLink, TripCardView, TripView } from "@/lib/tripViews";
 type Data = TripView & { version: string };
 
 function DiveLink({ dive }: { dive: LoggedDiveLink }) {
+  const { show } = useUnits();
   if (dive.seq === null) return <span className="muted">A dive no longer in the log</span>;
   return (
     <>
@@ -23,7 +25,7 @@ function DiveLink({ dive }: { dive: LoggedDiveLink }) {
         #{dive.seq} · {formatDate(dive.start)}
       </Link>{" "}
       <span className="secondary">
-        {[dive.site, formatNumber(dive.maxDepthM, 1, "m"), formatNumber(dive.durationMin, 0, "min"), `score ${dive.score}`].filter(Boolean).join(" · ")}
+        {[dive.site, show("depth", dive.maxDepthM), formatNumber(dive.durationMin, 0, "min"), `score ${dive.score}`].filter(Boolean).join(" · ")}
       </span>
     </>
   );
@@ -31,14 +33,15 @@ function DiveLink({ dive }: { dive: LoggedDiveLink }) {
 
 /** The numbers the preparation stands on, from the dives logged before the card's day. */
 function Facts({ card }: { card: TripCardView }) {
+  const { show } = useUnits();
   const { experience: e, gasPlan: g } = card.facts;
   const depth = card.maxDepthM;
   return (
     <div className="tiles">
       <div className="tile">
-        <div className="label">{depth ? `Dives to ${Math.max(0, depth - 3)} m or deeper` : "Dives before this one"}</div>
+        <div className="label">{depth ? `Dives to ${show("depth", Math.max(0, depth - 3), 0)} or deeper` : "Dives before this one"}</div>
         <div className="value">{depth ? e.divesNearPlannedDepth : e.dives}</div>
-        <div className="note">deepest {formatNumber(e.deepestM, 1, "m")}</div>
+        <div className="note">deepest {show("depth", e.deepestM)}</div>
       </div>
       <div className="tile">
         <div className="label">Since the last dive</div>
@@ -46,16 +49,16 @@ function Facts({ card }: { card: TripCardView }) {
         <div className="note">{e.divesInLast12Months} dives in the 12 months before</div>
       </div>
       <div className="tile">
-        <div className="label">Gas at {depth ? `${depth} m` : "depth"}</div>
-        <div className="value">{formatNumber(g.consumptionAtMaxDepthLMin, 0, "L/min")}</div>
-        <div className="note">your RMV {formatNumber(g.rmvLMin, 1, "L/min")}</div>
+        <div className="label">Gas at {depth ? show("depth", depth, 0) : "depth"}</div>
+        <div className="value">{show("flow", g.consumptionAtMaxDepthLMin, 0)}</div>
+        <div className="note">your RMV {show("flow", g.rmvLMin)}</div>
       </div>
       <div className="tile">
         <div className="label">ppO2 at max depth</div>
         <div className="value">{formatNumber(g.ppo2AtMaxDepth, 2, "bar")}</div>
         <div className="note">
           {g.modM !== null
-            ? `MOD ${formatNumber(g.modM, 1, "m")}`
+            ? `MOD ${show("depth", g.modM)}`
             : card.facts.gas?.family === "nitrox" && g.bestNitroxPercent !== null
               ? `richest nitrox EAN${g.bestNitroxPercent}`
               : "mix not known yet"}
@@ -224,6 +227,7 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
 
 /** A few checks for the whole trip, from the preparation of its first dive. */
 function BeforeYouGo({ data }: { data: Data }) {
+  const { show } = useUnits();
   const first = data.dives.find((d) => d.date) ?? data.dives[0];
   if (!first) return null;
   const { gasPlan: g } = first.facts;
@@ -256,7 +260,7 @@ function BeforeYouGo({ data }: { data: Data }) {
       </div>
       <div className={`card tile ${g.rmvLMin === null ? "warn" : ""}`}>
         <div className="label">Gas plan</div>
-        <div className="value">{g.rmvLMin === null ? "No RMV yet" : formatNumber(g.rmvLMin, 1, "L/min")}</div>
+        <div className="value">{g.rmvLMin === null ? "No RMV yet" : show("flow", g.rmvLMin)}</div>
         <div className="note">{g.rmvLMin === null ? <Link href="/">add your tank sizes</Link> : `your RMV, from ${g.rmvDives} dive${g.rmvDives === 1 ? "" : "s"}`}</div>
       </div>
       <div className={`card tile ${f && f.hours < f.neededHours ? "warn" : ""}`}>
