@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GET as getDive, PATCH as patchDive } from "./dives/[id]/route";
 import { GET as getDives } from "./dives/route";
 import { POST as importFiles } from "./import/route";
+import { GET as getKit, PUT as putKit } from "./kit/route";
 import { POST as importSamples } from "./import/samples/route";
 import { GET as migrateStatus, POST as migrate } from "./migrate/route";
 import { POST as linkDive } from "./trips/[id]/dives/route";
@@ -89,6 +90,39 @@ describe("API", () => {
     expect((await patchDive(json(`/api/dives/${id}`, "PATCH", { tankVolumeL: -1 }), ctx(id))).status).toBe(400);
     expect((await getDive(req("/api/dives/nope"), ctx("nope"))).status).toBe(404);
     expect((await patchDive(json("/api/dives/nope", "PATCH", { buddy: "x" }), ctx("nope"))).status).toBe(404);
+  });
+
+  it("keeps the kit, and puts a gear set, the lead, the water and how it felt on a dive", async () => {
+    await importSamples(json("/api/import/samples", "POST", {}), {});
+    await new TripStore().save({ id: "dahab", name: "Dahab", dives: [{ itemId: "c1", title: "Blue Hole", site: "Blue Hole" }, { itemId: "c2", title: "Canyon" }] });
+    const [, empty] = await read(await getKit(req("/api/kit"), {}));
+    expect(empty).toMatchObject({ diver: {}, items: [], sets: [], sites: [] });
+    expect(empty.siteNames).toContain("Koparki");
+    expect(empty.siteNames).toContain("Blue Hole");
+
+    const [status, kit] = await read(
+      await putKit(
+        json("/api/kit", "PUT", {
+          diver: { massKg: 82 },
+          items: [{ name: "Wetsuit 7 mm", kind: "suit", suitType: "wetsuit", thicknessMm: 7 }],
+          sets: [{ name: "Lake", items: ["Wetsuit 7 mm"], ballastKg: 8 }],
+          sites: [{ name: "Koparki", water: "fresh" }],
+        }),
+        {},
+      ),
+    );
+    expect(status).toBe(200);
+    expect(kit.sets[0]).toMatchObject({ id: "lake", itemIds: ["wetsuit-7-mm"] });
+    expect((await putKit(json("/api/kit", "PUT", { items: [{ name: "Mystery" }] }), {})).status).toBe(400);
+    expect((await putKit(json("/api/kit", "PUT", { diver: { massKg: "heavy" } }), {})).status).toBe(400);
+
+    const [, log] = await read(await getDives(req("/api/dives"), {}));
+    const id = log.dives[0].id;
+    const [ok, saved] = await read(await patchDive(json(`/api/dives/${id}`, "PATCH", { gearSetId: "lake", ballastKg: 8, weighting: "heavy" }), ctx(id)));
+    expect(ok).toBe(200);
+    expect(saved.details).toEqual({ gearSetId: "lake", ballastKg: 8, weighting: "heavy" });
+    expect((await patchDive(json(`/api/dives/${id}`, "PATCH", { gearSetId: "nope" }), ctx(id))).status).toBe(400);
+    expect((await patchDive(json(`/api/dives/${id}`, "PATCH", { water: "lava" }), ctx(id))).status).toBe(400);
   });
 
   it("says when there is no Python database to migrate", async () => {

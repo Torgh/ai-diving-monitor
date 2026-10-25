@@ -23,6 +23,13 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
   import: <path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />,
   companion: <path d="M4 5h16v11H9l-5 4z" />,
+  gear: (
+    <>
+      <circle cx="12" cy="5" r="2.5" />
+      <path d="M8 9h8l-1 12H9z" />
+      <path d="M9 13h6" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -35,6 +42,7 @@ const LINKS = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
   { href: "/dives", label: "Dive log", icon: "log" },
   { href: "/trips", label: "Trips", icon: "trips" },
+  { href: "/gear", label: "Gear", icon: "gear" },
   { href: "/import", label: "Import", icon: "import" },
   { href: "/companion", label: "Companion", icon: "companion" },
   { href: "/settings", label: "Settings", icon: "settings" },

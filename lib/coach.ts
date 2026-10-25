@@ -10,6 +10,7 @@ import { pyRound } from "./py";
 import { type PlannedDive, prepareDive } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive, logTodos } from "./record";
 import type { TripPlan } from "./trip";
+import { type Kit, waterOf } from "./kit";
 
 export const SYSTEM_PROMPT = `You are DiveDeck, the diver's AI dive companion, with the knowledge of an experienced technical diving instructor.
 You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
@@ -32,6 +33,7 @@ How to work with the dive log:
 - Dives are referred to by their number in the log (seq: 1 = the oldest dive) or by their id. list_dives shows both.
 - Start with get_overview when you don't know the log yet: it lists what is still missing ("to sort out").
 - The dive computer doesn't record everything. When the diver tells you the dive site, the buddy, the tank size or the gas, save it with update_dive instead of only using it in your answer. A tank volume gives the dive its gas consumption (RMV), and the gas gives ppO2, CNS and END. Never invent these values: ask.
+- The diver's kit (get_kit / update_kit) holds their body (mass, height, body fat), their gear, gear sets with the usual lead, and the water (fresh, brackish, salt) at each dive site. When the diver tells you about gear, a set or a site's water, save it with update_kit; when they tell you what they dived with, how much lead they carried and how the weighting felt (light, ok, heavy), save it on the dive with update_dive. Never invent a buoyancy figure for a piece of gear: ask, or leave it out.
 - Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the DiveDeck app.
 - Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation, your verdict for each and the trip's flights through save_trip_plan, so the app shows them. Then put the same verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
 
@@ -55,6 +57,25 @@ How this dive compares with my earlier dives and where I am progressing or slipp
 export const snake = (key: string) => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 
 /** The same value with snake_case keys, as the Python version answered. */
+/** The other way: what the agent sends in snake_case, for the app's camelCase types. */
+export function camelKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(camelKeys);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()), camelKeys(v)]));
+}
+
+/** What a dive was dived with: the set and its gear, the lead, the water and how the weighting felt. */
+export function diveGear(record: DiveRecord, kit: Kit) {
+  const set = record.details.gearSetId ? kit.sets.find((s) => s.id === record.details.gearSetId) : undefined;
+  const water = waterOf(kit, record.details, effectiveDive(record).site);
+  return {
+    gear_set: set ? { id: set.id, name: set.name, items: set.itemIds.map((id) => kit.items.find((i) => i.id === id)?.name ?? id) } : null,
+    ballast_kg: record.details.ballastKg ?? null,
+    water: water ? { water: water.water, density_kg_l: water.density, from: water.from } : null,
+    weighting: record.details.weighting ?? null,
+  };
+}
+
 export function snakeKeys(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(snakeKeys);
   if (value === null || typeof value !== "object") return value;
@@ -86,7 +107,16 @@ export const DESCRIPTIONS = {
   save_dive_summary: "Save a coaching summary (Markdown) for a dive so it shows up in the app.",
   update_dive:
     "Fill in what the dive computer doesn't record: dive site, location, buddy, notes, the main tank's volume (litres) " +
-    "and gas (e.g. air, EAN32, Tx 18/45). Only the fields given change; an empty text or null removes one. Returns the dive's new headline metrics.",
+    "and gas (e.g. air, EAN32, Tx 18/45), the gear set dived with (from get_kit), the lead carried (kg), the water when it differs from the site's, " +
+    "and how the weighting felt (light, ok, heavy). Only the fields given change; an empty text or null removes one. Returns the dive's new headline metrics.",
+  get_kit:
+    "The diver's kit: body (mass, height, body fat), every piece of gear with what matters for buoyancy (suit type and thickness, tank material, " +
+    "volume, working pressure and empty buoyancy, backplate…), the gear sets with their usual lead, the water (fresh, brackish, salt) at each dive site, " +
+    "and how many dives each set was used on. Read-only.",
+  update_kit:
+    "Change the diver's kit: the diver's body, gear items (added when the name is new, changed by id or name), gear sets (gear by id or name, " +
+    "usual lead in kg), the water at dive sites (null forgets a site), and items or sets to remove. Only what is sent changes; a null field removes it. " +
+    "Never guess a buoyancy figure: ask, or leave it out.",
   prepare_dive:
     "Get ready for a planned dive (e.g. a dive card of a TripDeck trip) from the diver's own log: comparable experience (depth, gas, the same site), " +
     "time since the last dive, gas consumption at the planned depth, ppO2 / MOD / best nitrox mix, recurring problems, and notes worth raising. Read-only.",

@@ -7,6 +7,7 @@
 
 import { analyzeDive, type DiveAnalysis } from "./analysis";
 import { type Dive, type GasMix, gasLabel } from "./dive";
+import type { Water } from "./kit";
 
 export const RECORD_FORMAT = "ai-diving-monitor/dive";
 export const RECORD_VERSION = 1;
@@ -21,7 +22,17 @@ export interface DiveDetails {
   tankVolumeL?: number;
   /** Gas in the main tank, as fractions 0..1. */
   gas?: { o2: number; he: number };
+  /** The gear set dived with (an id from the kit). */
+  gearSetId?: string;
+  /** The lead actually carried, kg. */
+  ballastKg?: number;
+  /** The water, when it differs from the site's (or the site has none). */
+  water?: Water;
+  /** How the weighting felt: too light, right, too heavy. */
+  weighting?: Weighting;
 }
+
+export type Weighting = "light" | "ok" | "heavy";
 
 export interface Review {
   markdown: string;

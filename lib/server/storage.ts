@@ -1,10 +1,11 @@
 import { activeStorage, backendFor, type StorageKind } from "./backends";
 import { updateSettings } from "./config";
 import { copyLog, DiveStore } from "./diveStore";
+import { copyKit, KitStore } from "./kitStore";
 import { copyTrips, TripStore } from "./tripStore";
 
 /**
- * Makes `storage` the place of the log and copies the dives and the trips there; where they were stays
+ * Makes `storage` the place of the log and copies the dives, the trips and the kit there; where they were stays
  * as it was. Returns how many dives were copied.
  */
 export async function switchStorage(storage: StorageKind): Promise<number> {
@@ -14,5 +15,6 @@ export async function switchStorage(storage: StorageKind): Promise<number> {
   if (before.kind === after.kind && before.location === after.location) return 0;
   const { dives } = await copyLog(new DiveStore(before), new DiveStore(after));
   await copyTrips(new TripStore(before), new TripStore(after));
+  await copyKit(new KitStore(before), new KitStore(after));
   return dives;
 }

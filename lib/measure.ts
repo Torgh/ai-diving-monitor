@@ -4,11 +4,12 @@
  */
 
 export type UnitSystem = "metric" | "imperial";
-export type Quantity = "depth" | "pressure" | "temperature" | "volume" | "speed" | "flow";
+export type Quantity = "depth" | "pressure" | "temperature" | "volume" | "speed" | "flow" | "weight";
 
 const FT_PER_M = 3.28084;
 const PSI_PER_BAR = 14.5038;
 const CUFT_PER_L = 0.0353147;
+const LB_PER_KG = 2.20462;
 
 interface Unit {
   unit: string;
@@ -25,6 +26,7 @@ const UNITS: Record<UnitSystem, Record<Quantity, Unit>> = {
     volume: { unit: "L", from: (v) => v, digits: 1 },
     speed: { unit: "m/min", from: (v) => v, digits: 1 },
     flow: { unit: "L/min", from: (v) => v, digits: 1 },
+    weight: { unit: "kg", from: (v) => v, digits: 1 },
   },
   imperial: {
     depth: { unit: "ft", from: (v) => v * FT_PER_M, digits: 0 },
@@ -34,6 +36,7 @@ const UNITS: Record<UnitSystem, Record<Quantity, Unit>> = {
     speed: { unit: "ft/min", from: (v) => v * FT_PER_M, digits: 0 },
     // Surface gas, so litres convert to cubic feet like a volume.
     flow: { unit: "cu ft/min", from: (v) => v * CUFT_PER_L, digits: 2 },
+    weight: { unit: "lb", from: (v) => v * LB_PER_KG, digits: 0 },
   },
 };
 

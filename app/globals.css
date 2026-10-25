@@ -1311,3 +1311,34 @@ a.dive-row:hover {
   background: var(--accent);
   color: var(--on-accent);
 }
+
+/* Gear */
+ul.gear-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+ul.gear-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--grid);
+}
+
+ul.gear-list li:last-child {
+  border-bottom: 0;
+}
+
+.form select {
+  min-height: 44px;
+  border: 1px solid var(--axis);
+  background: var(--raised);
+  border-radius: 8px;
+  padding: 0 0.5rem;
+}

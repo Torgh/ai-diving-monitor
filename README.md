@@ -29,6 +29,15 @@ directly through an MCP server, and the web app shows every change within second
   ppO2, CNS and END. *To sort out* lists what is still missing, and the dashboard saves a tank size or
   a gas for every dive that misses it in one go.
 
+**Your gear**
+
+- **The kit:** you (body mass, height, body fat), your gear with what matters for buoyancy (suit type
+  and neoprene thickness, tank material, volume, working pressure and empty buoyancy, backplate…),
+  sets of gear with the lead you usually carry, and the water (fresh, brackish, salt) at each dive
+  site. Kept with the log, so every device and your companion see the same.
+- **On each dive:** the set you dived with, the lead you carried, the water (from its site unless the
+  dive says otherwise) and how the weighting felt: too light, right or too heavy.
+
 **Analysis** (rule-based, offline, no AI needed)
 
 - gas consumption: surface RMV (L/min) and SAC (bar/min), and the gas left
@@ -147,7 +156,9 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `get_dive_profile` | Downsampled depth, pressure and temperature profile |
 | `get_progress_trend` | Early vs recent comparison for a metric |
 | `import_uddf` | Import a `.uddf` file or a folder of them |
-| `update_dive` | Fill in the site, location, buddy, notes, the main tank's size and gas (`air`, `EAN32`, `Tx 18/45`…) |
+| `update_dive` | Fill in the site, location, buddy, notes, the main tank's size and gas (`air`, `EAN32`, `Tx 18/45`…), the gear set, the lead carried, the water and how the weighting felt |
+| `get_kit` | You, your gear, your sets (with how many dives each was used on) and the water at your dive sites |
+| `update_kit` | Add or change your body data, gear, sets and the water at dive sites; remove gear or sets |
 | `save_dive_summary` | Store the debrief so the app shows it |
 | `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from the log: experience, gas plan, ppO2/MOD, recurring problems |
 | `save_trip_plan` | Store a TripDeck trip's dive cards with the preparation and verdict for each, the trip's flights, and the logged dives the cards turned into; answers each card's link for TripDeck |
@@ -188,10 +199,10 @@ declined, cut-off or empty answer is shown, never saved as a debrief.
 ## Where your dives are stored
 
 *Settings → Where your dives are stored* chooses **This PC**, **OneDrive** or **Google Drive**, and
-the menu shows the current place. Switching copies your dives and trips to the new place (the copy
+the menu shows the current place. Switching copies your dives, trips and kit to the new place (the copy
 with the newer changes wins); the old place keeps its copy. The MCP server follows the choice at once.
 
-- **This PC:** `dives/`, `originals/` and `trips/` in the data folder (see `DIVEDECK_HOME` below).
+- **This PC:** `dives/`, `originals/`, `trips/` and `kit/` in the data folder (see `DIVEDECK_HOME` below).
 - **OneDrive:** a *DiveDeck* folder in your OneDrive folder on this PC (on Windows `%OneDrive%`, on
   macOS under `~/Library/CloudStorage/OneDrive-…`), synced by the OneDrive app, no sign-in needed. If
   it isn't found, enter the folder in Settings or set `DIVEDECK_ONEDRIVE_FOLDER`. When two computers
@@ -263,6 +274,7 @@ lib/
   record.ts      a stored dive: recorded, filled in, the debrief; "to sort out"
   prep.ts        getting ready for a planned dive: experience, gas plan, ppO2/MOD, recurring problems
   trip.ts        a TripDeck trip's dive cards with the preparation and the logged dives
+  kit.ts, kitSchema.ts   you, your gear, sets and the water at dive sites; checking changes to them
   coach.ts       the companion's instructions, prompts and tool answers
   coachTools.ts  the in-app companion's tools (the MCP server's read-only tools)
   views.ts       what the pages show: the log, totals, trends, to-do list, profile thumbnails; one dive
@@ -273,6 +285,7 @@ lib/
   sections.ts    a long Markdown text split at its main headings, to fold
   server/
     diveStore.ts, tripStore.ts   the dive and trip files on any backend; parsing again after parser upgrades
+    kitStore.ts  kit.json, next to the log
     backends.ts  where the log lives: a folder (this PC, OneDrive) or Google Drive
     googleDrive.ts, cloudAuth.ts   Google Drive files, and the Google sign-in (OAuth with PKCE)
     storage.ts   switching the place, copying the dives and trips over
@@ -284,7 +297,7 @@ lib/
     http.ts, version.ts, paths.ts   API guards; the tag the browser polls; the data folder
 mcp/server.ts    the MCP server (stdio, run by Bun)
 proxy.ts         the localhost and same-origin guard in front of the API
-app/             the web app (Next.js): dashboard, dive log, a dive, trips, a trip, import,
+app/             the web app (Next.js): dashboard, dive log, a dive, trips, a trip, gear, import,
                  companion, settings; api/
 components/      Nav, LineChart (SVG, shared crosshair, keyboard, table view), ProfileCharts,
                  Sparkline, TripCard, Findings, Icons, Command (copy button), DetailsForm, StorageSettings,

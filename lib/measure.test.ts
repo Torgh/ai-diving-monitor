@@ -7,6 +7,7 @@ describe("units", () => {
     expect(unitOf("flow", "metric")).toBe("L/min");
     expect(digitsFor("depth", "metric", 0)).toBe(0);
     expect(digitsFor("depth", "metric")).toBe(1);
+    for (const q of ["depth", "pressure", "temperature", "volume", "speed", "flow", "weight"] as const) expect(convert(q, 12.5, "metric")).toBe(12.5);
   });
 
   it("converts to imperial with its own rounding", () => {
@@ -16,6 +17,7 @@ describe("units", () => {
     expect(convert("volume", 11.1, "imperial")).toBeCloseTo(0.392, 3);
     expect(convert("speed", 10, "imperial")).toBeCloseTo(32.8, 1);
     expect(convert("flow", 20, "imperial")).toBeCloseTo(0.706, 3);
+    expect(convert("weight", 8, "imperial")).toBeCloseTo(17.6, 1);
     expect(unitOf("depth", "imperial")).toBe("ft");
     expect(digitsFor("depth", "imperial", 1)).toBe(0);
   });
