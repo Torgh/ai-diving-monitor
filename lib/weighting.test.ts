@@ -68,6 +68,13 @@ describe("estimateWeighting", () => {
     expect(dry.parts.find((p) => p.label === "Dry")).toMatchObject({ kg: 7, assumed: true });
   });
 
+  it("counts the neoprene with a typical height when yours is missing, flagged", () => {
+    const k = updateKit(kit(), { diver: { heightCm: null } }, "T2");
+    const suit = estimateWeighting(k, [], set(k, "Lake"), "salt").parts.find((p) => p.label === "Wetsuit 7")!;
+    expect(suit.kg).toBeGreaterThan(4);
+    expect(suit.assumed).toBe(true);
+  });
+
   it("can't give a lead without your body mass, and asks for the rest", () => {
     const k = updateKit(kit(), { diver: { massKg: null, heightCm: null, bodyFatPercent: null } }, "T2");
     const e = estimateWeighting(k, [], null, "salt");
