@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { StorageSettings } from "@/components/StorageSettings";
+import { useUnits } from "@/components/Units";
+import type { UnitSystem } from "@/lib/measure";
 import { type ProviderView, useSettings } from "@/components/useSettings";
 import { api } from "@/components/useLive";
 import type { AppStatus } from "@/lib/server/agentApps";
@@ -99,6 +101,34 @@ function ApiProvider({ p, onSave }: { p: ProviderView; onSave: (patch: object) =
   );
 }
 
+/** Metric or imperial for everything the pages show; the log itself stays metric. */
+function UnitsSettings() {
+  const { system, setSystem } = useUnits();
+  const [failure, setFailure] = useState<string | null>(null);
+  const choose = (next: UnitSystem) => setSystem(next).then(() => setFailure(null), (err: Error) => setFailure(err.message));
+  return (
+    <div className="card stack">
+      <h2>Units</h2>
+      <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0, gap: "0.4rem" }}>
+        <legend className="muted">How depths, pressures, temperatures and gas are shown</legend>
+        <label className="row" style={{ gap: "0.5rem" }}>
+          <input type="radio" name="units" checked={system === "metric"} onChange={() => choose("metric")} />
+          Metric: m, bar, °C, L
+        </label>
+        <label className="row" style={{ gap: "0.5rem" }}>
+          <input type="radio" name="units" checked={system === "imperial"} onChange={() => choose("imperial")} />
+          Imperial: ft, psi, °F, cu ft
+        </label>
+      </fieldset>
+      <p className="muted" style={{ margin: 0 }}>
+        The log and the analysis stay in metric, and so do the findings and your companion&apos;s texts. ppO2 is shown in bar either way. Tank
+        sizes are still entered in litres.
+      </p>
+      {failure && <div className="error">{failure}</div>}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { settings, error, save } = useSettings();
   const [installed, setInstalled] = useState<string | null>(null);
@@ -163,6 +193,7 @@ export default function SettingsPage() {
         )}
       </div>
 
+      <UnitsSettings />
       <StorageSettings />
 
       <div className="card">

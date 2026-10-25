@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { DetailsForm } from "@/components/DetailsForm";
 import { FindingBadge, Findings } from "@/components/Findings";
+import { FoldedMarkdown } from "@/components/FoldedMarkdown";
 import { ProfileCharts } from "@/components/ProfileCharts";
 import { api, useLive } from "@/components/useLive";
+import { useUnits } from "@/components/Units";
 import { useSettings } from "@/components/useSettings";
 import { RESERVE_WARN_BAR } from "@/lib/analysis";
 import { formatDate, formatNumber, formatSeconds } from "@/lib/format";
@@ -78,7 +78,7 @@ function Debrief({ data, onSaved }: { data: Data; onSaved: () => void }) {
     <div className="review">
       {data.review ? (
         <>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.review.markdown}</ReactMarkdown>
+          <FoldedMarkdown key={data.review.savedAt} markdown={data.review.markdown} />
           <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
         </>
       ) : (
@@ -133,14 +133,15 @@ function DebriefAndFindings({ data, onSaved }: { data: Data; onSaved: () => void
 }
 
 function MetricCards({ data }: { data: Data }) {
+  const { show, system } = useUnits();
   const { metrics: m, averages: avg } = data;
   const missingVolume = m.rmvLMin === null && data.tanks.some((t) => t.startBar && t.endBar !== null && !t.volumeL);
   const lowReserve = m.endPressureBar !== null && m.endPressureBar < RESERVE_WARN_BAR;
   const tank = data.tanks.find((t) => t.startBar !== null);
   const average = [
-    avg.maxDepthM !== undefined ? formatNumber(avg.maxDepthM, 1, "m") : null,
+    avg.maxDepthM !== undefined ? show("depth", avg.maxDepthM) : null,
     avg.durationMin !== undefined ? formatNumber(avg.durationMin, 0, "min") : null,
-    avg.maxAscentRateMMin !== undefined ? formatNumber(avg.maxAscentRateMMin, 1, "m/min") : null,
+    avg.maxAscentRateMMin !== undefined ? show("speed", avg.maxAscentRateMMin) : null,
   ].filter(Boolean);
   const safetyFoot = [
     m.ceilingViolationS > 0 ? `deco ceiling broken for ${formatSeconds(m.ceilingViolationS)}` : null,
@@ -152,7 +153,7 @@ function MetricCards({ data }: { data: Data }) {
         <h3>Profile</h3>
         <div className="kv">
           <span>Max depth</span>
-          <strong>{formatNumber(m.maxDepthM, 1, "m")}</strong>
+          <strong>{show("depth", m.maxDepthM)}</strong>
         </div>
         <div className="kv">
           <span>Duration</span>
@@ -160,7 +161,7 @@ function MetricCards({ data }: { data: Data }) {
         </div>
         <div className="kv">
           <span>Peak ascent</span>
-          <strong>{formatNumber(m.maxAscentRateMMin, 1, "m/min")}</strong>
+          <strong>{show("speed", m.maxAscentRateMMin)}</strong>
         </div>
         {average.length > 0 && <span className="foot">Your average: {average.join(" · ")}</span>}
       </div>
@@ -169,7 +170,7 @@ function MetricCards({ data }: { data: Data }) {
         <h3>Gas</h3>
         <div className="kv">
           <span>Gas left</span>
-          <strong className={lowReserve ? "warn" : ""}>{formatNumber(m.endPressureBar, 0, "bar")}</strong>
+          <strong className={lowReserve ? "warn" : ""}>{show("pressure", m.endPressureBar)}</strong>
         </div>
         <div className="kv">
           <span>Consumption (RMV)</span>
@@ -178,7 +179,7 @@ function MetricCards({ data }: { data: Data }) {
               add tank size
             </a>
           ) : (
-            <strong>{formatNumber(m.rmvLMin, 1, "L/min")}</strong>
+            <strong>{show("flow", m.rmvLMin)}</strong>
           )}
         </div>
         <div className="kv">
@@ -187,7 +188,7 @@ function MetricCards({ data }: { data: Data }) {
         </div>
         <span className="foot">
           {[
-            tank ? `${formatNumber(tank.startBar, 0)} → ${formatNumber(tank.endBar, 0)} bar` : "no tank pressure",
+            tank ? `${show("pressure", tank.startBar)} → ${show("pressure", tank.endBar)}` : "no tank pressure",
             m.maxPpo2 !== null ? `max ppO2 ${formatNumber(m.maxPpo2, 2)}` : null,
             m.gases.join(", ") || "gas unknown",
           ]
@@ -199,7 +200,7 @@ function MetricCards({ data }: { data: Data }) {
       <div className="card metric-card">
         <h3>Safety</h3>
         <div className="kv">
-          <span>Time at 3–6 m</span>
+          <span>Time at {system === "imperial" ? "10–20 ft" : "3–6 m"}</span>
           <strong>{formatSeconds(m.safetyStopS)}</strong>
         </div>
         <div className="kv">
@@ -218,6 +219,7 @@ function MetricCards({ data }: { data: Data }) {
 
 export default function DivePage() {
   const { id } = useParams<{ id: string }>();
+  const { show } = useUnits();
   const { data, error, loading, reload } = useLive<Data>(`/api/dives/${id}`);
   if (error && !data) return <div className="error">{error}</div>;
   if (!data) return <p className="muted">Loading the dive…</p>;
@@ -292,7 +294,7 @@ export default function DivePage() {
           <p className="muted">
             Tanks:{" "}
             {data.tanks
-              .map((t) => `${t.volumeL ? `${formatNumber(t.volumeL, 1)} L` : "volume unknown"}, ${t.startBar !== null ? `${formatNumber(t.startBar, 0)} → ${formatNumber(t.endBar, 0)} bar` : "no pressure"}${t.gas ? `, ${t.gas}` : ""}`)
+              .map((t) => `${t.volumeL ? show("volume", t.volumeL) : "volume unknown"}, ${t.startBar !== null ? `${show("pressure", t.startBar)} → ${show("pressure", t.endBar)}` : "no pressure"}${t.gas ? `, ${t.gas}` : ""}`)
               .join("; ")}
           </p>
         )}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Nav } from "@/components/Nav";
+import { UnitsProvider } from "@/components/Units";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,10 +19,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="app">
-          <Nav />
-          <main className="page">{children}</main>
-        </div>
+        <UnitsProvider>
+          <div className="app">
+            <Nav />
+            <main className="page">{children}</main>
+          </div>
+        </UnitsProvider>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { StatusBadge } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
 import { Sparkline } from "@/components/Sparkline";
+import { useUnits } from "@/components/Units";
 import { useLive } from "@/components/useLive";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { DiveRow, LogView } from "@/lib/views";
@@ -30,6 +31,7 @@ function matches(d: DiveRow, query: string) {
 
 export default function DiveLog() {
   const { data, error, loading } = useLive<Data>("/api/dives");
+  const { show } = useUnits();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   if (error && !data) return <div className="error">Couldn&apos;t load the dive log: {error}</div>;
@@ -81,7 +83,7 @@ export default function DiveLog() {
                     <span className="main">
                       <strong>{d.site || <span className="muted">No site</span>}</strong>
                       <span className="secondary">
-                        {[formatDate(d.start), formatNumber(d.maxDepthM, 1, "m"), formatNumber(d.durationMin, 0, "min"), d.gases.join(", ") || "gas unknown"].join(" · ")}
+                        {[formatDate(d.start), show("depth", d.maxDepthM), formatNumber(d.durationMin, 0, "min"), d.gases.join(", ") || "gas unknown"].join(" · ")}
                       </span>
                     </span>
                     <span className="side">

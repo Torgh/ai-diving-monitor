@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatNumber } from "@/lib/format";
 import type { DiveView } from "@/lib/views";
 import { LineChart } from "./LineChart";
+import { useUnits } from "./Units";
 
 const minutes = (v: number) => `${Math.floor(v)}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}`;
 
@@ -13,11 +14,14 @@ const minutes = (v: number) => `${Math.floor(v)}:${String(Math.round((v % 1) * 6
  */
 export function ProfileCharts({ view }: { view: DiveView }) {
   const [hover, setHover] = useState<number | null>(null);
+  const { show, value, unit } = useUnits();
+  // Values in the diver's units; a missing one stays missing.
+  const to = (quantity: Parameters<typeof value>[0], v: number | null) => (v === null ? null : value(quantity, v));
   const { profile } = view;
   const x = profile.map((p) => p.tMin);
   const has = (key: "tankBar" | "ppo2" | "tempC" | "ceilingM") => profile.some((p) => p[key] !== null);
   const shared = { x, formatX: minutes, xUnit: "Time (min)", hover, onHover: setHover, labelMargin: true };
-  const ascent = (i: number) => [{ label: "ascent rate", value: `${formatNumber(Math.max(0, profile[i].ascentMMin), 1)} m/min` }];
+  const ascent = (i: number) => [{ label: "ascent rate", value: show("speed", Math.max(0, profile[i].ascentMMin)) }];
 
   if (!profile.length) return <p className="muted">The dive computer recorded no profile for this dive.</p>;
   return (
@@ -30,10 +34,10 @@ export function ProfileCharts({ view }: { view: DiveView }) {
           invertY
           includeY={[0]}
           height={260}
-          formatY={(v) => `${formatNumber(v, 1)} m`}
+          formatY={(v) => `${formatNumber(v, 1)} ${unit("depth")}`}
           series={[
-            { key: "depth", label: "Depth", color: "var(--series-1)", values: profile.map((p) => p.depthM) },
-            ...(has("ceilingM") ? [{ key: "ceiling", label: "Deco stop (computer)", color: "var(--series-2)", values: profile.map((p) => p.ceilingM) }] : []),
+            { key: "depth", label: "Depth", color: "var(--series-1)", values: profile.map((p) => value("depth", p.depthM)) },
+            ...(has("ceilingM") ? [{ key: "ceiling", label: "Deco stop (computer)", color: "var(--series-2)", values: profile.map((p) => to("depth", p.ceilingM)) }] : []),
           ]}
           bands={view.fastAscents.map((a) => ({ from: a.fromMin, to: a.toMin, label: "⚠ Fast ascent", color: "var(--serious)" }))}
           markers={view.gasSwitches.map((g) => ({ x: g.tMin, label: `→ ${g.gas}` }))}
@@ -43,7 +47,7 @@ export function ProfileCharts({ view }: { view: DiveView }) {
       {has("tankBar") && (
         <div>
           <h3>Tank pressure</h3>
-          <LineChart {...shared} title="Tank pressure" height={140} formatY={(v) => `${formatNumber(v, 0)} bar`} includeY={[0]} series={[{ key: "tank", label: "Tank pressure", color: "var(--series-1)", values: profile.map((p) => p.tankBar) }]} />
+          <LineChart {...shared} title="Tank pressure" height={140} formatY={(v) => `${formatNumber(v, 0)} ${unit("pressure")}`} includeY={[0]} series={[{ key: "tank", label: "Tank pressure", color: "var(--series-1)", values: profile.map((p) => to("pressure", p.tankBar)) }]} />
         </div>
       )}
       {has("ppo2") && (
@@ -69,7 +73,7 @@ export function ProfileCharts({ view }: { view: DiveView }) {
       {has("tempC") && (
         <div>
           <h3>Water temperature</h3>
-          <LineChart {...shared} title="Water temperature" height={120} formatY={(v) => `${formatNumber(v, 1)} °C`} series={[{ key: "temp", label: "Temperature", color: "var(--series-1)", values: profile.map((p) => p.tempC) }]} />
+          <LineChart {...shared} title="Water temperature" height={120} formatY={(v) => `${formatNumber(v, 1)} ${unit("temperature")}`} series={[{ key: "temp", label: "Temperature", color: "var(--series-1)", values: profile.map((p) => to("temperature", p.tempC)) }]} />
         </div>
       )}
     </div>
