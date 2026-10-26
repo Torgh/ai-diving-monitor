@@ -1784,3 +1784,20 @@ ul.balance-rows .value {
     padding-right: 0;
   }
 }
+
+.site-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+
+.site-card.chosen,
+.site-profile {
+  border-color: var(--accent);
+}
+
+.pill.chosen {
+  background: var(--accent-wash);
+  color: var(--accent);
+}

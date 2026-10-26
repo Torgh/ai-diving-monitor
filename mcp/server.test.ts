@@ -58,10 +58,11 @@ describe.skipIf(!bun)("MCP server", () => {
   it("offers the coach tools and prompts", async () => {
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
-      "estimate_weighting", "get_dive_analysis", "get_dive_profile", "get_kit", "get_overview", "get_progress_trend", "get_trip_plans", "import_uddf",
-      "list_dives", "migrate_from_python", "prepare_dive", "save_dive_summary", "save_trip_plan", "update_dive", "update_kit",
+      "choose_dive_sites", "estimate_weighting", "find_dive_sites", "get_dive_analysis", "get_dive_profile", "get_kit", "get_overview", "get_progress_trend",
+      "get_site_conditions", "get_trip_plans", "import_uddf", "list_dives", "migrate_from_python", "prepare_dive", "propose_dive_sites", "save_dive_summary",
+      "save_site_profile", "save_trip_plan", "update_dive", "update_kit",
     ]);
-    expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "sort-out", "trip-prep"]);
+    expect((await client.listPrompts()).prompts.map((p) => p.name).sort()).toEqual(["dive-review", "site-scout", "sort-out", "trip-prep"]);
     expect(client.getInstructions()).toContain("save it with update_dive");
     expect(client.getInstructions()).toContain("TripDeck's get_trip");
   });
@@ -209,6 +210,47 @@ describe.skipIf(!bun)("MCP server", () => {
     expect((await call("get_trip_plans", { trip_id: "nope" })).isError).toBe(true);
     const prompt = await client.getPrompt({ name: "trip-prep", arguments: { trip: "Dahab" } });
     expect(JSON.stringify(prompt.messages)).toContain('trip \\"Dahab\\"');
+  });
+
+  it("proposes dive sites for a trip, takes the diver's choice and saves the chosen ones' profiles", async () => {
+    await ok("save_trip_plan", { trip_id: "koh-tao", trip_name: "Koh Tao", dives: [] });
+    const proposed = await json("propose_dive_sites", {
+      trip_id: "koh-tao",
+      shop: { name: "Big Blue", lat: 10.095, lng: 99.827 },
+      sites: [
+        { id: "osm-node-1", name: "Chumphon Pinnacle", max_depth_m: 35, distance_km: 7.2, why: "Your deepest dives were 30 m." },
+        { name: "Sail Rock", why: "A swim-through at 12 m." },
+      ],
+    });
+    expect(proposed).toEqual({
+      saved: true,
+      sites: [
+        { id: "osm-node-1", name: "Chumphon Pinnacle", status: "proposed" },
+        { id: "sail-rock", name: "Sail Rock", status: "proposed" },
+      ],
+      choose_at: "http://localhost:3001/trips/koh-tao#sites",
+    });
+    expect((await call("save_site_profile", { trip_id: "koh-tao", site_id: "sail-rock", profile_markdown: "## Sail Rock" })).text).toContain("isn't chosen");
+
+    expect(await json("choose_dive_sites", { trip_id: "koh-tao", chosen: ["sail-rock"] })).toEqual({
+      chosen: [{ id: "sail-rock", name: "Sail Rock", has_profile: false }],
+      still_proposed: ["osm-node-1"],
+    });
+    expect((await call("choose_dive_sites", { trip_id: "koh-tao", chosen: ["nope"] })).text).toContain('no proposed site "nope"');
+    const profile = "## Sail Rock\nSource: https://example.com";
+    const saved = await json("save_site_profile", { trip_id: "koh-tao", site_id: "sail-rock", profile_markdown: profile });
+    expect(saved).toEqual({ saved: true, site: "Sail Rock", chosen_without_profile: [], shown_at: "http://localhost:3001/trips/koh-tao#sites" });
+
+    const trip = await json("get_trip_plans", { trip_id: "koh-tao" });
+    expect(trip.shop).toEqual({ name: "Big Blue", lat: 10.095, lng: 99.827 });
+    expect(trip.sites[1]).toMatchObject({ id: "sail-rock", status: "chosen", profile });
+    expect(trip.sites[0]).toMatchObject({ id: "osm-node-1", max_depth_m: 35, distance_km: 7.2, profile: null });
+    expect(await json("get_trip_plans")).toEqual(expect.arrayContaining([expect.objectContaining({ trip_id: "koh-tao", sites_chosen: 1, sites_proposed: 1 })]));
+    expect((await call("propose_dive_sites", { trip_id: "nope", shop: { name: "X" }, sites: [{ name: "A", why: "b" }] })).text).toContain("Save it with save_trip_plan first");
+
+    const prompt = await client.getPrompt({ name: "site-scout", arguments: { trip: "Koh Tao" } });
+    expect(JSON.stringify(prompt.messages)).toContain("find_dive_sites");
+    expect(client.getInstructions()).toContain("the diver chooses, you research");
   });
 
   it("explains when there is no Python database to migrate", async () => {

@@ -57,6 +57,40 @@ export interface TripFlight {
   to?: string;
 }
 
+/** The dive shop the trip dives from: what the sites are proposed around. */
+export interface TripShop {
+  name: string;
+  lat?: number;
+  lng?: number;
+}
+
+export type SiteStatus = "proposed" | "chosen" | "dropped";
+
+/**
+ * A dive site the companion proposed for the trip. The diver chooses; only a chosen site gets the
+ * full profile (conditions, what it takes, sources), so the research goes where the dives will be.
+ */
+export interface TripSite {
+  /** "osm-node-123" for a site from OpenStreetMap, else a slug of the name. */
+  id: string;
+  name: string;
+  lat?: number;
+  lng?: number;
+  /** From the dive shop. */
+  distanceKm?: number;
+  minDepthM?: number;
+  maxDepthM?: number;
+  type?: string;
+  entry?: string;
+  /** Where the site's facts come from: its OpenStreetMap page, or a web page. */
+  source?: string;
+  /** Why it suits this diver, in one line. */
+  why: string;
+  status: SiteStatus;
+  /** The companion's profile of a chosen site: conditions for the trip's dates, what it takes, sources. */
+  profile: SavedText | null;
+}
+
 export interface TripPlan {
   format: typeof TRIP_FORMAT;
   version: number;
@@ -73,6 +107,9 @@ export interface TripPlan {
   /** The trip's flights, for the time between the last dive and flying (older files have none). */
   flights?: TripFlight[];
   dives: TripDive[];
+  /** The dive shop and the sites proposed around it (older files have none). */
+  shop?: TripShop;
+  sites?: TripSite[];
 }
 
 /** What the agent sends: the trip's dive cards as they are now, with optional preparation texts. */
@@ -154,6 +191,8 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
     summary: text(saved?.summary ?? null, input.summaryMarkdown, now),
     dives,
   };
+  if (saved?.shop) plan.shop = saved.shop;
+  if (saved?.sites) plan.sites = saved.sites;
   if (input.destination?.trim()) plan.destination = input.destination.trim();
   if (input.startDate) plan.startDate = input.startDate;
   if (input.endDate) plan.endDate = input.endDate;
@@ -172,4 +211,66 @@ export function tripFileName(plan: Pick<TripPlan, "id" | "name">): string {
     .trim()
     .slice(0, 60);
   return `${name ? `${name} ` : ""}(${plan.id}).trip.json`;
+}
+
+/** A proposal as the agent sends it. */
+export type SiteProposal = Omit<TripSite, "id" | "status" | "profile"> & { id?: string };
+
+/** "Chumphon Pinnacle" → "chumphon-pinnacle": the id of a site that isn't from OpenStreetMap. */
+export function siteSlug(name: string): string {
+  return (
+    name
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "") // é → e; the marks of other scripts (Thai vowels) stay
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "site"
+  );
+}
+
+const SITE_ID_RE = /^[\p{L}\p{M}\p{N}_-]{1,80}$/u;
+
+/**
+ * Proposes the sites around the dive shop. A site proposed again keeps what the diver chose and its
+ * profile; a chosen site that isn't proposed any more stays, so a choice is never lost.
+ */
+export function proposeSites(plan: TripPlan, shop: TripShop, proposals: SiteProposal[]): void {
+  if (!shop.name.trim()) throw new TripInputError("The dive shop needs a name.");
+  const before = new Map((plan.sites ?? []).map((s) => [s.id, s]));
+  const sites: TripSite[] = [];
+  for (const p of proposals) {
+    if (!p.name.trim()) throw new TripInputError("Every site needs a name.");
+    const id = p.id?.trim() || siteSlug(p.name);
+    if (!SITE_ID_RE.test(id)) throw new TripInputError(`Invalid site id "${id}": letters, digits, - and _.`);
+    if (sites.some((s) => s.id === id)) throw new TripInputError(`The site ${id} is proposed twice.`);
+    const old = before.get(id);
+    const clean = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined && v !== "")) as SiteProposal;
+    sites.push({ ...clean, id, name: p.name.trim(), why: p.why.trim(), status: old?.status ?? "proposed", profile: old?.profile ?? null });
+  }
+  for (const old of before.values()) if (old.status === "chosen" && !sites.some((s) => s.id === old.id)) sites.push(old);
+  const cleanShop = Object.fromEntries(Object.entries(shop).filter(([, v]) => v !== undefined && v !== "")) as unknown as TripShop;
+  plan.shop = { ...cleanShop, name: shop.name.trim() };
+  plan.sites = sites;
+}
+
+/** Marks sites chosen or dropped (or proposed again); an unknown id is an error, so a typo doesn't pass silently. */
+export function chooseSites(plan: TripPlan, change: Partial<Record<SiteStatus, string[]>>): void {
+  const sites = plan.sites ?? [];
+  for (const [status, ids] of Object.entries(change) as [SiteStatus, string[]][]) {
+    for (const id of ids ?? []) {
+      const site = sites.find((s) => s.id === id);
+      if (!site) throw new TripInputError(`The trip has no proposed site "${id}". Its sites: ${sites.map((s) => s.id).join(", ") || "none yet"}.`);
+      site.status = status;
+    }
+  }
+}
+
+/** Saves the profile of a chosen site; "" removes it. */
+export function saveSiteProfile(plan: TripPlan, siteId: string, markdown: string, now: string): TripSite {
+  const site = (plan.sites ?? []).find((s) => s.id === siteId);
+  if (!site) throw new TripInputError(`The trip has no proposed site "${siteId}".`);
+  if (site.status !== "chosen" && markdown.trim()) throw new TripInputError(`${site.name} isn't chosen: profiles are written for the sites the diver chose.`);
+  site.profile = text(site.profile, markdown, now);
+  return site;
 }

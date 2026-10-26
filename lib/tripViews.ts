@@ -5,7 +5,7 @@
 
 import { type DivePrep, prepareDive, recurringNote } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive } from "./record";
-import type { SavedText, TripDive, TripFlight, TripPlan } from "./trip";
+import type { SavedText, TripDive, TripFlight, TripPlan, TripShop, TripSite } from "./trip";
 
 /** Upcoming, under way (today is between its first and last day), past, or without dates. */
 export type TripWhen = "upcoming" | "now" | "past" | "undated";
@@ -76,6 +76,9 @@ export interface TripView extends TripRow {
   /** Problems on at least 2 of the last 10 dives before the trip. */
   recurringIssues: DivePrep["recurringIssues"];
   dives: TripCardView[];
+  /** The dive shop and the sites proposed around it, for the diver to choose. */
+  shop: TripShop | null;
+  sites: TripSite[];
 }
 
 const DAY_MS = 86_400_000;
@@ -199,6 +202,8 @@ export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, t
     breakBefore: breakBefore(plan, plans, records),
     flight: flightAfterDiving(plan),
     recurringIssues: prepareDive(records, { date: row.startDate ?? undefined }, today).recurringIssues,
+    shop: plan.shop ?? null,
+    sites: plan.sites ?? [],
     dives: plan.dives.map(({ prep, loggedDiveIds, ...card }) => {
       const facts = prepareDive(records, { site: card.site, maxDepthM: card.maxDepthM, gas: card.gas, dives: card.dives, date: card.date }, today);
       const shared = recurringNote(facts.recurringIssues);

@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import { Findings } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
 import { TripPrepHint } from "@/components/TripPrepHint";
+import { TripSites } from "@/components/TripSites";
 import { useUnits } from "@/components/Units";
 import { api, useLive } from "@/components/useLive";
 import { formatDate, formatDateRange, formatNumber, formatTripWhen } from "@/lib/format";
@@ -398,6 +399,8 @@ export default function TripPage() {
         {data.summary ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.summary.markdown}</ReactMarkdown> : <p className="muted">No notes for the whole trip yet.</p>}
         <TripPrepHint trip={data.name} />
       </section>
+
+      <TripSites tripId={data.id} trip={data.name} shop={data.shop} sites={data.sites} onChange={reload} />
 
       {data.dives.length ? (
         <DiveDays data={data} onChange={reload} />
