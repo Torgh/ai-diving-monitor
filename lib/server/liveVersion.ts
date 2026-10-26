@@ -11,7 +11,7 @@ interface Options {
   folderMs?: number;
   /** Google Drive can't be watched: checked this often, once for every open page. */
   driveMs?: number;
-  /** A write is a temp file and a rename; one check after the burst of events. */
+  /** A write is a temp file and a rename: one check this long after the first event. */
   debounceMs?: number;
 }
 
@@ -90,8 +90,9 @@ export class LiveVersion {
     }
   }
 
+  /** Not pushed back by later events, so a long run of writes (an import) still shows as it goes. */
   private soon() {
-    if (this.debounce) clearTimeout(this.debounce);
+    if (this.debounce) return;
     this.debounce = setTimeout(() => {
       this.debounce = null;
       void this.check();

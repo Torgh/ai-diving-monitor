@@ -61,9 +61,12 @@ describe("/api/events", () => {
     expect(stream.text()).toContain("retry: 2000");
 
     fs.mkdirSync(path.join(home, "dives"), { recursive: true });
-    fs.writeFileSync(path.join(home, "dives", "a.dive.json"), "{}");
+    // On Linux a recursive watch reaches a new subfolder a moment later: write until the change comes.
+    let text = "{}";
+    const writing = setInterval(() => fs.writeFileSync(path.join(home, "dives", "a.dive.json"), (text += " ")), 100);
     let next = await stream.nextVersion();
     while (next === version) next = await stream.nextVersion(); // the server's own first check may repeat it
+    clearInterval(writing);
     expect(next).toMatch(/^[0-9a-f]{16}$/);
 
     abort.abort();
