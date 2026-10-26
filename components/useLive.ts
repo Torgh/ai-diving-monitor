@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { noteAnswer, showingKeptCopy } from "./Offline";
 
 type Answer<T> = { data: T } | { error: string };
 type VersionListener = (version: string) => void;
@@ -29,6 +30,7 @@ function onVersion(listener: VersionListener): () => void {
 async function request<T>(url: string): Promise<Answer<T>> {
   try {
     const res = await fetch(url, { cache: "no-store" });
+    noteAnswer(res);
     const body = await res.json();
     return res.ok ? { data: body as T } : { error: body.error ?? `HTTP ${res.status}` };
   } catch (err) {
@@ -39,7 +41,8 @@ async function request<T>(url: string): Promise<Answer<T>> {
 /**
  * Loads `url` and loads it again whenever the dive log changes, also when the MCP server changed it:
  * the server sends the log's new version (/api/events), and a hidden page reloads once it is shown
- * again. The previous data stays on screen while a reload runs, so nothing flashes.
+ * again. The previous data stays on screen while a reload runs, so nothing flashes. When the service
+ * worker answered with a kept copy (the log couldn't be reached), the next version loads it again.
  */
 export function useLive<T extends { version: string }>(url: string) {
   const [data, setData] = useState<T | null>(null);
@@ -75,7 +78,8 @@ export function useLive<T extends { version: string }>(url: string) {
       request<T>(url).then(apply);
     };
     const stop = onVersion((v) => {
-      if (v === version.current) return;
+      // Back after a kept copy was shown: the server answers again, so load even the same version.
+      if (v === version.current && !showingKeptCopy()) return;
       if (document.visibilityState === "visible") load();
       else stale = true;
     });

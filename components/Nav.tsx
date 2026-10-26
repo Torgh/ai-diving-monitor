@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useKeptCopy } from "./Offline";
 
 /** 24×24 stroke icons, drawn in the link's text colour. */
 const ICONS: Record<string, React.ReactNode> = {
@@ -60,6 +61,7 @@ export function Nav() {
   const path = usePathname();
   const current = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   const [storage, setStorage] = useState<Storage | null>(null);
+  const kept = useKeptCopy();
 
   useEffect(() => {
     fetch("/api/storage", { cache: "no-store" })
@@ -84,10 +86,10 @@ export function Nav() {
           {l.label}
         </Link>
       ))}
-      <div className="live" title="Updates live when your companion in Claude Code or Codex changes the log.">
+      <div className={`live ${kept ? "offline" : ""}`} title={kept ? "Your log can't be reached: showing what was kept." : "Updates live when your companion in Claude Code or Codex changes the log."}>
         <span className="status">
-          <span className="dot good" />
-          <strong>Live</strong>
+          <span className={`dot ${kept ? "warning" : "good"}`} />
+          <strong>{kept ? "Offline" : "Live"}</strong>
         </span>
         {storage && <span title={storage.location}>{storageLabel(storage)}</span>}
       </div>

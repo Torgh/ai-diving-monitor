@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Nav } from "@/components/Nav";
+import { Offline } from "@/components/Offline";
 import { UnitsProvider } from "@/components/Units";
 import "./globals.css";
 
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <UnitsProvider>
           <div className="app">
             <Nav />
-            <main className="page">{children}</main>
+            <main className="page">
+              <Offline />
+              {children}
+            </main>
           </div>
         </UnitsProvider>
       </body>
