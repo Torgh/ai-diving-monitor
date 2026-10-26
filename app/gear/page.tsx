@@ -10,13 +10,14 @@ import { MakeItSure } from "./_parts/MakeItSure";
 import { ResultCard } from "./_parts/ResultCard";
 import { SetEditor } from "./_parts/SetEditor";
 import { SitesCard } from "./_parts/SitesCard";
-import type { Data } from "./_parts/shared";
+import type { Data, TankChoice } from "./_parts/shared";
 import { YouStrip } from "./_parts/YouStrip";
 
 export default function GearPage() {
   const { data, error, loading, reload } = useLive<Data>("/api/kit");
   const [setId, setSetId] = useState<string | null>(null);
   const [waterChoice, setWaterChoice] = useState<Water | null>(null);
+  const [tank, setTank] = useState<TankChoice>("own");
   const [editingItem, setEditingItem] = useState<ItemForm | null>(null);
   const [editingSet, setEditingSet] = useState<GearSet | "new" | null>(null);
   const [editYou, setEditYou] = useState(0);
@@ -25,8 +26,9 @@ export default function GearPage() {
 
   const set = data.sets.find((s) => s.id === setId) ?? data.sets[0] ?? null;
   const water = waterChoice ?? set?.water ?? "salt";
-  const estimate = set ? data.estimates[set.id]?.[water] : undefined;
-  const hasTank = !!set?.itemIds.some((id) => data.items.find((i) => i.id === id)?.kind === "tank");
+  const estimate = set ? (tank === "own" ? data.estimates[set.id]?.[water] : data.rentalEstimates?.[set.id]?.[tank]?.[water]) : undefined;
+  const ownTank = set ? data.items.find((i) => i.kind === "tank" && set.itemIds.includes(i.id)) : undefined;
+  const hasTank = tank !== "own" || !!ownTank;
   const you = estimate?.parts.find((p) => p.label === "You");
   const addItem = (kind: GearKind = "suit") => setEditingItem({ ...EMPTY_ITEM, kind, material: "aluminium" });
 
@@ -103,7 +105,7 @@ export default function GearPage() {
 
       {set && estimate && (
         <div className="balance-grid">
-          <BalanceCard estimate={estimate} hasTank={hasTank} water={water} setWater={setWaterChoice} />
+          <BalanceCard estimate={estimate} hasTank={hasTank} water={water} setWater={setWaterChoice} tank={tank} setTank={setTank} ownTank={ownTank} />
           <ResultCard estimate={estimate} hasTank={hasTank} />
         </div>
       )}

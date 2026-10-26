@@ -2000,3 +2000,14 @@ ul.todos li.done span {
   margin: 0;
   overflow-x: auto;
 }
+
+.tank-choice {
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.tank-choice .segmented {
+  flex-wrap: wrap;
+}

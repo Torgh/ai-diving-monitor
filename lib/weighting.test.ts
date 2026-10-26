@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyKit, type Kit, updateKit } from "./kit";
 import type { DiveRecord } from "./record";
-import { bodySurface, confidenceOf, estimateWeighting } from "./weighting";
+import { bodySurface, confidenceOf, estimateWeighting, withRentalTank } from "./weighting";
 
 const kit = (): Kit =>
   updateKit(
@@ -160,5 +160,37 @@ describe("parts and how sure", () => {
 describe("bodySurface", () => {
   it("is about 2 m² for a tall adult", () => {
     expect(bodySurface(183, 82)).toBeCloseTo(2.04, 2);
+  });
+});
+
+describe("a rental tank", () => {
+  it("replaces the set's own tank: an aluminium one floats when nearly empty, so it takes more lead than steel", () => {
+    const k = kit();
+    const own = estimateWeighting(k, [], set(k, "Lake"), "salt");
+    const al = estimateWeighting(k, [], set(k, "Lake"), "salt", undefined, "aluminium-11");
+    const steel = estimateWeighting(k, [], set(k, "Lake"), "salt", undefined, "steel-12");
+    expect(own.rentalTank).toBeNull();
+    expect(al.rentalTank).toBe("aluminium-11");
+    expect(al.parts.map((p) => p.label)).toContain("Rental aluminium 11.1 L (AL80)");
+    expect(al.parts.map((p) => p.label)).not.toContain("Steel 12");
+    expect(al.leadKg!).toBeGreaterThan(steel.leadKg!);
+    expect(al.parts.find((p) => p.itemId === "rental-aluminium-11")).toMatchObject({ status: "typical", kg: expect.any(Number) });
+    expect(al.parts.find((p) => p.itemId === "rental-aluminium-11")!.kg).toBeGreaterThan(0);
+    expect(al.missing[0]).toBe("ask the dive centre which tanks they give: a rental aluminium 11 L is assumed");
+    expect(al.missing.some((m) => m.startsWith("Rental aluminium 11.1 L (AL80):"))).toBe(false);
+  });
+
+  it("is added to a set without a tank, which then counts as having one", () => {
+    const k = kit();
+    const noTank = updateKit(k, { sets: [{ name: "No tank", items: ["Shorty 3", "Jacket"] }] }, "T");
+    const without = estimateWeighting(noTank, [], set(noTank, "No tank"), "salt");
+    const rented = estimateWeighting(noTank, [], set(noTank, "No tank"), "salt", undefined, "steel-12");
+    expect(without.confidence.reasons).toContain("no tank in the set");
+    expect(rented.confidence.reasons).not.toContain("no tank in the set");
+    expect(withRentalTank(noTank, set(noTank, "No tank"), "steel-12").set.itemIds).toEqual([...set(noTank, "No tank").itemIds, "rental-steel-12"]);
+  });
+
+  it("needs a set", () => {
+    expect(estimateWeighting(kit(), [], null, "salt", undefined, "steel-12").rentalTank).toBeNull();
   });
 });

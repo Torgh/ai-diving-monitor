@@ -1,10 +1,30 @@
 import { useUnits } from "@/components/Units";
-import { type Water, WATERS } from "@/lib/kit";
-import type { WeightingEstimate } from "@/lib/weighting";
-import { WATER_LABEL } from "./shared";
+import { type GearItem, type Water, WATERS } from "@/lib/kit";
+import { RENTAL_TANK_IDS, RENTAL_TANKS, type WeightingEstimate } from "@/lib/weighting";
+import { type TankChoice, WATER_LABEL } from "./shared";
+
+/** "Your Tank (steel 15 L)", or that the set has none. */
+const ownLabel = (tank: GearItem | undefined) =>
+  tank ? `Yours: ${[tank.material, tank.volumeL ? `${tank.volumeL} L` : null].filter(Boolean).join(" ") || tank.name}` : "Yours (none in the set)";
 
 /** Bars from a centre line: what floats goes right in blue, what sinks goes left in orange. */
-export function BalanceCard({ estimate, hasTank, water, setWater }: { estimate: WeightingEstimate; hasTank: boolean; water: Water; setWater: (w: Water) => void }) {
+export function BalanceCard({
+  estimate,
+  hasTank,
+  water,
+  setWater,
+  tank,
+  setTank,
+  ownTank,
+}: {
+  estimate: WeightingEstimate;
+  hasTank: boolean;
+  water: Water;
+  setWater: (w: Water) => void;
+  tank: TankChoice;
+  setTank: (t: TankChoice) => void;
+  ownTank: GearItem | undefined;
+}) {
   const { show } = useUnits();
   const parts = estimate.parts;
   const total = parts.reduce((s, p) => s + p.kg, 0);
@@ -31,6 +51,19 @@ export function BalanceCard({ estimate, hasTank, water, setWater }: { estimate: 
           {WATERS.map((w) => (
             <button key={w} type="button" role="radio" aria-checked={water === w} onClick={() => setWater(w)}>
               {WATER_LABEL[w]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="row tank-choice">
+        <span className="muted">Tank</span>
+        <div className="segmented small" role="radiogroup" aria-label="Tank">
+          <button type="button" role="radio" aria-checked={tank === "own"} onClick={() => setTank("own")}>
+            {ownLabel(ownTank)}
+          </button>
+          {RENTAL_TANK_IDS.map((id) => (
+            <button key={id} type="button" role="radio" aria-checked={tank === id} onClick={() => setTank(id)} title={RENTAL_TANKS[id].name}>
+              {RENTAL_TANKS[id].short[0].toUpperCase() + RENTAL_TANKS[id].short.slice(1)}
             </button>
           ))}
         </div>
