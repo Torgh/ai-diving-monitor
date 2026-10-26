@@ -1,4 +1,4 @@
-import { type FSWatcher, watch } from "node:fs";
+import { existsSync, type FSWatcher, watch } from "node:fs";
 import { activeBackend, type Backend } from "./backends";
 import { logVersion } from "./version";
 
@@ -81,12 +81,17 @@ export class LiveVersion {
     if (folder === this.watched && (this.watcher || !folder)) return;
     this.unwatch();
     this.watched = folder;
-    if (!folder) return;
+    // No folder yet (nothing imported): the timer checks often until there is one. Linux doesn't
+    // refuse a missing folder at once but reports an error later, hence the check first.
+    if (!folder || !existsSync(folder)) return;
     try {
       this.watcher = watch(folder, { recursive: true }, () => this.soon());
-      this.watcher.on("error", () => this.unwatch());
+      this.watcher.on("error", () => {
+        this.unwatch();
+        this.schedule(); // back to checking often until the folder can be watched again
+      });
     } catch {
-      this.watcher = null; // No folder yet (nothing imported): the timer checks until there is one.
+      this.watcher = null;
     }
   }
 
