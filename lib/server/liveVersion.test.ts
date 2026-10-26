@@ -70,14 +70,20 @@ describe("LiveVersion", () => {
     await vi.waitFor(() => expect(seen).toHaveLength(2));
   });
 
-  it("starts watching once the folder exists", async () => {
+  it("follows a folder that appears later", async () => {
     const live = new LiveVersion({ backend: () => new FolderBackend("local", path.join(home, "later")), driveMs: 10, folderMs: 60_000, debounceMs: 10 });
     const seen = listen(live);
     await vi.waitFor(() => expect(seen).toHaveLength(1));
     fs.mkdirSync(path.join(home, "later", "dives"), { recursive: true });
-    await new Promise((r) => setTimeout(r, 50)); // the timer finds the folder and watches it
-    fs.writeFileSync(path.join(home, "later", "dives", "a.dive.json"), "{}");
-    await vi.waitFor(() => expect(seen).toHaveLength(2), { timeout: 5000 });
+    // On Linux a recursive watch reaches the subfolders a moment after it starts: write until it is seen.
+    let text = "{}";
+    await vi.waitFor(
+      () => {
+        fs.writeFileSync(path.join(home, "later", "dives", "a.dive.json"), (text += " "));
+        expect(seen.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 5000, interval: 100 },
+    );
   });
 
   it("checks once more after a check that a change interrupted, and stops with the last listener", async () => {
