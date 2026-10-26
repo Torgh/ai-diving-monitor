@@ -196,6 +196,19 @@ export default function SettingsPage() {
       <UnitsSettings />
       <StorageSettings />
 
+      <div className="card stack">
+        <h2>On your phone</h2>
+        <p className="secondary" style={{ margin: 0 }}>
+          The DiveDeck phone app shows your dives, debriefs, trips and kit offline, on the boat too. Export them here and open the file on the
+          phone, from Google Drive, OneDrive, Downloads or an email. Export again after new dives or a new preparation.
+        </p>
+        <div className="row">
+          <a className="button primary" href="/api/export" download>
+            Export for phone
+          </a>
+        </div>
+      </div>
+
       <div className="card">
         <h2>On this computer</h2>
         <p className="secondary">
