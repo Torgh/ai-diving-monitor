@@ -7,11 +7,12 @@ import { GetStarted } from "@/components/GetStarted";
 import { Icon } from "@/components/Icons";
 import { TripCard } from "@/components/TripCard";
 import { LineChart } from "@/components/LineChart";
+import { SummaryTiles } from "@/components/SummaryTiles";
 import { api, useLive } from "@/components/useLive";
 import { useUnits } from "@/components/Units";
 import { useSettings } from "@/components/useSettings";
 import type { Quantity } from "@/lib/measure";
-import { formatDate, formatMinutes, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import type { TodoKind } from "@/lib/record";
 import type { TripRow } from "@/lib/tripViews";
 import type { LogView, ProgressSeries } from "@/lib/views";
@@ -334,7 +335,6 @@ function Progress({ data }: { data: Data }) {
 
 export default function Dashboard() {
   const { data, error, loading, reload } = useLive<Data>("/api/dives");
-  const { show } = useUnits();
   const [lastSave, setLastSave] = useState<BulkSave | null>(null);
   if (error && !data) return <div className="error">Couldn&apos;t load the dive log: {error}</div>;
   if (!data) return <p className="muted">Loading the dive log…</p>;
@@ -360,40 +360,13 @@ export default function Dashboard() {
       </div>
     );
   }
-  const { totals, dives } = data;
-  const latest = dives[dives.length - 1];
-  const deepest = dives.reduce((a, b) => (b.maxDepthM > a.maxDepthM ? b : a));
+  const { dives } = data;
   return (
     <div className={`stack ${loading ? "loading" : ""}`} style={{ gap: "1.25rem" }}>
       {head}
       <GetStarted dives={dives.length} onImported={reload} />
       <UpcomingTrips />
-      <section className="tiles" aria-label="Summary">
-        <div className="card tile">
-          <div className="label">Dives</div>
-          <div className="value">{totals.dives}</div>
-          <div className="note">{dives[0].start ? `since ${formatDate(dives[0].start, false)}` : ""}</div>
-        </div>
-        <div className="card tile">
-          <div className="label">Time underwater</div>
-          <div className="value">{formatMinutes(totals.minutes)}</div>
-          <div className="note">{formatMinutes(totals.minutes / totals.dives)} on average</div>
-        </div>
-        <div className="card tile">
-          <div className="label">Deepest</div>
-          <div className="value">{show("depth", totals.deepestM)}</div>
-          <div className="note">
-            <Link href={`/dives/${deepest.id}`}>dive #{deepest.seq}</Link>
-          </div>
-        </div>
-        <div className="card tile">
-          <div className="label">Latest score</div>
-          <div className="value">{totals.latestScore ?? "–"}</div>
-          <div className="note">
-            <Link href={`/dives/${latest.id}`}>dive #{latest.seq} ›</Link>
-          </div>
-        </div>
-      </section>
+      <SummaryTiles log={data} />
 
       {lastSave && (
         <UndoBar
