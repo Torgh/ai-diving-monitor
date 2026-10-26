@@ -1801,3 +1801,11 @@ ul.balance-rows .value {
   background: var(--accent-wash);
   color: var(--accent);
 }
+
+.card-site {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  padding: 0.45rem 0.7rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.92rem;
+}

@@ -2,10 +2,14 @@ import Link from "next/link";
 import { formatDateRange, formatTripWhen } from "@/lib/format";
 import type { TripRow } from "@/lib/tripViews";
 import { Icon } from "./Icons";
+import { useUnits } from "./Units";
 
 /** A trip as a card: when, where, and how far its preparation is (or, once past, the dives logged). */
 export function TripCard({ trip: t }: { trip: TripRow }) {
+  const { show } = useUnits();
   const left = t.cards - t.prepared;
+  const depth = (s: TripRow["chosenSites"][number]) =>
+    s.minDepthM !== undefined && s.maxDepthM !== undefined ? `${show("depth", s.minDepthM)}–${show("depth", s.maxDepthM)}` : s.maxDepthM !== undefined ? `to ${show("depth", s.maxDepthM)}` : null;
   const past = t.when === "past";
   return (
     <Link href={`/trips/${t.id}`} className="card trip-card">
@@ -37,6 +41,11 @@ export function TripCard({ trip: t }: { trip: TripRow }) {
           .filter(Boolean)
           .join(" · ")}
       </span>
+      {t.chosenSites.length > 0 && (
+        <span className="muted" style={{ fontSize: "0.85rem" }}>
+          Dive sites: {t.chosenSites.map((s) => [s.name, depth(s)].filter(Boolean).join(" ")).join(" · ")}
+        </span>
+      )}
       {!past && t.cards > 0 && (
         <div className="stack" style={{ gap: "0.35rem" }}>
           <div className="meter" role="img" aria-label={`${t.prepared} of ${t.cards} dive cards prepared`}>

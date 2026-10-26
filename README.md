@@ -79,7 +79,8 @@ seconds on Google Drive).
   does it research the chosen sites: conditions for your dates, depths and how the dive goes, what it
   takes (certification, nitrox, SMB, suit), boat time, fees and closures, each fact with its source.
   Within 16 days of the dive it adds the sea's forecast (waves, water temperature, surface current
-  from Open-Meteo).
+  from Open-Meteo). A chosen site keeps what was proposed, the dive cards about it show its depths,
+  distance and why it suits you, and the trip's tile lists the chosen sites.
 
 **The app**
 

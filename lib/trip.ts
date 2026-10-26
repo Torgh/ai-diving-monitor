@@ -283,3 +283,22 @@ export function saveSiteProfile(plan: TripPlan, siteId: string, markdown: string
   site.profile = text(site.profile, markdown, now);
   return site;
 }
+
+const plain = (text: string) => text.toLowerCase().replace(/\s+/g, " ").trim();
+
+/** A site's names: "Twin Rocks (Twins)" is also "Twin Rocks" and "Twins". */
+function siteNames(site: TripSite): string[] {
+  const alias = /\(([^)]+)\)/.exec(site.name)?.[1];
+  return [site.name, site.name.replace(/\([^)]*\)/g, ""), alias].filter((n): n is string => !!n?.trim()).map(plain);
+}
+
+/**
+ * The proposed site a dive card is about, by its site or title ("Sail Rock full-day trip" is Sail
+ * Rock): a chosen site first, never a dropped one.
+ */
+export function siteForCard(sites: TripSite[] | undefined, card: Pick<TripDive, "site" | "title">): TripSite | null {
+  const texts = [card.site, card.title].filter((t): t is string => !!t?.trim()).map(plain);
+  const matches = (site: TripSite) => siteNames(site).some((name) => texts.some((t) => t === name || ` ${t} `.includes(` ${name} `)));
+  const open = (sites ?? []).filter((s) => s.status !== "dropped");
+  return open.find((s) => s.status === "chosen" && matches(s)) ?? open.find(matches) ?? null;
+}

@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/format";
 import type { SavedText, SiteStatus, TripShop, TripSite } from "@/lib/trip";
 
 /** Depth range, distance, type and entry, in a few words. */
-function facts(site: TripSite, depth: (m: number) => string): string {
+export function siteFacts(site: Pick<TripSite, "minDepthM" | "maxDepthM" | "distanceKm" | "type" | "entry">, depth: (m: number) => string): string {
   const range =
     site.minDepthM !== undefined && site.maxDepthM !== undefined
       ? `${depth(site.minDepthM)}–${depth(site.maxDepthM)}`
@@ -33,7 +33,7 @@ function SourceLink({ site }: { site: TripSite }) {
 
 function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onChoose: (status: SiteStatus) => void }) {
   const { show } = useUnits();
-  const line = facts(site, (m) => show("depth", m));
+  const line = siteFacts(site, (m) => show("depth", m));
   return (
     <article className={`card site-card ${site.status}`} id={`site-${site.id}`}>
       <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>
@@ -73,7 +73,7 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
 /** A chosen site: what was proposed (facts, why it suits you, source) stays, and the profile follows. */
 function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onUndo: () => void }) {
   const { show } = useUnits();
-  const line = facts(site, (m) => show("depth", m));
+  const line = siteFacts(site, (m) => show("depth", m));
   return (
     <article className="card stack site-profile" id={`site-${site.id}`} aria-labelledby={`site-h-${site.id}`}>
       <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>

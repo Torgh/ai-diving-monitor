@@ -178,7 +178,7 @@ describe("API", () => {
 
   it("shows the dive sites proposed for a trip and lets the diver choose them", async () => {
     const trips = new TripStore();
-    await trips.save({ id: "koh-tao", name: "Koh Tao", dives: [] });
+    await trips.save({ id: "koh-tao", name: "Koh Tao", dives: [{ itemId: "c1", title: "Chumphon Pinnacle morning" }] });
     await trips.update("koh-tao", (p) =>
       proposeSites(p, { name: "Big Blue", lat: 10.095, lng: 99.827 }, [
         { id: "osm-node-1", name: "Chumphon Pinnacle", maxDepthM: 35, why: "Your deepest dives were 30 m." },
@@ -196,6 +196,10 @@ describe("API", () => {
     expect(await read(await choose("osm-node-1", "chosen"))).toEqual([200, { status: "chosen" }]);
     expect(await read(await choose("twins", "dropped"))).toEqual([200, { status: "dropped" }]);
     expect((await trips.get("koh-tao"))!.sites!.map((s) => s.status)).toEqual(["chosen", "dropped"]);
+    const [, after] = await read(await getTrip(req("/api/trips/koh-tao"), ctx("koh-tao")));
+    expect(after.dives[0].siteInfo).toMatchObject({ name: "Chumphon Pinnacle", maxDepthM: 35, why: "Your deepest dives were 30 m." });
+    const [, list] = await read(await getTrips(req("/api/trips"), {}));
+    expect(list.trips[0].chosenSites).toEqual([{ id: "osm-node-1", name: "Chumphon Pinnacle", maxDepthM: 35 }]);
     expect((await choose("nope", "chosen")).status).toBe(404);
     expect((await choose("twins", "chosen", "nope")).status).toBe(404);
     expect((await choose("twins", "maybe")).status).toBe(400);

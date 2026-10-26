@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseSites, mergeTripPlan, proposeSites, saveSiteProfile, siteSlug, TripInputError, tripFileName, type TripPlanInput } from "./trip";
+import { chooseSites, mergeTripPlan, proposeSites, saveSiteProfile, siteForCard, siteSlug, TripInputError, tripFileName, type TripPlanInput } from "./trip";
 
 const input = (over: Partial<TripPlanInput> = {}): TripPlanInput => ({
   id: "malta-27",
@@ -188,5 +188,24 @@ describe("dive sites", () => {
     expect(siteSlug("Ängelholm Récif")).toBe("angelholm-recif");
     expect(siteSlug("Hin Bai (หินใบ)")).toBe("hin-bai-หินใบ");
     expect(siteSlug("!!!")).toBe("site");
+  });
+});
+
+describe("siteForCard", () => {
+  const site = (name: string, status: "proposed" | "chosen" | "dropped" = "proposed") => ({ id: siteSlug(name), name, why: "", status, profile: null });
+  const sites = [site("Sail Rock", "chosen"), site("Twin Rocks (Twins)"), site("Green Rock", "dropped"), site("Chumphon Pinnacle")];
+
+  it("finds the site by the card's site, its title or the site's other name", () => {
+    expect(siteForCard(sites, { title: "Sail Rock full-day trip" })?.name).toBe("Sail Rock");
+    expect(siteForCard(sites, { title: "Morning dive", site: "twins" })?.name).toBe("Twin Rocks (Twins)");
+    expect(siteForCard(sites, { title: "Twin Rocks" })?.name).toBe("Twin Rocks (Twins)");
+  });
+
+  it("never gives a dropped site, prefers a chosen one, and doesn't match part of a word", () => {
+    expect(siteForCard(sites, { title: "Green Rock" })).toBeNull();
+    expect(siteForCard([site("Rock", "proposed"), site("Sail Rock", "chosen")], { title: "Sail Rock" })?.name).toBe("Sail Rock");
+    expect(siteForCard(sites, { title: "Sail Rocks tour" })).toBeNull();
+    expect(siteForCard(undefined, { title: "Sail Rock" })).toBeNull();
+    expect(siteForCard(sites, { title: "Big Blue Best-Of – day 1/3" })).toBeNull();
   });
 });
