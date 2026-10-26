@@ -400,7 +400,7 @@ export default function TripPage() {
         <TripPrepHint trip={data.name} />
       </section>
 
-      <TripSites tripId={data.id} trip={data.name} shop={data.shop} sites={data.sites} onChange={reload} />
+      <TripSites tripId={data.id} trip={data.name} shop={data.shop} sites={data.sites} notes={data.siteNotes} onChange={reload} />
 
       {data.dives.length ? (
         <DiveDays data={data} onChange={reload} />

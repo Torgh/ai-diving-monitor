@@ -6,7 +6,7 @@ import { FoldedMarkdown } from "@/components/FoldedMarkdown";
 import { useUnits } from "@/components/Units";
 import { api } from "@/components/useLive";
 import { formatDate } from "@/lib/format";
-import type { SiteStatus, TripShop, TripSite } from "@/lib/trip";
+import type { SavedText, SiteStatus, TripShop, TripSite } from "@/lib/trip";
 
 /** Depth range, distance, type and entry, in a few words. */
 function facts(site: TripSite, depth: (m: number) => string): string {
@@ -21,10 +21,19 @@ function facts(site: TripSite, depth: (m: number) => string): string {
     .join(" · ");
 }
 
+/** A link to where the site's facts come from, when it is a web page. */
+function SourceLink({ site }: { site: TripSite }) {
+  if (!site.source?.startsWith("http")) return null;
+  return (
+    <a className="muted" href={site.source} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: "0.85rem" }}>
+      Source
+    </a>
+  );
+}
+
 function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onChoose: (status: SiteStatus) => void }) {
   const { show } = useUnits();
   const line = facts(site, (m) => show("depth", m));
-  const source = site.source?.startsWith("http") ? site.source : null;
   return (
     <article className={`card site-card ${site.status}`} id={`site-${site.id}`}>
       <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>
@@ -55,12 +64,47 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
             Undo
           </button>
         )}
-        {source && (
-          <a className="muted" href={source} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", fontSize: "0.85rem" }}>
-            Source
-          </a>
-        )}
+        <SourceLink site={site} />
       </div>
+    </article>
+  );
+}
+
+/** A chosen site: what was proposed (facts, why it suits you, source) stays, and the profile follows. */
+function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onUndo: () => void }) {
+  const { show } = useUnits();
+  const line = facts(site, (m) => show("depth", m));
+  return (
+    <article className="card stack site-profile" id={`site-${site.id}`} aria-labelledby={`site-h-${site.id}`}>
+      <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>
+        <div style={{ minWidth: 0 }}>
+          <h3 id={`site-h-${site.id}`} style={{ margin: 0, fontSize: "1.05rem" }}>
+            {site.name}
+          </h3>
+          {line && (
+            <div className="muted" style={{ fontSize: "0.85rem" }}>
+              {line}
+            </div>
+          )}
+        </div>
+        <button className="button small" type="button" disabled={busy} onClick={onUndo}>
+          Undo choice
+        </button>
+      </div>
+      <div className="row" style={{ gap: "0.5rem", alignItems: "baseline" }}>
+        <p style={{ margin: 0, flex: "1 1 260px" }}>{site.why}</p>
+        <SourceLink site={site} />
+      </div>
+      {site.profile ? (
+        <div className="review">
+          <FoldedMarkdown markdown={site.profile.markdown} />
+          <p className="muted">Researched {formatDate(site.profile.savedAt.slice(0, 19))}</p>
+        </div>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>
+          Not researched yet.
+        </p>
+      )}
     </article>
   );
 }
@@ -69,7 +113,21 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
  * The dive sites your companion proposed around the trip's dive shop. You choose; it then researches
  * only the chosen ones, and their profiles show here.
  */
-export function TripSites({ tripId, trip, shop, sites, onChange }: { tripId: string; trip: string; shop: TripShop | null; sites: TripSite[]; onChange: () => void }) {
+export function TripSites({
+  tripId,
+  trip,
+  shop,
+  sites,
+  notes,
+  onChange,
+}: {
+  tripId: string;
+  trip: string;
+  shop: TripShop | null;
+  sites: TripSite[];
+  notes: SavedText | null;
+  onChange: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const scout = <Command text={`/mcp__divedeck__site-scout ${trip}`} />;
@@ -113,27 +171,18 @@ export function TripSites({ tripId, trip, shop, sites, onChange }: { tripId: str
         {shop && <span className="muted">around {shop.name}</span>}
       </div>
 
+      {notes && (
+        <section className="card review" aria-labelledby="site-notes-h">
+          <h3 id="site-notes-h" style={{ marginTop: 0 }}>
+            What your companion weighed
+          </h3>
+          <FoldedMarkdown markdown={notes.markdown} />
+          <p className="muted">Saved {formatDate(notes.savedAt.slice(0, 19))}</p>
+        </section>
+      )}
+
       {chosen.map((site) => (
-        <article key={site.id} className="card stack site-profile" id={`site-${site.id}`} aria-labelledby={`site-h-${site.id}`}>
-          <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem" }}>
-            <h3 id={`site-h-${site.id}`} style={{ margin: 0, fontSize: "1.05rem" }}>
-              {site.name}
-            </h3>
-            <button className="button small" type="button" disabled={busy} onClick={() => choose(site.id, "proposed")}>
-              Undo choice
-            </button>
-          </div>
-          {site.profile ? (
-            <div className="review">
-              <FoldedMarkdown markdown={site.profile.markdown} />
-              <p className="muted">Researched {formatDate(site.profile.savedAt.slice(0, 19))}</p>
-            </div>
-          ) : (
-            <p className="muted" style={{ margin: 0 }}>
-              {site.why} Not researched yet.
-            </p>
-          )}
-        </article>
+        <ChosenSite key={site.id} site={site} busy={busy} onUndo={() => choose(site.id, "proposed")} />
       ))}
 
       {waiting.length > 0 && (

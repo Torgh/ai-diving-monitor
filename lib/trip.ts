@@ -110,6 +110,8 @@ export interface TripPlan {
   /** The dive shop and the sites proposed around it (older files have none). */
   shop?: TripShop;
   sites?: TripSite[];
+  /** The companion's notes on the proposals as a whole: the shop's schedule, the season, the diver's log. */
+  siteNotes?: SavedText;
 }
 
 /** What the agent sends: the trip's dive cards as they are now, with optional preparation texts. */
@@ -193,6 +195,7 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
   };
   if (saved?.shop) plan.shop = saved.shop;
   if (saved?.sites) plan.sites = saved.sites;
+  if (saved?.siteNotes) plan.siteNotes = saved.siteNotes;
   if (input.destination?.trim()) plan.destination = input.destination.trim();
   if (input.startDate) plan.startDate = input.startDate;
   if (input.endDate) plan.endDate = input.endDate;
@@ -232,10 +235,11 @@ export function siteSlug(name: string): string {
 const SITE_ID_RE = /^[\p{L}\p{M}\p{N}_-]{1,80}$/u;
 
 /**
- * Proposes the sites around the dive shop. A site proposed again keeps what the diver chose and its
- * profile; a chosen site that isn't proposed any more stays, so a choice is never lost.
+ * Proposes the sites around the dive shop, with notes on the proposals as a whole (left out: the saved
+ * ones stay; "": removed). A site proposed again keeps what the diver chose and its profile; a chosen
+ * site that isn't proposed any more stays, so a choice is never lost.
  */
-export function proposeSites(plan: TripPlan, shop: TripShop, proposals: SiteProposal[]): void {
+export function proposeSites(plan: TripPlan, shop: TripShop, proposals: SiteProposal[], notes?: { markdown: string; now: string }): void {
   if (!shop.name.trim()) throw new TripInputError("The dive shop needs a name.");
   const before = new Map((plan.sites ?? []).map((s) => [s.id, s]));
   const sites: TripSite[] = [];
@@ -252,6 +256,11 @@ export function proposeSites(plan: TripPlan, shop: TripShop, proposals: SiteProp
   const cleanShop = Object.fromEntries(Object.entries(shop).filter(([, v]) => v !== undefined && v !== "")) as unknown as TripShop;
   plan.shop = { ...cleanShop, name: shop.name.trim() };
   plan.sites = sites;
+  if (notes) {
+    const kept = text(plan.siteNotes ?? null, notes.markdown, notes.now);
+    if (kept) plan.siteNotes = kept;
+    else delete plan.siteNotes;
+  }
 }
 
 /** Marks sites chosen or dropped (or proposed again); an unknown id is an error, so a typo doesn't pass silently. */

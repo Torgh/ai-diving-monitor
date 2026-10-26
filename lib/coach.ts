@@ -174,7 +174,7 @@ export const DESCRIPTIONS = {
     "some sites are missing or have no depth. Read-only.",
   propose_dive_sites:
     "Save the dive sites you propose for a trip, around its dive shop, each with one line on why it suits the diver (their depth, experience, what keeps going wrong), " +
-    "so the diver can choose them in the app. The trip must be saved first (save_trip_plan, with no cards if it has none yet). Proposing again keeps what was " +
+    "so the diver can choose them in the app, and your notes on the list as a whole (the shop's schedule, the season, the diver's log), which stay on the trip's page. The trip must be saved first (save_trip_plan, with no cards if it has none yet). Proposing again keeps what was " +
     "already chosen or dropped and the profiles; a chosen site left out stays. Answers the page where the diver chooses.",
   choose_dive_sites:
     "Mark the trip's proposed sites as the diver chose them: chosen, dropped, or proposed again. Use it when the diver tells you; they can also choose in the app.",
@@ -375,6 +375,7 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
     summary: plan.summary?.markdown ?? null,
     flights: plan.flights ?? [],
     shop: plan.shop ?? null,
+    site_notes: plan.siteNotes?.markdown ?? null,
     sites: (plan.sites ?? []).map(({ profile, ...site }) => ({
       ...(snakeKeys(site) as object),
       profile: profile?.markdown ?? null,
@@ -409,7 +410,7 @@ export const SITE_SCOUT_REQUEST = `Help me choose the dive sites for my TripDeck
 1. Read the trip with TripDeck's get_trip (list_trips if you need its id) and get_trip_plans for what DiveDeck already has. If the trip isn't saved in DiveDeck yet, save it with save_trip_plan (with its dive cards, or none).
 2. If sites were already proposed: when some are chosen and have no profile yet, go to step 5; otherwise show me the proposals and ask me to choose.
 3. Find the dive shop the trip dives from: a dive centre or booking card in the trip, else ask me. Get its position (TripDeck's search_places if the card has none).
-4. Call find_dive_sites around the shop (start with 30 km; widen it when there are few). Look up which sites the shop itself goes to (its website) and add the ones OpenStreetMap misses. Read my log (get_overview, prepare_dive for the deepest ones) and propose 6 to 12 sites with propose_dive_sites, each with one line on why it suits me, or what it would take. Then show me the list with the link to choose them in the app, and stop: I choose.
+4. Call find_dive_sites around the shop (start with 30 km; widen it when there are few). Look up which sites the shop itself goes to (its website) and add the ones OpenStreetMap misses. Read my log (get_overview, prepare_dive for the deepest ones) and propose 6 to 12 sites with propose_dive_sites, each with one line on why it suits me, or what it would take, and your notes on the list as a whole (the shop's schedule and my package, the season, what my log says, with sources) in notes_markdown. Then show me the list with the link to choose them in the app, and stop: I choose.
 5. For each chosen site without a profile: research on the web what to expect on the trip's dates (water temperature, visibility, currents, season, closures), the depths and how the dive goes, what it takes (certification, experience, nitrox, SMB, light, suit thickness), boat time from the shop, fees and permits, and the risks. When the dive is within 16 days, add get_site_conditions. Save it with save_site_profile, with your sources as links. Never present a fact without a source.
 6. Save the water at each chosen site with update_kit (sites, usually salt), so my lead estimate fits, and offer to add the chosen sites to the trip in TripDeck as dive cards (add_item) and to prepare them with trip-prep.`;
 

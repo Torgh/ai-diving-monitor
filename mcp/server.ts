@@ -527,10 +527,15 @@ server.registerTool(
       trip_id: z.string().min(1).max(64).describe("The trip's id in TripDeck."),
       shop: z.object({ name: z.string().min(1).max(200), lat: lat.optional(), lng: lng.optional() }).describe("The dive shop the trip dives from."),
       sites: z.array(siteProposal).min(1).max(40),
+      notes_markdown: z
+        .string()
+        .max(20000)
+        .optional()
+        .describe("What you weighed for the list as a whole: the shop's schedule and packages, the season, the diver's log, with sources. Omit to keep the saved notes; \"\" removes them."),
     },
     annotations: WRITES,
   },
-  tool(async (args: { trip_id: string; shop: { name: string; lat?: number; lng?: number }; sites: z.infer<typeof siteProposal>[] }) => {
+  tool(async (args: { trip_id: string; shop: { name: string; lat?: number; lng?: number }; sites: z.infer<typeof siteProposal>[]; notes_markdown?: string }) => {
     const plan = await trips().update(args.trip_id, (p) =>
       proposeSites(
         p,
@@ -548,6 +553,7 @@ server.registerTool(
           source: s.source,
           why: s.why,
         })),
+        args.notes_markdown === undefined ? undefined : { markdown: args.notes_markdown, now: new Date().toISOString() },
       ),
     );
     return {

@@ -79,6 +79,7 @@ export interface TripView extends TripRow {
   /** The dive shop and the sites proposed around it, for the diver to choose. */
   shop: TripShop | null;
   sites: TripSite[];
+  siteNotes: SavedText | null;
 }
 
 const DAY_MS = 86_400_000;
@@ -204,6 +205,7 @@ export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, t
     recurringIssues: prepareDive(records, { date: row.startDate ?? undefined }, today).recurringIssues,
     shop: plan.shop ?? null,
     sites: plan.sites ?? [],
+    siteNotes: plan.siteNotes ?? null,
     dives: plan.dives.map(({ prep, loggedDiveIds, ...card }) => {
       const facts = prepareDive(records, { site: card.site, maxDepthM: card.maxDepthM, gas: card.gas, dives: card.dives, date: card.date }, today);
       const shared = recurringNote(facts.recurringIssues);

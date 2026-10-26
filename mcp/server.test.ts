@@ -217,6 +217,7 @@ describe.skipIf(!bun)("MCP server", () => {
     const proposed = await json("propose_dive_sites", {
       trip_id: "koh-tao",
       shop: { name: "Big Blue", lat: 10.095, lng: 99.827 },
+      notes_markdown: "## Big Blue's rotation",
       sites: [
         { id: "osm-node-1", name: "Chumphon Pinnacle", max_depth_m: 35, distance_km: 7.2, why: "Your deepest dives were 30 m." },
         { name: "Sail Rock", why: "A swim-through at 12 m." },
@@ -243,6 +244,7 @@ describe.skipIf(!bun)("MCP server", () => {
 
     const trip = await json("get_trip_plans", { trip_id: "koh-tao" });
     expect(trip.shop).toEqual({ name: "Big Blue", lat: 10.095, lng: 99.827 });
+    expect(trip.site_notes).toBe("## Big Blue's rotation");
     expect(trip.sites[1]).toMatchObject({ id: "sail-rock", status: "chosen", profile });
     expect(trip.sites[0]).toMatchObject({ id: "osm-node-1", max_depth_m: 35, distance_km: 7.2, profile: null });
     expect(await json("get_trip_plans")).toEqual(expect.arrayContaining([expect.objectContaining({ trip_id: "koh-tao", sites_chosen: 1, sites_proposed: 1 })]));

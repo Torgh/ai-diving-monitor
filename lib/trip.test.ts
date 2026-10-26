@@ -165,10 +165,21 @@ describe("dive sites", () => {
 
   it("stay when TripDeck's cards are saved again", () => {
     const p = plan();
-    proposeSites(p, shop, proposals);
+    proposeSites(p, shop, proposals, { markdown: "## The season", now: "T2" });
     const again = mergeTripPlan(p, input(), "T5");
     expect(again.shop).toEqual(p.shop);
     expect(again.sites).toHaveLength(3);
+    expect(again.siteNotes).toEqual({ markdown: "## The season", savedAt: "T2" });
+  });
+
+  it("keeps the notes on the list until new ones or \"\" are sent", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals, { markdown: " ## Big Blue's rotation ", now: "T2" });
+    expect(p.siteNotes).toEqual({ markdown: "## Big Blue's rotation", savedAt: "T2" });
+    proposeSites(p, shop, proposals);
+    expect(p.siteNotes?.savedAt).toBe("T2");
+    proposeSites(p, shop, proposals, { markdown: "", now: "T3" });
+    expect(p).not.toHaveProperty("siteNotes");
   });
 
   it("slugs names, accents and all", () => {
