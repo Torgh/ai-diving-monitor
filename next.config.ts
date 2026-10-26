@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // `bun run dev` is how the app is used: the route indicator in a corner sat on the phone's tab bar.
+  // Compile and runtime errors still show.
+  devIndicators: false,
   // The AI coach page became the companion page.
   redirects() {
     return [{ source: "/coach", destination: "/companion", permanent: true }];

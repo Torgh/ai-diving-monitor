@@ -14,6 +14,8 @@ export const viewport: Viewport = {
   themeColor: "#0e7490",
   width: "device-width",
   initialScale: 1,
+  // The tab bar on a phone keeps clear of the home indicator (env(safe-area-inset-bottom)).
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

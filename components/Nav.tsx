@@ -31,6 +31,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M9 13h6" />
     </>
   ),
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="19" cy="12" r="1.4" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -39,15 +46,24 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
+/** On a phone the first ones are the tab bar; the rest open from More. */
 const LINKS = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
   { href: "/dives", label: "Dive log", icon: "log" },
   { href: "/trips", label: "Trips", icon: "trips" },
   { href: "/gear", label: "Gear", icon: "gear" },
+];
+const MORE_LINKS = [
   { href: "/import", label: "Import", icon: "import" },
   { href: "/companion", label: "Companion", icon: "companion" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
+
+const Glyph = ({ icon }: { icon: string }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {ICONS[icon]}
+  </svg>
+);
 
 type Storage = { active: "local" | "onedrive" | "google"; location: string };
 
@@ -62,6 +78,10 @@ export function Nav() {
   const current = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   const [storage, setStorage] = useState<Storage | null>(null);
   const kept = useKeptCopy();
+  // More stays open on the page it was opened on; going to another page closes it.
+  const [moreOn, setMoreOn] = useState<string | null>(null);
+  const moreOpen = moreOn === path;
+  const inMore = MORE_LINKS.some((l) => current(l.href));
 
   useEffect(() => {
     fetch("/api/storage", { cache: "no-store" })
@@ -70,29 +90,56 @@ export function Nav() {
       .catch(() => setStorage(null));
   }, []);
 
+  const brand = (
+    <Link href="/" className="brand">
+      {/* A small static SVG: next/image would not optimise it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icon-small.svg" alt="" width={32} height={32} />
+      DiveDeck
+    </Link>
+  );
+  const live = (
+    <div className={`live ${kept ? "offline" : ""}`} title={kept ? "Your log can't be reached: showing what was kept." : "Updates live when your companion in Claude Code or Codex changes the log."}>
+      <span className="status">
+        <span className={`dot ${kept ? "warning" : "good"}`} />
+        <strong>{kept ? "Offline" : "Live"}</strong>
+      </span>
+      {storage && <span title={storage.location}>{storageLabel(storage)}</span>}
+    </div>
+  );
+  const link = (l: (typeof LINKS)[number]) => (
+    <Link key={l.href} href={l.href} className="link" aria-current={current(l.href) ? "page" : undefined}>
+      <Glyph icon={l.icon} />
+      {l.label}
+    </Link>
+  );
+
   return (
-    <nav className="nav" aria-label="Main">
-      <Link href="/" className="brand">
-        {/* A small static SVG: next/image would not optimise it. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icon-small.svg" alt="" width={32} height={32} />
-        DiveDeck
-      </Link>
-      {LINKS.map((l) => (
-        <Link key={l.href} href={l.href} className="link" aria-current={current(l.href) ? "page" : undefined}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            {ICONS[l.icon]}
-          </svg>
-          {l.label}
-        </Link>
-      ))}
-      <div className={`live ${kept ? "offline" : ""}`} title={kept ? "Your log can't be reached: showing what was kept." : "Updates live when your companion in Claude Code or Codex changes the log."}>
-        <span className="status">
-          <span className={`dot ${kept ? "warning" : "good"}`} />
-          <strong>{kept ? "Offline" : "Live"}</strong>
-        </span>
-        {storage && <span title={storage.location}>{storageLabel(storage)}</span>}
-      </div>
-    </nav>
+    <>
+      {/* On a phone: the brand and the live status on top, the menu as a tab bar at the bottom. */}
+      <header className="topbar">
+        {brand}
+        {live}
+      </header>
+      <nav className={`nav ${moreOpen ? "more-open" : ""}`} aria-label="Main">
+        {brand}
+        {LINKS.map(link)}
+        <button
+          type="button"
+          className="link more"
+          aria-expanded={moreOpen}
+          aria-controls="more-links"
+          aria-current={inMore && !moreOpen ? "page" : undefined}
+          onClick={() => setMoreOn(moreOpen ? null : path)}
+        >
+          <Glyph icon="more" />
+          More
+        </button>
+        <div className="more-links" id="more-links">
+          {MORE_LINKS.map(link)}
+        </div>
+        {live}
+      </nav>
+    </>
   );
 }
