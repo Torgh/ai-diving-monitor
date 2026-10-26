@@ -384,6 +384,11 @@ const tripCard = z.object({
     .max(20)
     .optional()
     .describe("Logged dives this card turned into (numbers or ids). Omit to keep the saved links."),
+  site_id: z
+    .string()
+    .max(80)
+    .optional()
+    .describe('The proposed site this card dives (an id from propose_dive_sites), when its title doesn\'t name it; "none" for no site. Omit to keep; "" goes back to matching by name.'),
 });
 
 server.registerTool(
@@ -410,6 +415,16 @@ server.registerTool(
         .max(20)
         .optional()
         .describe("The trip's flights from TripDeck (its transport cards). Omit to keep the saved ones; [] removes them."),
+      todos: z
+        .array(
+          z.object({
+            text: z.string().min(1).max(300).describe("One line: what to sort out, e.g. Ask Big Blue which tanks they give."),
+            item_id: z.string().max(64).optional().describe("The dive card it is about."),
+          }),
+        )
+        .max(40)
+        .optional()
+        .describe("What is still to sort out before the dives. Replaces your earlier list (a to-do with the same text stays ticked off); the diver's own stay. Omit to keep; [] removes yours."),
       dives: z.array(tripCard).max(100).describe("Every dive card of the trip."),
     },
     annotations: WRITES,
@@ -422,6 +437,7 @@ server.registerTool(
     end_date?: string;
     summary_markdown?: string;
     flights?: { date: string; time?: string; from?: string; to?: string }[];
+    todos?: { text: string; item_id?: string }[];
     dives: z.infer<typeof tripCard>[];
   }) => {
     const records = await store().list();
@@ -434,6 +450,7 @@ server.registerTool(
       endDate: args.end_date,
       summaryMarkdown: args.summary_markdown,
       flights: args.flights,
+      todos: args.todos?.map((t) => ({ text: t.text, itemId: t.item_id })),
       dives: args.dives.map((c) => ({
         itemId: c.item_id,
         title: c.title,
@@ -451,6 +468,7 @@ server.registerTool(
         verdict: c.verdict,
         verdictSummary: c.verdict_summary,
         loggedDiveIds: c.logged_dives?.map((ref) => resolveDive(records, ref).record.id),
+        siteId: c.site_id,
       })),
     });
     return {
@@ -460,6 +478,7 @@ server.registerTool(
       prepared: plan.dives.filter((d) => d.prep).length,
       to_check: plan.dives.filter((d) => d.verdict?.status === "check").map((d) => d.itemId),
       without_prep: plan.dives.filter((d) => !d.prep).map((d) => d.itemId),
+      open_todos: (plan.todos ?? []).filter((t) => !t.done).map((t) => t.text),
       // For TripDeck's save_dive_prep: where each card's preparation opens.
       urls: Object.fromEntries(plan.dives.map((d) => [d.itemId, tripCardUrl(plan.id, d.itemId)])),
       stored_in: target.backend.location,

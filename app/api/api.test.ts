@@ -10,6 +10,8 @@ import { POST as importSamples } from "./import/samples/route";
 import { GET as migrateStatus, POST as migrate } from "./migrate/route";
 import { POST as linkDive } from "./trips/[id]/dives/route";
 import { POST as chooseSite } from "./trips/[id]/sites/route";
+import { POST as setCard } from "./trips/[id]/cards/route";
+import { DELETE as removeTodo, PATCH as tickTodo, POST as addTodo } from "./trips/[id]/todos/route";
 import { DELETE as deleteTrip, GET as getTrip } from "./trips/[id]/route";
 import { GET as getTrips } from "./trips/route";
 import { GET as getVersion } from "./version/route";
@@ -203,6 +205,37 @@ describe("API", () => {
     expect((await choose("nope", "chosen")).status).toBe(404);
     expect((await choose("twins", "chosen", "nope")).status).toBe(404);
     expect((await choose("twins", "maybe")).status).toBe(400);
+  });
+
+  it("sets a card's dive site and keeps the trip's to-dos", async () => {
+    const trips = new TripStore();
+    await trips.save({ id: "koh-tao", name: "Koh Tao", dives: [{ itemId: "c1", title: "Best-Of day 1" }], todos: [{ text: "Ask which tanks", itemId: "c1" }] });
+    await trips.update("koh-tao", (p) => proposeSites(p, { name: "Big Blue" }, [{ id: "osm-node-1", name: "Chumphon Pinnacle", why: "x" }]));
+    const ctxT = ctx("koh-tao");
+
+    expect(await read(await setCard(json("/api/trips/koh-tao/cards", "POST", { itemId: "c1", siteId: "osm-node-1" }), ctxT))).toEqual([200, { siteId: "osm-node-1" }]);
+    let [, trip] = await read(await getTrip(req("/api/trips/koh-tao"), ctxT));
+    expect(trip.dives[0]).toMatchObject({ siteId: "osm-node-1", siteInfo: { name: "Chumphon Pinnacle" }, openTodos: 1 });
+    expect(await read(await setCard(json("/api/trips/koh-tao/cards", "POST", { itemId: "c1", siteId: null }), ctxT))).toEqual([200, { siteId: null }]);
+    expect((await setCard(json("/api/trips/koh-tao/cards", "POST", { itemId: "c1", siteId: "nope" }), ctxT)).status).toBe(404);
+    expect((await setCard(json("/api/trips/nope/cards", "POST", { itemId: "c1", siteId: null }), ctx("nope"))).status).toBe(404);
+
+    const [, mine] = await read(await addTodo(json("/api/trips/koh-tao/todos", "POST", { text: "Buy an SMB" }), ctxT));
+    expect(mine).toMatchObject({ id: "t2", text: "Buy an SMB", by: "diver", done: false });
+    expect(await read(await tickTodo(json("/api/trips/koh-tao/todos", "PATCH", { id: "t1", done: true }), ctxT))).toEqual([200, expect.objectContaining({ id: "t1", done: true })]);
+    [, trip] = await read(await getTrip(req("/api/trips/koh-tao"), ctxT));
+    expect(trip.todos.map((t: { id: string; done: boolean }) => [t.id, t.done])).toEqual([
+      ["t1", true],
+      ["t2", false],
+    ]);
+    expect(trip.dives[0].openTodos).toBe(0);
+    const [, list] = await read(await getTrips(req("/api/trips"), {}));
+    expect(list.trips[0].openTodos).toBe(1);
+    expect(await read(await removeTodo(json("/api/trips/koh-tao/todos", "DELETE", { id: "t2" }), ctxT))).toEqual([200, { removed: true }]);
+    expect((await tickTodo(json("/api/trips/koh-tao/todos", "PATCH", { id: "t9", done: true }), ctxT)).status).toBe(404);
+    expect((await addTodo(json("/api/trips/koh-tao/todos", "POST", { text: "x", itemId: "zz" }), ctxT)).status).toBe(404);
+    expect((await addTodo(json("/api/trips/koh-tao/todos", "POST", { text: " " }), ctxT)).status).toBe(400);
+    expect((await addTodo(json("/api/trips/nope/todos", "POST", { text: "x" }), ctx("nope"))).status).toBe(404);
   });
 
   it("only answers requests addressed to localhost", async () => {

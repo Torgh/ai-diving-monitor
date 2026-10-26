@@ -164,10 +164,13 @@ export const DESCRIPTIONS = {
     "Save a TripDeck trip's dive cards in the dive log with your preparation for each card (Markdown) and optional notes for the whole trip, so the app shows them. " +
     "Send every dive card of the trip as it is now: cards not sent are removed; a card's preparation, verdict and logged dives are kept unless new ones are sent (\"\" removes a text or a verdict). " +
     "Give each card the same verdict you save on the TripDeck card (ready, or check with a one-line summary), and the trip's flights from TripDeck (date, departure time, from, to), " +
-    "so the app shows the break before the trip and the time from the last dive to the flight.",
+    "so the app shows the break before the trip and the time from the last dive to the flight. " +
+    "Put what is still to sort out before the dives (questions for the dive centre, gear, a course, a refresher) as todos, one line each, with the card it is about: " +
+    "they replace your earlier ones, a to-do with the same text keeps whether the diver ticked it off, and the diver's own stay. " +
+    "A card's site_id links it to a site proposed with propose_dive_sites when its title doesn't name it.",
   get_trip_plans:
     "The trips saved with save_trip_plan. Without trip_id: each trip with its dates and how many cards are prepared. With trip_id: its cards, preparation, " +
-    "linked logged dives, and the dives logged on each card's day that aren't linked yet.",
+    "linked logged dives, the dives logged on each card's day that aren't linked yet, and the to-dos with what the diver ticked off.",
   find_dive_sites:
     "The dive sites OpenStreetMap knows within a radius of a point (the trip's dive shop), the nearest first: name, position, distance, depth range, type " +
     "(reef, wreck…), entry (boat, shore), OSM's difficulty (0–3), whether there is a descent line, and the site's OpenStreetMap page. Mapped by volunteers: " +
@@ -358,6 +361,7 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
       logged_dives: p.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
       sites_chosen: (p.sites ?? []).filter((s) => s.status === "chosen").length,
       sites_proposed: (p.sites ?? []).filter((s) => s.status === "proposed").length,
+      open_todos: (p.todos ?? []).filter((t) => !t.done).length,
       updated_at: p.updatedAt,
     }));
   }
@@ -376,6 +380,7 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
     flights: plan.flights ?? [],
     shop: plan.shop ?? null,
     site_notes: plan.siteNotes?.markdown ?? null,
+    todos: (plan.todos ?? []).map((t) => ({ id: t.id, text: t.text, done: t.done, card: t.itemId ?? null, by: t.by })),
     sites: (plan.sites ?? []).map(({ profile, ...site }) => ({
       ...(snakeKeys(site) as object),
       profile: profile?.markdown ?? null,
@@ -401,7 +406,7 @@ export const TRIP_PREP_REQUEST = `Prepare me for the dives of my TripDeck trip {
 2. For every dive card, call prepare_dive with its site, location, max depth, gas, number of dives and date. If a card says only nitrox or trimix, or has no depth, ask me.
 3. For each card write a short preparation: how ready I am from my log (comparable dives, time since my last dive), the gas plan (my RMV at that depth, ppO2 and MOD), what keeps going wrong in my dives and one or two drills for it, and what to check or ask the dive centre.
 4. Write notes for the whole trip: what to practise before it, the order of the dives, gear, and the no-fly time before the flight home.
-5. Save everything with save_trip_plan: all the dive cards with your preparation and your verdict for each (ready, or check when something is still to sort out, with a one-line summary), and the trip's flights from TripDeck (date, departure time, from, to).
+5. Save everything with save_trip_plan: all the dive cards with your preparation and your verdict for each (ready, or check when something is still to sort out, with a one-line summary), the trip's flights from TripDeck (date, departure time, from, to), and what is still to sort out as todos (one line each, with the card it is about). A card whose only open points the diver has ticked off can become ready.
 6. On each TripDeck dive card, save the same verdict with TripDeck's save_dive_prep: the status, the one-line summary, and the card's url from save_trip_plan. Save any gas mix I told you on the card too (update_item with dive.mix).
 7. Give me the trip notes and the cards that need my attention.`;
 

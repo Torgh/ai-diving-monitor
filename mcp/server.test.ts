@@ -250,6 +250,17 @@ describe.skipIf(!bun)("MCP server", () => {
     expect(await json("get_trip_plans")).toEqual(expect.arrayContaining([expect.objectContaining({ trip_id: "koh-tao", sites_chosen: 1, sites_proposed: 1 })]));
     expect((await call("propose_dive_sites", { trip_id: "nope", shop: { name: "X" }, sites: [{ name: "A", why: "b" }] })).text).toContain("Save it with save_trip_plan first");
 
+    await ok("save_trip_plan", {
+      trip_id: "koh-tao",
+      trip_name: "Koh Tao",
+      todos: [{ text: "Ask which tanks", item_id: "c1" }],
+      dives: [{ item_id: "c1", title: "Best-Of day 1", site_id: "osm-node-1" }],
+    });
+    const withCard = await json("get_trip_plans", { trip_id: "koh-tao" });
+    expect(withCard.cards[0].site_id).toBe("osm-node-1");
+    expect(withCard.todos).toEqual([{ id: "t1", text: "Ask which tanks", done: false, card: "c1", by: "companion" }]);
+    expect(withCard.sites).toHaveLength(2);
+
     const prompt = await client.getPrompt({ name: "site-scout", arguments: { trip: "Koh Tao" } });
     expect(JSON.stringify(prompt.messages)).toContain("find_dive_sites");
     expect(client.getInstructions()).toContain("the diver chooses, you research");

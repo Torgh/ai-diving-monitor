@@ -40,6 +40,11 @@ export function TripCard({ trip: t }: { trip: TripRow }) {
           .filter(Boolean)
           .join(" · ")}
       </span>
+      {!past && t.openTodos > 0 && (
+        <span className="muted" style={{ fontSize: "0.85rem" }}>
+          {t.openTodos} to sort out before you go
+        </span>
+      )}
       {t.chosenSites.length > 0 && (
         <span className="muted" style={{ fontSize: "0.85rem" }}>
           Dive sites: {t.chosenSites.map((s) => [s.name, depth(s)].filter(Boolean).join(" ")).join(" · ")}

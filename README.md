@@ -80,7 +80,11 @@ seconds on Google Drive).
   takes (certification, nitrox, SMB, suit), boat time, fees and closures, each fact with its source.
   Within 16 days of the dive it adds the sea's forecast (waves, water temperature, surface current
   from Open-Meteo). A chosen site keeps what was proposed, the dive cards about it show its depths,
-  distance and why it suits you, and the trip's tile lists the chosen sites.
+  distance and why it suits you (pick the site on a card whose title doesn't name it), and the trip's
+  tile lists the chosen sites.
+- **To sort out:** your companion lists what is still open before the dives (questions for the dive
+  centre, gear, a refresher), each with the card it is about. Tick them off on the trip's page or add
+  your own; the cards show how many are open, and the next preparation sees what you did.
 
 **The app**
 
