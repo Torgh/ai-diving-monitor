@@ -1902,3 +1902,14 @@ ul.todos li.done span {
   min-height: 32px;
   max-width: 100%;
 }
+
+.tank-choice {
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.tank-choice .segmented {
+  flex-wrap: wrap;
+}

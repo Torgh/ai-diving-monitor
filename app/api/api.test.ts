@@ -120,6 +120,8 @@ describe("API", () => {
     const [, withLead] = await read(await getKit(req("/api/kit"), {}));
     expect(Object.keys(withLead.estimates.lake)).toEqual(["fresh", "brackish", "salt"]);
     expect(withLead.estimates.lake.salt.leadKg).toBeGreaterThan(withLead.estimates.lake.fresh.leadKg);
+    expect(Object.keys(withLead.rentalEstimates.lake)).toEqual(["aluminium-11", "steel-12"]);
+    expect(withLead.rentalEstimates.lake["aluminium-11"].salt.rentalTank).toBe("aluminium-11");
     expect((await putKit(json("/api/kit", "PUT", { items: [{ name: "Mystery" }] }), {})).status).toBe(400);
     expect((await putKit(json("/api/kit", "PUT", { diver: { massKg: "heavy" } }), {})).status).toBe(400);
 

@@ -56,8 +56,26 @@ export interface Confidence {
   reasons: string[];
 }
 
+/** Tanks dive centres usually rent out, for a trip where the diver doesn't bring their own. */
+export const RENTAL_TANKS = {
+  "aluminium-11": { name: "Rental aluminium 11.1 L (AL80)", short: "rental aluminium 11 L", material: "aluminium", volumeL: 11.1 },
+  "steel-12": { name: "Rental steel 12 L", short: "rental steel 12 L", material: "steel", volumeL: 12 },
+} as const satisfies Record<string, { name: string; short: string; material: GearItem["material"]; volumeL: number }>;
+export type RentalTank = keyof typeof RENTAL_TANKS;
+export const RENTAL_TANK_IDS = Object.keys(RENTAL_TANKS) as RentalTank[];
+
+/** The set with a rental tank in place of its own tank (or added, when it has none). */
+export function withRentalTank(kit: Kit, set: GearSet, tank: RentalTank): { kit: Kit; set: GearSet } {
+  const rental = RENTAL_TANKS[tank];
+  const item: GearItem = { id: `rental-${tank}`, name: rental.name, kind: "tank", material: rental.material, volumeL: rental.volumeL };
+  const others = set.itemIds.filter((id) => kit.items.find((i) => i.id === id)?.kind !== "tank");
+  return { kit: { ...kit, items: [...kit.items, item] }, set: { ...set, itemIds: [...others, item.id] } };
+}
+
 export interface WeightingEstimate {
   set: { id: string; name: string } | null;
+  /** The rental tank counted instead of the set's own, if one. */
+  rentalTank: RentalTank | null;
   water: Water;
   density: number;
   /** Lead to carry, rounded to 0.5 kg; null without the diver's body mass. */
@@ -228,13 +246,27 @@ export function confidenceOf(parts: Part[], hasTank: boolean, calibration: Weigh
   return { level: score >= 75 ? "high" : score >= 45 ? "medium" : "low", score, reasons };
 }
 
-export function estimateWeighting(kit: Kit, records: DiveRecord[], setRef: GearSet | null, water: Water, density = WATER_DENSITY[water]): WeightingEstimate {
-  const { parts, missing } = estimateParts(kit, setRef, density);
+export function estimateWeighting(
+  kit: Kit,
+  records: DiveRecord[],
+  setRef: GearSet | null,
+  water: Water,
+  density = WATER_DENSITY[water],
+  rentalTank: RentalTank | null = null,
+): WeightingEstimate {
+  // A rental tank replaces the set's own; the diver's dives still correct the rest as they are.
+  const swapped = setRef && rentalTank ? withRentalTank(kit, setRef, rentalTank) : null;
+  const { parts, missing: found } = estimateParts(swapped?.kit ?? kit, swapped?.set ?? setRef, density);
+  const rental = swapped ? RENTAL_TANKS[rentalTank!] : null;
+  const missing = rental
+    ? [`ask the dive centre which tanks they give: a ${rental.short} is assumed`, ...found.filter((m) => !m.startsWith(`${rental.name}:`))]
+    : found;
   const calibration = calibrate(kit, records, setRef);
   if (!calibration) missing.push("a few dives with this set, the lead you carried and how it felt (they correct the estimate to you)");
   const model = kit.diver.massKg ? leadFor(parts.reduce((s, p) => s + p.kg, 0), density) : null;
   return {
     set: setRef ? { id: setRef.id, name: setRef.name } : null,
+    rentalTank: swapped ? rentalTank : null,
     water,
     density,
     leadKg: model === null ? null : round(Math.max(0, model + (calibration?.offsetKg ?? 0)), 0.5),
@@ -242,6 +274,6 @@ export function estimateWeighting(kit: Kit, records: DiveRecord[], setRef: GearS
     parts: parts.map((p) => ({ ...p, kg: r1(p.kg) })),
     calibration,
     missing,
-    confidence: confidenceOf(parts, !!setRef?.itemIds.some((id) => kit.items.find((i) => i.id === id)?.kind === "tank"), calibration),
+    confidence: confidenceOf(parts, !!swapped || !!setRef?.itemIds.some((id) => kit.items.find((i) => i.id === id)?.kind === "tank"), calibration),
   };
 }

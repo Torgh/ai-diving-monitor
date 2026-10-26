@@ -1,5 +1,5 @@
 import { useUnits } from "@/components/Units";
-import type { WeightingEstimate } from "@/lib/weighting";
+import { RENTAL_TANKS, type WeightingEstimate } from "@/lib/weighting";
 
 export function ResultCard({ estimate, hasTank }: { estimate: WeightingEstimate; hasTank: boolean }) {
   const { show } = useUnits();
@@ -8,7 +8,7 @@ export function ResultCard({ estimate, hasTank }: { estimate: WeightingEstimate;
   return (
     <section className="card result" aria-labelledby="lead-h">
       <h2 id="lead-h" className="eyebrow" style={{ margin: 0 }}>
-        Lead to carry · {estimate.water} water
+        Lead to carry · {estimate.water} water{estimate.rentalTank ? ` · ${RENTAL_TANKS[estimate.rentalTank].short}` : ""}
       </h2>
       <div className="lead">{estimate.leadKg === null ? "–" : show("weight", estimate.leadKg)}</div>
       <p style={{ margin: 0 }}>
