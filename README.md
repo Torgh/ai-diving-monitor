@@ -12,7 +12,8 @@ needed**, or with an API key. Your dives stay yours: on this PC, in OneDrive or 
 ![TypeScript](https://img.shields.io/badge/TypeScript-Next.js%20%2B%20Bun-blue)
 
 DiveDeck works like its sister app TripDeck: your companion in Claude Code or Codex works on the log
-directly through an MCP server, and the web app shows every change within seconds.
+directly through an MCP server, and the web app shows every change as it happens (within a few
+seconds on Google Drive).
 
 ## What you get
 

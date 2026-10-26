@@ -3,8 +3,8 @@ import { activeBackend, type Backend } from "./backends";
 
 /**
  * A short tag that changes whenever a dive, trip or kit file is added, changed or removed, by the MCP
- * server as much as by the app, wherever the log is stored. The browser polls it and reloads the log
- * only when it changes.
+ * server as much as by the app, wherever the log is stored. The open pages are told when it changes
+ * (liveVersion) and reload the log only then.
  */
 export async function logVersion(backend: Backend = activeBackend()): Promise<string> {
   const [dives, trips, kit] = await Promise.all([backend.list("dives"), backend.list("trips"), backend.list("kit")]);
