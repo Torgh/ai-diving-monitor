@@ -99,8 +99,8 @@ const flightTime = (f: { date: string; time?: string }) => `${formatDate(f.date,
 
 /** The proposed site a card is about: its depths and distance, and why it suits you, linked to the site below. */
 function CardSite({ site }: { site: TripSite }) {
-  const { show } = useUnits();
-  const line = siteFacts(site, (m) => show("depth", m));
+  const { range } = useUnits();
+  const line = siteFacts(site, (min, max) => range("depth", min, max));
   return (
     <div className="card-site">
       <a href={`#site-${site.id}`}>

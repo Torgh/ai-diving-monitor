@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { formatNumber } from "@/lib/format";
-import { convert, digitsFor, type Quantity, type UnitSystem, unitOf } from "@/lib/measure";
+import { convert, digitsFor, formatRange, type Quantity, type UnitSystem, unitOf } from "@/lib/measure";
 import { api } from "./useLive";
 
 interface UnitsContext {
@@ -11,6 +11,8 @@ interface UnitsContext {
   setSystem: (system: UnitSystem) => Promise<void>;
   /** "39.2 m" or "129 ft"; "–" for a missing value. */
   show: (quantity: Quantity, metric: number | null | undefined, metricDigits?: number) => string;
+  /** "1–35 m", "to 35 m" or "98–115 ft": the unit once; null when neither end is known. */
+  range: (quantity: Quantity, min: number | null | undefined, max: number | null | undefined) => string | null;
   /** The number alone, converted (for charts). */
   value: (quantity: Quantity, metric: number) => number;
   unit: (quantity: Quantity) => string;
@@ -39,6 +41,7 @@ export function UnitsProvider({ children }: { children: React.ReactNode }) {
       setSystem,
       show: (quantity, metric, metricDigits) =>
         metric === null || metric === undefined ? "–" : formatNumber(convert(quantity, metric, system), digitsFor(quantity, system, metricDigits), unitOf(quantity, system)),
+      range: (quantity, min, max) => formatRange(quantity, min, max, system, (v, digits) => formatNumber(v, digits)),
       value: (quantity, metric) => convert(quantity, metric, system),
       unit: (quantity) => unitOf(quantity, system),
     }),

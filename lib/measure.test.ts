@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { convert, digitsFor, isUnitSystem, unitOf } from "./measure";
+import { convert, digitsFor, formatRange, isUnitSystem, unitOf } from "./measure";
 
 describe("units", () => {
   it("leaves metric as it is", () => {
@@ -25,5 +25,22 @@ describe("units", () => {
   it("knows the two systems", () => {
     expect(isUnitSystem("imperial")).toBe(true);
     expect(isUnitSystem("us")).toBe(false);
+  });
+});
+
+describe("formatRange", () => {
+  const number = (v: number, digits: number) => v.toFixed(digits);
+
+  it("writes the unit once", () => {
+    expect(formatRange("depth", 1, 35, "metric", number)).toBe("1–35 m");
+    expect(formatRange("depth", 1, 35, "imperial", number)).toBe("3–115 ft");
+    expect(formatRange("depth", 18, 18, "metric", number)).toBe("18 m");
+  });
+
+  it("says which end is known, or nothing", () => {
+    expect(formatRange("depth", undefined, 35, "metric", number)).toBe("to 35 m");
+    expect(formatRange("depth", 5, null, "metric", number)).toBe("from 5 m");
+    expect(formatRange("depth", undefined, undefined, "metric", number)).toBeNull();
+    expect(formatRange("depth", Number.NaN, undefined, "metric", number)).toBeNull();
   });
 });

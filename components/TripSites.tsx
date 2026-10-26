@@ -9,14 +9,11 @@ import { formatDate } from "@/lib/format";
 import type { SavedText, SiteStatus, TripShop, TripSite } from "@/lib/trip";
 
 /** Depth range, distance, type and entry, in a few words. */
-export function siteFacts(site: Pick<TripSite, "minDepthM" | "maxDepthM" | "distanceKm" | "type" | "entry">, depth: (m: number) => string): string {
-  const range =
-    site.minDepthM !== undefined && site.maxDepthM !== undefined
-      ? `${depth(site.minDepthM)}–${depth(site.maxDepthM)}`
-      : site.maxDepthM !== undefined
-        ? `to ${depth(site.maxDepthM)}`
-        : null;
-  return [range, site.distanceKm !== undefined ? `${site.distanceKm} km from the shop` : null, site.type, site.entry ? `${site.entry} entry` : null]
+export function siteFacts(
+  site: Pick<TripSite, "minDepthM" | "maxDepthM" | "distanceKm" | "type" | "entry">,
+  range: (min: number | undefined, max: number | undefined) => string | null,
+): string {
+  return [range(site.minDepthM, site.maxDepthM), site.distanceKm !== undefined ? `${site.distanceKm} km from the shop` : null, site.type, site.entry ? `${site.entry} entry` : null]
     .filter(Boolean)
     .join(" · ");
 }
@@ -32,8 +29,8 @@ function SourceLink({ site }: { site: TripSite }) {
 }
 
 function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onChoose: (status: SiteStatus) => void }) {
-  const { show } = useUnits();
-  const line = siteFacts(site, (m) => show("depth", m));
+  const { range } = useUnits();
+  const line = siteFacts(site, (min, max) => range("depth", min, max));
   return (
     <article className={`card site-card ${site.status}`} id={`site-${site.id}`}>
       <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>
@@ -72,8 +69,8 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
 
 /** A chosen site: what was proposed (facts, why it suits you, source) stays, and the profile follows. */
 function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onUndo: () => void }) {
-  const { show } = useUnits();
-  const line = siteFacts(site, (m) => show("depth", m));
+  const { range } = useUnits();
+  const line = siteFacts(site, (min, max) => range("depth", min, max));
   return (
     <article className="card stack site-profile" id={`site-${site.id}`} aria-labelledby={`site-h-${site.id}`}>
       <div className="row" style={{ justifyContent: "space-between", gap: "0.5rem", alignItems: "flex-start" }}>

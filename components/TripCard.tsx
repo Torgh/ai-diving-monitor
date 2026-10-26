@@ -6,10 +6,9 @@ import { useUnits } from "./Units";
 
 /** A trip as a card: when, where, and how far its preparation is (or, once past, the dives logged). */
 export function TripCard({ trip: t }: { trip: TripRow }) {
-  const { show } = useUnits();
+  const { range } = useUnits();
   const left = t.cards - t.prepared;
-  const depth = (s: TripRow["chosenSites"][number]) =>
-    s.minDepthM !== undefined && s.maxDepthM !== undefined ? `${show("depth", s.minDepthM)}–${show("depth", s.maxDepthM)}` : s.maxDepthM !== undefined ? `to ${show("depth", s.maxDepthM)}` : null;
+  const depth = (s: TripRow["chosenSites"][number]) => range("depth", s.minDepthM, s.maxDepthM);
   const past = t.when === "past";
   return (
     <Link href={`/trips/${t.id}`} className="card trip-card">

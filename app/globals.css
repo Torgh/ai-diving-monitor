@@ -1264,8 +1264,16 @@ a.dive-row:hover {
   transform: rotate(90deg);
 }
 
+.folded .fold-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0.15rem;
+}
+
 .folded .fold-all {
-  float: right;
   border: 0;
   background: none;
   color: var(--accent);
