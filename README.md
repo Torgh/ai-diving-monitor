@@ -97,6 +97,9 @@ seconds on Google Drive).
   log, the analysis and the texts stay metric, and ppO2 stays in bar.
 - A long debrief folds into its sections; saving a tank size or gas for several dives can be undone.
 - Updates live, light and dark mode, works at phone width; every command has a copy button.
+- **Offline:** the pages and dives you opened stay readable when your log can't be reached (DiveDeck
+  isn't running, or no connection to Google Drive), with a note saying from when; it catches up by
+  itself once the log is back.
 
 ## Quick start
 

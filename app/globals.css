@@ -198,6 +198,10 @@ select {
   color: var(--good-text);
 }
 
+.nav .live.offline strong {
+  color: var(--warning-text);
+}
+
 main.page {
   padding: 1.5rem 1.75rem 3rem;
   max-width: 1200px;
@@ -460,6 +464,12 @@ table.log tbody tr:hover {
   background: var(--accent-wash);
   padding: 0.6rem 0.8rem;
   border-radius: 0 8px 8px 0;
+}
+
+.notice.offline {
+  border-left-color: var(--warning);
+  background: var(--warning-wash);
+  margin-bottom: 1rem;
 }
 
 .error {
