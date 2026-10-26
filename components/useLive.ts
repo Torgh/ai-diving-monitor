@@ -2,9 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const POLL_MS = 3000;
-
 type Answer<T> = { data: T } | { error: string };
+type VersionListener = (version: string) => void;
+
+const versionListeners = new Set<VersionListener>();
+let source: EventSource | null = null;
+
+/** One connection to /api/events for the page, however many parts of it are live. */
+function onVersion(listener: VersionListener): () => void {
+  versionListeners.add(listener);
+  if (!source) {
+    source = new EventSource("/api/events");
+    source.addEventListener("version", (e) => {
+      for (const l of versionListeners) l((e as MessageEvent<string>).data);
+    });
+  }
+  return () => {
+    versionListeners.delete(listener);
+    if (!versionListeners.size) {
+      source?.close();
+      source = null;
+    }
+  };
+}
 
 async function request<T>(url: string): Promise<Answer<T>> {
   try {
@@ -18,8 +38,8 @@ async function request<T>(url: string): Promise<Answer<T>> {
 
 /**
  * Loads `url` and loads it again whenever the dive log changes, also when the MCP server changed it:
- * the cheap /api/version tag is polled while the page is visible. The previous data stays on screen
- * while a reload runs, so nothing flashes.
+ * the server sends the log's new version (/api/events), and a hidden page reloads once it is shown
+ * again. The previous data stays on screen while a reload runs, so nothing flashes.
  */
 export function useLive<T extends { version: string }>(url: string) {
   const [data, setData] = useState<T | null>(null);
@@ -48,18 +68,25 @@ export function useLive<T extends { version: string }>(url: string) {
   useEffect(() => {
     alive.current = true;
     request<T>(url).then(apply);
-    const timer = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      request<{ version: string }>("/api/version").then((answer) => {
-        if ("data" in answer && answer.data.version !== version.current) {
-          setLoading(true);
-          request<T>(url).then(apply);
-        }
-      });
-    }, POLL_MS);
+    let stale = false;
+    const load = () => {
+      stale = false;
+      setLoading(true);
+      request<T>(url).then(apply);
+    };
+    const stop = onVersion((v) => {
+      if (v === version.current) return;
+      if (document.visibilityState === "visible") load();
+      else stale = true;
+    });
+    const shown = () => {
+      if (stale && document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", shown);
     return () => {
       alive.current = false;
-      clearInterval(timer);
+      stop();
+      document.removeEventListener("visibilitychange", shown);
     };
   }, [url, apply]);
 
