@@ -38,6 +38,25 @@ export interface TripDive {
   verdict?: CardVerdict;
   /** Logged dives this card turned into (record ids). */
   loggedDiveIds: string[];
+  /**
+   * The proposed site this card dives, set by the diver or the companion ("none": no site); without
+   * it, the site is found by the card's site or title.
+   */
+  siteId?: string;
+}
+
+/** Something to sort out before the trip: a question for the dive centre, a piece of gear, a course. */
+export interface TripTodo {
+  /** "t1", "t2"…: stays when the companion saves the list again. */
+  id: string;
+  text: string;
+  done: boolean;
+  /** The dive card it is about, if one. */
+  itemId?: string;
+  /** Who added it: the companion's list is replaced when it saves a new one; the diver's own stay. */
+  by: "companion" | "diver";
+  createdAt: string;
+  doneAt?: string;
 }
 
 /** Ready, or something still to sort out before the dive, in one line: the badge on the TripDeck card. */
@@ -112,6 +131,8 @@ export interface TripPlan {
   sites?: TripSite[];
   /** The companion's notes on the proposals as a whole: the shop's schedule, the season, the diver's log. */
   siteNotes?: SavedText;
+  /** What is still to sort out before the trip (older files have none). */
+  todos?: TripTodo[];
 }
 
 /** What the agent sends: the trip's dive cards as they are now, with optional preparation texts. */
@@ -125,7 +146,11 @@ export interface TripPlanInput {
   summaryMarkdown?: string;
   /** Omitted: keep the saved ones. [] removes them. */
   flights?: TripFlight[];
-  dives: (Omit<TripDive, "prep" | "loggedDiveIds" | "verdict"> & {
+  /** The companion's to-dos: they replace its earlier ones (a done one stays done); the diver's stay. Omitted: keep. */
+  todos?: TodoInput[];
+  dives: (Omit<TripDive, "prep" | "loggedDiveIds" | "verdict" | "siteId"> & {
+    /** Omitted: keep the saved one. "": remove it (the site is found by name again). */
+    siteId?: string;
     /** Omitted: keep the saved one. "": remove it. */
     prepMarkdown?: string;
     /** Omitted: keep the saved verdict. "": remove it. */
@@ -169,9 +194,10 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
   if (dup) throw new TripInputError(`The card ${dup} is sent twice.`);
 
   const before = new Map(saved?.dives.map((c) => [c.itemId, c]));
-  const dives: TripDive[] = input.dives.map(({ prepMarkdown, loggedDiveIds, verdict, verdictSummary, ...card }) => {
+  const dives: TripDive[] = input.dives.map(({ prepMarkdown, loggedDiveIds, verdict, verdictSummary, siteId, ...card }) => {
     const old = before.get(card.itemId);
     const clean = Object.fromEntries(Object.entries(card).filter(([, v]) => v !== undefined && v !== "")) as unknown as Omit<TripDive, "prep" | "loggedDiveIds" | "verdict">;
+    const site = siteId === undefined ? old?.siteId : siteId.trim() || undefined;
     const kept = verdict === undefined ? old?.verdict : verdict === "" ? undefined : { status: verdict, summary: verdictSummary?.trim() ?? "", savedAt: now };
     return {
       ...clean,
@@ -179,6 +205,7 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
       prep: text(old?.prep ?? null, prepMarkdown, now),
       ...(kept ? { verdict: kept } : {}),
       loggedDiveIds: loggedDiveIds ? [...new Set(loggedDiveIds)] : (old?.loggedDiveIds ?? []),
+      ...(site ? { siteId: site } : {}),
     };
   });
   dives.sort((a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999") || (a.day ?? 0) - (b.day ?? 0) || (a.startTime ?? "").localeCompare(b.startTime ?? ""));
@@ -196,6 +223,8 @@ export function mergeTripPlan(saved: TripPlan | undefined, input: TripPlanInput,
   if (saved?.shop) plan.shop = saved.shop;
   if (saved?.sites) plan.sites = saved.sites;
   if (saved?.siteNotes) plan.siteNotes = saved.siteNotes;
+  const todos = input.todos === undefined ? (saved?.todos ?? []) : companionTodos(saved?.todos ?? [], input.todos, now);
+  if (todos.length) plan.todos = todos;
   if (input.destination?.trim()) plan.destination = input.destination.trim();
   if (input.startDate) plan.startDate = input.startDate;
   if (input.endDate) plan.endDate = input.endDate;
@@ -293,12 +322,76 @@ function siteNames(site: TripSite): string[] {
 }
 
 /**
- * The proposed site a dive card is about, by its site or title ("Sail Rock full-day trip" is Sail
- * Rock): a chosen site first, never a dropped one.
+ * The proposed site a dive card is about: the one set on the card, else by its site or title ("Sail
+ * Rock full-day trip" is Sail Rock), a chosen site first, never a dropped one.
  */
-export function siteForCard(sites: TripSite[] | undefined, card: Pick<TripDive, "site" | "title">): TripSite | null {
+export function siteForCard(sites: TripSite[] | undefined, card: Pick<TripDive, "site" | "title" | "siteId">): TripSite | null {
+  if (card.siteId === "none") return null;
+  const set = card.siteId && sites?.find((s) => s.id === card.siteId);
+  if (set) return set;
   const texts = [card.site, card.title].filter((t): t is string => !!t?.trim()).map(plain);
   const matches = (site: TripSite) => siteNames(site).some((name) => texts.some((t) => t === name || ` ${t} `.includes(` ${name} `)));
   const open = (sites ?? []).filter((s) => s.status !== "dropped");
   return open.find((s) => s.status === "chosen" && matches(s)) ?? open.find(matches) ?? null;
+}
+
+/** A to-do as the companion sends it. */
+export interface TodoInput {
+  text: string;
+  /** The dive card it is about. */
+  itemId?: string;
+}
+
+const nextTodoId = (todos: TripTodo[]) => `t${todos.reduce((n, t) => Math.max(n, Number(t.id.slice(1)) || 0), 0) + 1}`;
+
+/** The companion's new list: a to-do with the same text keeps its id and whether it is done; the diver's own stay. */
+function companionTodos(saved: TripTodo[], input: TodoInput[], now: string): TripTodo[] {
+  const out = saved.filter((t) => t.by === "diver");
+  const before = saved.filter((t) => t.by === "companion");
+  for (const t of input) {
+    const text = t.text.trim();
+    if (!text) throw new TripInputError("A to-do needs a text.");
+    if (text.length > 300) throw new TripInputError("Keep a to-do to one line (300 characters).");
+    const old = before.find((b) => plain(b.text) === plain(text));
+    const todo: TripTodo = old ? { ...old, text } : { id: nextTodoId([...saved, ...out]), text, done: false, by: "companion", createdAt: now };
+    if (t.itemId) todo.itemId = t.itemId;
+    else delete todo.itemId;
+    out.push(todo);
+  }
+  return out;
+}
+
+/** The diver adds a to-do of their own. */
+export function addTodo(plan: TripPlan, text: string, itemId: string | undefined, now: string): TripTodo {
+  const clean = text.trim();
+  if (!clean) throw new TripInputError("A to-do needs a text.");
+  if (itemId && !plan.dives.some((d) => d.itemId === itemId)) throw new TripInputError(`The trip has no dive card ${itemId}.`);
+  const todo: TripTodo = { id: nextTodoId(plan.todos ?? []), text: clean, done: false, by: "diver", createdAt: now, ...(itemId ? { itemId } : {}) };
+  plan.todos = [...(plan.todos ?? []), todo];
+  return todo;
+}
+
+/** Ticks a to-do off, or back on. */
+export function setTodoDone(plan: TripPlan, id: string, done: boolean, now: string): TripTodo {
+  const todo = plan.todos?.find((t) => t.id === id);
+  if (!todo) throw new TripInputError(`The trip has no to-do ${id}.`);
+  todo.done = done;
+  if (done) todo.doneAt = now;
+  else delete todo.doneAt;
+  return todo;
+}
+
+export function removeTodo(plan: TripPlan, id: string): void {
+  if (!plan.todos?.some((t) => t.id === id)) throw new TripInputError(`The trip has no to-do ${id}.`);
+  plan.todos = plan.todos.filter((t) => t.id !== id);
+  if (!plan.todos.length) delete plan.todos;
+}
+
+/** Sets which proposed site a card dives; null goes back to finding it by name, "none" shows no site. */
+export function setCardSite(plan: TripPlan, itemId: string, siteId: string | null): void {
+  const card = plan.dives.find((d) => d.itemId === itemId);
+  if (!card) throw new TripInputError(`The trip has no dive card ${itemId}.`);
+  if (siteId && siteId !== "none" && !plan.sites?.some((s) => s.id === siteId)) throw new TripInputError(`The trip has no proposed site "${siteId}".`);
+  if (siteId) card.siteId = siteId;
+  else delete card.siteId;
 }

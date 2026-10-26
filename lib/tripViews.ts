@@ -5,7 +5,7 @@
 
 import { type DivePrep, prepareDive, recurringNote } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive } from "./record";
-import { type SavedText, siteForCard, type TripDive, type TripFlight, type TripPlan, type TripShop, type TripSite } from "./trip";
+import { type SavedText, siteForCard, type TripDive, type TripFlight, type TripPlan, type TripShop, type TripSite, type TripTodo } from "./trip";
 
 /** Upcoming, under way (today is between its first and last day), past, or without dates. */
 export type TripWhen = "upcoming" | "now" | "past" | "undated";
@@ -28,6 +28,8 @@ export interface TripRow {
   loggedDives: number;
   /** The dive sites the diver chose for the trip, in brief. */
   chosenSites: ChosenSiteBrief[];
+  /** To-dos not done yet. */
+  openTodos: number;
   updatedAt: string;
 }
 
@@ -55,6 +57,8 @@ export interface TripCardView extends Omit<TripDive, "prep" | "loggedDiveIds"> {
   loggedThatDay: LoggedDiveLink[];
   /** The proposed site this card is about, if there is one: its depths, distance and why it suits the diver. */
   siteInfo: TripSite | null;
+  /** To-dos about this card not done yet. */
+  openTodos: number;
 }
 
 /** The rest before the trip: from the last logged dive, or the last dive of an earlier trip if that is later. */
@@ -86,6 +90,7 @@ export interface TripView extends TripRow {
   shop: TripShop | null;
   sites: TripSite[];
   siteNotes: SavedText | null;
+  todos: TripTodo[];
 }
 
 const DAY_MS = 86_400_000;
@@ -120,6 +125,7 @@ export function tripRow(plan: TripPlan, today: Date = new Date()): TripRow {
     chosenSites: (plan.sites ?? [])
       .filter((s) => s.status === "chosen")
       .map(({ id, name, minDepthM, maxDepthM, distanceKm }) => ({ id, name, minDepthM, maxDepthM, distanceKm })),
+    openTodos: (plan.todos ?? []).filter((t) => !t.done).length,
     updatedAt: plan.updatedAt,
   };
 }
@@ -215,6 +221,7 @@ export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, t
     shop: plan.shop ?? null,
     sites: plan.sites ?? [],
     siteNotes: plan.siteNotes ?? null,
+    todos: plan.todos ?? [],
     dives: plan.dives.map(({ prep, loggedDiveIds, ...card }) => {
       const facts = prepareDive(records, { site: card.site, maxDepthM: card.maxDepthM, gas: card.gas, dives: card.dives, date: card.date }, today);
       const shared = recurringNote(facts.recurringIssues);
@@ -226,6 +233,7 @@ export function tripView(plans: TripPlan[], records: DiveRecord[], id: string, t
         logged: loggedDiveIds.map(link),
         loggedThatDay: card.date ? log.filter((r) => r.dive.start?.slice(0, 10) === card.date && !linked.has(r.id)).map((r) => link(r.id)) : [],
         siteInfo: siteForCard(plan.sites, card),
+        openTodos: (plan.todos ?? []).filter((t) => t.itemId === card.itemId && !t.done).length,
       };
     }),
   };

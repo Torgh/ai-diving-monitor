@@ -9,6 +9,7 @@ import { Findings } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
 import { TripPrepHint } from "@/components/TripPrepHint";
 import { siteFacts, TripSites } from "@/components/TripSites";
+import { TripTodos } from "@/components/TripTodos";
 import { useUnits } from "@/components/Units";
 import { api, useLive } from "@/components/useLive";
 import { formatDate, formatDateRange, formatNumber, formatTripWhen } from "@/lib/format";
@@ -112,7 +113,7 @@ function CardSite({ site }: { site: TripSite }) {
   );
 }
 
-function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId: string; open: boolean; onChange: () => void }) {
+function DayCard({ card, tripId, sites, open, onChange }: { card: TripCardView; tripId: string; sites: TripSite[]; open: boolean; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -121,6 +122,19 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
     setFailure(null);
     try {
       await api(`/api/trips/${tripId}/dives`, "POST", { itemId: card.itemId, diveId, linked });
+      onChange();
+    } catch (err) {
+      setFailure((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pickSite(siteId: string) {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await api(`/api/trips/${tripId}/cards`, "POST", { itemId: card.itemId, siteId: siteId || null });
       onChange();
     } catch (err) {
       setFailure((err as Error).message);
@@ -163,12 +177,34 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
             {card.date && <span className="visually-hidden">{formatDate(card.date, false)}: </span>}
             {card.title}
           </h3>
-          <CardStatus card={card} />
+          <span className="row" style={{ gap: "0.35rem" }}>
+            {card.openTodos > 0 && (
+              <a className="badge" href="#todos">
+                {card.openTodos} to do
+              </a>
+            )}
+            <CardStatus card={card} />
+          </span>
         </div>
         <span className="secondary" style={{ fontSize: "0.9rem" }}>
           {plan.join(" · ") || "No depth or gas on the card yet"}
         </span>
         {card.siteInfo && <CardSite site={card.siteInfo} />}
+        {sites.length > 0 && (
+          <label className="card-site-pick">
+            <span className="muted">Dive site</span>
+            <select value={card.siteId ?? ""} disabled={busy} onChange={(e) => pickSite(e.target.value)}>
+              <option value="">{card.siteId ? "Find it by name" : `By name${card.siteInfo ? `: ${card.siteInfo.name}` : ": none found"}`}</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.status === "chosen" ? " (chosen)" : s.status === "dropped" ? " (not for this trip)" : ""}
+                </option>
+              ))}
+              <option value="none">No site</option>
+            </select>
+          </label>
+        )}
         {first && <p style={{ margin: 0 }}>{first}</p>}
 
         <details open={open}>
@@ -334,7 +370,7 @@ function DiveDays({ data, onChange }: { data: Data; onChange: () => void }) {
                 {gap} day{gap === 1 ? "" : "s"} without diving
               </div>
             )}
-            <DayCard card={card} tripId={data.id} open={card.itemId === openFirst} onChange={onChange} />
+            <DayCard card={card} tripId={data.id} sites={data.sites} open={card.itemId === openFirst} onChange={onChange} />
           </div>
         );
       })}
@@ -342,7 +378,7 @@ function DiveDays({ data, onChange }: { data: Data; onChange: () => void }) {
         <>
           {dated.length > 0 && <div className="gap-divider">Not scheduled yet</div>}
           {undated.map((card) => (
-            <DayCard key={card.itemId} card={card} tripId={data.id} open={card.itemId === openFirst} onChange={onChange} />
+            <DayCard key={card.itemId} card={card} tripId={data.id} sites={data.sites} open={card.itemId === openFirst} onChange={onChange} />
           ))}
         </>
       )}
@@ -399,6 +435,8 @@ export default function TripPage() {
         </div>
       </div>
       {failure && <div className="error">{failure}</div>}
+
+      <TripTodos tripId={data.id} todos={data.todos} cards={data.dives.map((d) => ({ itemId: d.itemId, title: d.date ? `${d.title} (${formatDate(d.date, false)})` : d.title }))} onChange={reload} />
 
       <BeforeYouGo data={data} />
 

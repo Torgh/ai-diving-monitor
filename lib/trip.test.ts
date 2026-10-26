@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseSites, mergeTripPlan, proposeSites, saveSiteProfile, siteForCard, siteSlug, TripInputError, tripFileName, type TripPlanInput } from "./trip";
+import { addTodo, chooseSites, mergeTripPlan, proposeSites, removeTodo, saveSiteProfile, setCardSite, setTodoDone, siteForCard, siteSlug, TripInputError, tripFileName, type TripPlanInput } from "./trip";
 
 const input = (over: Partial<TripPlanInput> = {}): TripPlanInput => ({
   id: "malta-27",
@@ -207,5 +207,80 @@ describe("siteForCard", () => {
     expect(siteForCard(sites, { title: "Sail Rocks tour" })).toBeNull();
     expect(siteForCard(undefined, { title: "Sail Rock" })).toBeNull();
     expect(siteForCard(sites, { title: "Big Blue Best-Of – day 1/3" })).toBeNull();
+  });
+});
+
+describe("a card's site set by hand", () => {
+  const withSites = () => {
+    const p = mergeTripPlan(undefined, input(), "T1");
+    proposeSites(p, { name: "Shop" }, [
+      { name: "Blue Hole", why: "x" },
+      { name: "Canyon", why: "y" },
+    ]);
+    return p;
+  };
+
+  it("wins over the name, can say no site, and goes back to the name", () => {
+    const p = withSites();
+    const night = p.dives.find((d) => d.itemId === "c")!;
+    expect(siteForCard(p.sites, night)).toBeNull();
+    setCardSite(p, "c", "canyon");
+    expect(siteForCard(p.sites, night)?.name).toBe("Canyon");
+    const blue = p.dives.find((d) => d.itemId === "a")!;
+    expect(siteForCard(p.sites, blue)?.name).toBe("Blue Hole");
+    setCardSite(p, "a", "none");
+    expect(siteForCard(p.sites, blue)).toBeNull();
+    setCardSite(p, "a", null);
+    expect(blue).not.toHaveProperty("siteId");
+    expect(() => setCardSite(p, "zz", "canyon")).toThrow("no dive card zz");
+    expect(() => setCardSite(p, "a", "nope")).toThrow('no proposed site "nope"');
+  });
+
+  it("stays when the cards are saved again, unless a new one or \"\" is sent", () => {
+    const p = withSites();
+    setCardSite(p, "c", "canyon");
+    const again = mergeTripPlan(p, input(), "T2");
+    expect(again.dives.find((d) => d.itemId === "c")?.siteId).toBe("canyon");
+    const cleared = mergeTripPlan(again, input({ dives: [{ itemId: "c", title: "Night dive", siteId: "" }] }), "T3");
+    expect(cleared.dives[0]).not.toHaveProperty("siteId");
+    const set = mergeTripPlan(cleared, input({ dives: [{ itemId: "c", title: "Night dive", siteId: "blue-hole" }] }), "T4");
+    expect(set.dives[0].siteId).toBe("blue-hole");
+  });
+});
+
+describe("to-dos", () => {
+  it("replaces the companion's list, keeping what was ticked off and the diver's own", () => {
+    const p = mergeTripPlan(undefined, input({ todos: [{ text: "Ask which tanks", itemId: "b" }, { text: "Buy an SMB" }] }), "T1");
+    expect(p.todos).toEqual([
+      { id: "t1", text: "Ask which tanks", done: false, by: "companion", createdAt: "T1", itemId: "b" },
+      { id: "t2", text: "Buy an SMB", done: false, by: "companion", createdAt: "T1" },
+    ]);
+    setTodoDone(p, "t1", true, "T2");
+    addTodo(p, " Book a refresher ", undefined, "T2");
+    const again = mergeTripPlan(p, input({ todos: [{ text: "ask WHICH tanks" }, { text: "Confirm the meeting time", itemId: "a" }] }), "T3");
+    expect(again.todos!.map((t) => [t.id, t.text, t.done, t.by, t.itemId])).toEqual([
+      ["t3", "Book a refresher", false, "diver", undefined],
+      ["t1", "ask WHICH tanks", true, "companion", undefined],
+      ["t4", "Confirm the meeting time", false, "companion", "a"],
+    ]);
+    expect(mergeTripPlan(again, input(), "T4").todos).toHaveLength(3);
+    expect(mergeTripPlan(again, input({ todos: [] }), "T4").todos!.map((t) => t.by)).toEqual(["diver"]);
+  });
+
+  it("ticks off, unticks and removes, refusing what isn't there", () => {
+    const p = mergeTripPlan(undefined, input(), "T1");
+    expect(p).not.toHaveProperty("todos");
+    const t = addTodo(p, "Pack the camera", "a", "T1");
+    expect(t).toEqual({ id: "t1", text: "Pack the camera", done: false, by: "diver", createdAt: "T1", itemId: "a" });
+    expect(setTodoDone(p, "t1", true, "T2")).toMatchObject({ done: true, doneAt: "T2" });
+    expect(setTodoDone(p, "t1", false, "T3")).not.toHaveProperty("doneAt");
+    removeTodo(p, "t1");
+    expect(p).not.toHaveProperty("todos");
+    expect(() => setTodoDone(p, "t9", true, "T")).toThrow("no to-do t9");
+    expect(() => removeTodo(p, "t9")).toThrow("no to-do t9");
+    expect(() => addTodo(p, " ", undefined, "T")).toThrow("needs a text");
+    expect(() => addTodo(p, "x", "zz", "T")).toThrow("no dive card zz");
+    expect(() => mergeTripPlan(undefined, input({ todos: [{ text: "" }] }), "T")).toThrow("needs a text");
+    expect(() => mergeTripPlan(undefined, input({ todos: [{ text: "x".repeat(301) }] }), "T")).toThrow("one line");
   });
 });
