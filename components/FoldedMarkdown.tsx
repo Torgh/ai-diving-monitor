@@ -14,9 +14,12 @@ export function FoldedMarkdown({ markdown }: { markdown: string }) {
   return (
     <div className="folded">
       {split.intro && <ReactMarkdown remarkPlugins={[remarkGfm]}>{split.intro}</ReactMarkdown>}
-      <button type="button" className="fold-all" onClick={() => setOpen(split.sections.map(() => !all))}>
-        {all ? "Collapse all" : "Expand all"}
-      </button>
+      <div className="fold-bar">
+        <span className="muted">{split.sections.length} sections</span>
+        <button type="button" className="fold-all" aria-expanded={all} onClick={() => setOpen(split.sections.map(() => !all))}>
+          {all ? "Collapse all" : "Expand all"}
+        </button>
+      </div>
       {split.sections.map((section, i) => (
         <details
           key={`${i}${section.title}`}

@@ -54,3 +54,24 @@ export function convert(quantity: Quantity, metric: number, system: UnitSystem):
 export function digitsFor(quantity: Quantity, system: UnitSystem, metricDigits?: number): number {
   return system === "metric" && metricDigits !== undefined ? metricDigits : UNITS[system][quantity].digits;
 }
+
+/**
+ * A range with its unit once: "1–35 m", "to 35 m", "from 5 m"; null when neither end is known.
+ * `number` formats a converted number with the given decimals (the pages' number format).
+ */
+export function formatRange(
+  quantity: Quantity,
+  min: number | null | undefined,
+  max: number | null | undefined,
+  system: UnitSystem,
+  number: (value: number, digits: number) => string,
+): string | null {
+  const known = (v: number | null | undefined): v is number => v !== null && v !== undefined && Number.isFinite(v);
+  const digits = digitsFor(quantity, system, 0);
+  const text = (v: number) => number(convert(quantity, v, system), digits);
+  const unit = unitOf(quantity, system);
+  if (known(min) && known(max)) return min === max ? `${text(max)} ${unit}` : `${text(min)}–${text(max)} ${unit}`;
+  if (known(max)) return `to ${text(max)} ${unit}`;
+  if (known(min)) return `from ${text(min)} ${unit}`;
+  return null;
+}
