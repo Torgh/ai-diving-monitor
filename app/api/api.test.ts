@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GET as getDive, PATCH as patchDive } from "./dives/[id]/route";
 import { GET as getDives } from "./dives/route";
+import { GET as exportLog } from "./export/route";
 import { POST as importFiles } from "./import/route";
 import { GET as getKit, PUT as putKit } from "./kit/route";
 import { POST as importSamples } from "./import/samples/route";
@@ -238,6 +239,19 @@ describe("API", () => {
     expect((await addTodo(json("/api/trips/koh-tao/todos", "POST", { text: "x", itemId: "zz" }), ctxT)).status).toBe(404);
     expect((await addTodo(json("/api/trips/koh-tao/todos", "POST", { text: " " }), ctxT)).status).toBe(400);
     expect((await addTodo(json("/api/trips/nope/todos", "POST", { text: "x" }), ctx("nope"))).status).toBe(404);
+  });
+
+  it("exports the whole log as one file for the phone", async () => {
+    await importSamples(json("/api/import/samples", "POST", {}), {});
+    await new TripStore().save({ id: "dahab", name: "Dahab", dives: [{ itemId: "c1", title: "Canyon" }] });
+    const res = await exportLog(req("/api/export"), {});
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="DiveDeck \d{4}-\d{2}-\d{2}\.divedeck\.json"$/);
+    const file = await res.json();
+    expect(file).toMatchObject({ format: "divedeck/export", version: 1, units: "metric", trips: [expect.objectContaining({ id: "dahab" })] });
+    expect(file.dives).toHaveLength(9);
+    expect(file.kit.format).toBe("divedeck/kit");
+    expect((await exportLog(req("/api/export", { headers: { origin: "https://evil.example" } }), {})).status).toBe(403);
   });
 
   it("only answers requests addressed to localhost", async () => {

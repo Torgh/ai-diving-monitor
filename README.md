@@ -29,6 +29,10 @@ seconds on Google Drive).
   page or by telling your companion. A tank size gives the dive its gas consumption; the gas gives
   ppO2, CNS and END. *To sort out* lists what is still missing, and the dashboard saves a tank size or
   a gas for every dive that misses it in one go.
+- **Export for phone.** *Settings → Export for phone* saves the whole log in one
+  `DiveDeck <date>.divedeck.json` file: the dives with what you filled in and their debriefs, the trips
+  with their preparation, your kit and the units you chose (not the original UDDF files). It is the
+  file the phone app imports.
 
 **Your gear**
 
@@ -254,6 +258,7 @@ with the newer changes wins); the old place keeps its copy. The MCP server follo
   4. Paste the client ID and secret into Settings and click **Connect Google Drive**.
 
 Settings, API keys, the Google sign-in and the locks always stay in the data folder on this computer.
+The phone export never includes them.
 
 ## Configuration
 
@@ -319,6 +324,7 @@ lib/
   format.ts, units.ts, py.ts, sha256.ts   formatting; SI units; Python-compatible rounding; SHA-256
   measure.ts     metric or imperial for what the pages show
   sections.ts    a long Markdown text split at its main headings, to fold
+  exportFile.ts  the whole log in one .divedeck.json file for the phone app, and reading it back
   server/
     diveStore.ts, tripStore.ts   the dive and trip files on any backend; parsing again after parser upgrades
     kitStore.ts  kit.json, next to the log
