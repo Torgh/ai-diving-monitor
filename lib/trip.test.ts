@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeTripPlan, TripInputError, tripFileName, type TripPlanInput } from "./trip";
+import { chooseSites, mergeTripPlan, proposeSites, saveSiteProfile, siteForCard, siteSlug, TripInputError, tripFileName, type TripPlanInput } from "./trip";
 
 const input = (over: Partial<TripPlanInput> = {}): TripPlanInput => ({
   id: "malta-27",
@@ -92,5 +92,120 @@ describe("tripFileName", () => {
   it("is readable and keeps the id", () => {
     expect(tripFileName({ id: "malta-27", name: "Malta: 2027 / wrecks?" })).toBe("Malta 2027 wrecks (malta-27).trip.json");
     expect(tripFileName({ id: "x", name: "???" })).toBe("(x).trip.json");
+  });
+});
+
+describe("dive sites", () => {
+  const plan = () => mergeTripPlan(undefined, input({ dives: [] }), "T1");
+  const shop = { name: " Big Blue Diving ", lat: 10.095, lng: 99.827 };
+  const proposals = [
+    { id: "osm-node-1", name: "Chumphon Pinnacle", maxDepthM: 35, distanceKm: 7.2, source: "https://www.openstreetmap.org/node/1", why: " Your deepest dives were 30 m. " },
+    { name: "Sail Rock", type: "", why: "A chimney swim-through; 12 m is enough." },
+    { name: "Twins", why: "Easy reef for the first day." },
+  ];
+
+  it("proposes sites around the shop, an id from OpenStreetMap or from the name", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals);
+    expect(p.shop).toEqual({ name: "Big Blue Diving", lat: 10.095, lng: 99.827 });
+    expect(p.sites!.map((s) => [s.id, s.status])).toEqual([
+      ["osm-node-1", "proposed"],
+      ["sail-rock", "proposed"],
+      ["twins", "proposed"],
+    ]);
+    expect(p.sites![0]).toEqual({
+      id: "osm-node-1",
+      name: "Chumphon Pinnacle",
+      maxDepthM: 35,
+      distanceKm: 7.2,
+      source: "https://www.openstreetmap.org/node/1",
+      why: "Your deepest dives were 30 m.",
+      status: "proposed",
+      profile: null,
+    });
+    expect(p.sites![1]).not.toHaveProperty("type");
+  });
+
+  it("keeps the choices and profiles when proposing again, and never loses a chosen site", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals);
+    chooseSites(p, { chosen: ["osm-node-1", "sail-rock"], dropped: ["twins"] });
+    saveSiteProfile(p, "sail-rock", "## Sail Rock\nSource: https://example.com", "T2");
+    proposeSites(p, shop, [proposals[0], proposals[2], { name: "White Rock", why: "Close to the shop." }]);
+    expect(p.sites!.map((s) => [s.id, s.status, !!s.profile])).toEqual([
+      ["osm-node-1", "chosen", false],
+      ["twins", "dropped", false],
+      ["white-rock", "proposed", false],
+      ["sail-rock", "chosen", true],
+    ]);
+  });
+
+  it("writes a profile only for a chosen site; \"\" removes it", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals);
+    expect(() => saveSiteProfile(p, "twins", "## Twins", "T2")).toThrow("isn't chosen");
+    chooseSites(p, { chosen: ["twins"] });
+    expect(saveSiteProfile(p, "twins", " ## Twins ", "T2").profile).toEqual({ markdown: "## Twins", savedAt: "T2" });
+    expect(saveSiteProfile(p, "twins", "", "T3").profile).toBeNull();
+    chooseSites(p, { proposed: ["twins"] });
+    expect(saveSiteProfile(p, "twins", "", "T4").profile).toBeNull();
+    expect(() => saveSiteProfile(p, "nope", "x", "T2")).toThrow('no proposed site "nope"');
+  });
+
+  it("refuses an unknown site, a site proposed twice, a bad id and missing names", () => {
+    const p = plan();
+    expect(() => chooseSites(p, { chosen: ["x"] })).toThrow("Its sites: none yet");
+    proposeSites(p, shop, proposals);
+    expect(() => chooseSites(p, { chosen: ["chumphon"] })).toThrow(TripInputError);
+    expect(() => proposeSites(p, shop, [proposals[1], proposals[1]])).toThrow("proposed twice");
+    expect(() => proposeSites(p, shop, [{ id: "a b", name: "A", why: "x" }])).toThrow("Invalid site id");
+    expect(() => proposeSites(p, shop, [{ name: " ", why: "x" }])).toThrow("needs a name");
+    expect(() => proposeSites(p, { name: "" }, proposals)).toThrow("dive shop needs a name");
+  });
+
+  it("stay when TripDeck's cards are saved again", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals, { markdown: "## The season", now: "T2" });
+    const again = mergeTripPlan(p, input(), "T5");
+    expect(again.shop).toEqual(p.shop);
+    expect(again.sites).toHaveLength(3);
+    expect(again.siteNotes).toEqual({ markdown: "## The season", savedAt: "T2" });
+  });
+
+  it("keeps the notes on the list until new ones or \"\" are sent", () => {
+    const p = plan();
+    proposeSites(p, shop, proposals, { markdown: " ## Big Blue's rotation ", now: "T2" });
+    expect(p.siteNotes).toEqual({ markdown: "## Big Blue's rotation", savedAt: "T2" });
+    proposeSites(p, shop, proposals);
+    expect(p.siteNotes?.savedAt).toBe("T2");
+    proposeSites(p, shop, proposals, { markdown: "", now: "T3" });
+    expect(p).not.toHaveProperty("siteNotes");
+  });
+
+  it("slugs names, accents and all", () => {
+    expect(siteSlug("Chumphon Pinnacle")).toBe("chumphon-pinnacle");
+    expect(siteSlug("Cenote Dos Ojos – Bat Cave")).toBe("cenote-dos-ojos-bat-cave");
+    expect(siteSlug("Ängelholm Récif")).toBe("angelholm-recif");
+    expect(siteSlug("Hin Bai (หินใบ)")).toBe("hin-bai-หินใบ");
+    expect(siteSlug("!!!")).toBe("site");
+  });
+});
+
+describe("siteForCard", () => {
+  const site = (name: string, status: "proposed" | "chosen" | "dropped" = "proposed") => ({ id: siteSlug(name), name, why: "", status, profile: null });
+  const sites = [site("Sail Rock", "chosen"), site("Twin Rocks (Twins)"), site("Green Rock", "dropped"), site("Chumphon Pinnacle")];
+
+  it("finds the site by the card's site, its title or the site's other name", () => {
+    expect(siteForCard(sites, { title: "Sail Rock full-day trip" })?.name).toBe("Sail Rock");
+    expect(siteForCard(sites, { title: "Morning dive", site: "twins" })?.name).toBe("Twin Rocks (Twins)");
+    expect(siteForCard(sites, { title: "Twin Rocks" })?.name).toBe("Twin Rocks (Twins)");
+  });
+
+  it("never gives a dropped site, prefers a chosen one, and doesn't match part of a word", () => {
+    expect(siteForCard(sites, { title: "Green Rock" })).toBeNull();
+    expect(siteForCard([site("Rock", "proposed"), site("Sail Rock", "chosen")], { title: "Sail Rock" })?.name).toBe("Sail Rock");
+    expect(siteForCard(sites, { title: "Sail Rocks tour" })).toBeNull();
+    expect(siteForCard(undefined, { title: "Sail Rock" })).toBeNull();
+    expect(siteForCard(sites, { title: "Big Blue Best-Of – day 1/3" })).toBeNull();
   });
 });

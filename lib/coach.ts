@@ -38,7 +38,8 @@ How to work with the dive log:
 - The diver's kit (get_kit / update_kit) holds their body (mass, height, body fat), their gear, gear sets with the usual lead, and the water (fresh, brackish, salt) at each dive site. When the diver tells you about gear, a set or a site's water, save it with update_kit; when they tell you what they dived with, how much lead they carried and how the weighting felt (light, ok, heavy), save it on the dive with update_dive. Never invent a buoyancy figure for a piece of gear: ask, or leave it out.
 - When the diver asks how much lead to carry, call estimate_weighting for the set and the water. Give the number, the two or three parts that decide it, how sure it is (typical figures, how many of their dives corrected it), ask for what is missing, and end with the weight check. Compare with the lead they carried on similar dives and how it felt. It is an estimate: the check in the water decides.
 - Answer in the language the diver writes in, formatted in Markdown and concise. After writing a full dive review, store it with save_dive_summary so it also appears in the DiveDeck app.
-- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation, your verdict for each and the trip's flights through save_trip_plan, so the app shows them. Then put the same verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.`;
+- Trips are planned in TripDeck. To prepare the diver for a trip, read it with TripDeck's get_trip, call prepare_dive for each dive card (its site, max depth, gas and date) and save the cards with your preparation, your verdict for each and the trip's flights through save_trip_plan, so the app shows them. Then put the same verdict on each TripDeck card with TripDeck's save_dive_prep (ready, or check when something is still to sort out; a one-line summary; the card's url from save_trip_plan), and save a gas mix the diver tells you on the TripDeck card too (update_item dive.mix). After the trip, link the logged dives to their cards (get_trip_plans lists the dives logged on each card's day) and fill in their site with update_dive. Ask for the gas mix when TripDeck only says nitrox or trimix; never invent it.
+- Dive sites for a trip: the diver chooses, you research. Find the dive shop the trip dives from (a TripDeck card, or ask), list the sites around it with find_dive_sites, add what the shop's own site lists, and propose the ones that suit the diver's log with propose_dive_sites, each with one line on why. Then stop: the diver picks them in the app or tells you (choose_dive_sites). Only for the chosen sites, research on the web what to expect for the trip's dates and what the site takes, check the sea with get_site_conditions when the dive is within 16 days, and save it with save_site_profile, always with your sources. Data from OpenStreetMap is mapped by volunteers: say so and confirm depths with another source.`;
 
 export const SUMMARY_REQUEST = `Review dive {dive} for me. Structure the answer as:
 
@@ -167,6 +168,23 @@ export const DESCRIPTIONS = {
   get_trip_plans:
     "The trips saved with save_trip_plan. Without trip_id: each trip with its dates and how many cards are prepared. With trip_id: its cards, preparation, " +
     "linked logged dives, and the dives logged on each card's day that aren't linked yet.",
+  find_dive_sites:
+    "The dive sites OpenStreetMap knows within a radius of a point (the trip's dive shop), the nearest first: name, position, distance, depth range, type " +
+    "(reef, wreck…), entry (boat, shore), OSM's difficulty (0–3), whether there is a descent line, and the site's OpenStreetMap page. Mapped by volunteers: " +
+    "some sites are missing or have no depth. Read-only.",
+  propose_dive_sites:
+    "Save the dive sites you propose for a trip, around its dive shop, each with one line on why it suits the diver (their depth, experience, what keeps going wrong), " +
+    "so the diver can choose them in the app, and your notes on the list as a whole (the shop's schedule, the season, the diver's log), which stay on the trip's page. The trip must be saved first (save_trip_plan, with no cards if it has none yet). Proposing again keeps what was " +
+    "already chosen or dropped and the profiles; a chosen site left out stays. Answers the page where the diver chooses.",
+  choose_dive_sites:
+    "Mark the trip's proposed sites as the diver chose them: chosen, dropped, or proposed again. Use it when the diver tells you; they can also choose in the app.",
+  save_site_profile:
+    "Save your profile of a chosen dive site (Markdown) so the app shows it: what to expect on the trip's dates (water temperature, visibility, currents, season), " +
+    "the depths and the dive, what it takes (certification, experience, nitrox, SMB, light, suit), boat time from the shop, fees, permits or closures, the risks, " +
+    "and your sources as links with the date you checked. Only chosen sites get a profile. \"\" removes it.",
+  get_site_conditions:
+    "The sea at a dive site from Open-Meteo's marine forecast, day by day: the highest waves and their period, the water temperature and the strongest surface current. " +
+    "It reaches 16 days ahead; for a later date it says so, and the season (from your web research) is what to go by. Surface figures, not the current at depth. Read-only.",
   migrate_from_python:
     "Copy the dive log of the Python version (AI Diving Monitor, its SQLite database) into this one: every dive and saved review. " +
     "Safe to run again; nothing is added twice and the database is only read.",
@@ -338,6 +356,8 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
       prepared: p.dives.filter((d) => d.prep).length,
       to_check: p.dives.filter((d) => d.verdict?.status === "check").length,
       logged_dives: p.dives.reduce((n, d) => n + d.loggedDiveIds.length, 0),
+      sites_chosen: (p.sites ?? []).filter((s) => s.status === "chosen").length,
+      sites_proposed: (p.sites ?? []).filter((s) => s.status === "proposed").length,
       updated_at: p.updatedAt,
     }));
   }
@@ -354,6 +374,13 @@ export function tripPlans(plans: TripPlan[], records: DiveRecord[], tripId?: str
     end_date: plan.endDate ?? null,
     summary: plan.summary?.markdown ?? null,
     flights: plan.flights ?? [],
+    shop: plan.shop ?? null,
+    site_notes: plan.siteNotes?.markdown ?? null,
+    sites: (plan.sites ?? []).map(({ profile, ...site }) => ({
+      ...(snakeKeys(site) as object),
+      profile: profile?.markdown ?? null,
+      profile_saved_at: profile?.savedAt ?? null,
+    })),
     cards: plan.dives.map(({ prep, loggedDiveIds, verdict, ...card }) => ({
       ...(snakeKeys(card) as object),
       prep: prep?.markdown ?? null,
@@ -378,8 +405,22 @@ export const TRIP_PREP_REQUEST = `Prepare me for the dives of my TripDeck trip {
 6. On each TripDeck dive card, save the same verdict with TripDeck's save_dive_prep: the status, the one-line summary, and the card's url from save_trip_plan. Save any gas mix I told you on the card too (update_item with dive.mix).
 7. Give me the trip notes and the cards that need my attention.`;
 
+export const SITE_SCOUT_REQUEST = `Help me choose the dive sites for my TripDeck trip {trip}.
+
+1. Read the trip with TripDeck's get_trip (list_trips if you need its id) and get_trip_plans for what DiveDeck already has. If the trip isn't saved in DiveDeck yet, save it with save_trip_plan (with its dive cards, or none).
+2. If sites were already proposed: when some are chosen and have no profile yet, go to step 5; otherwise show me the proposals and ask me to choose.
+3. Find the dive shop the trip dives from: a dive centre or booking card in the trip, else ask me. Get its position (TripDeck's search_places if the card has none).
+4. Call find_dive_sites around the shop (start with 30 km; widen it when there are few). Look up which sites the shop itself goes to (its website) and add the ones OpenStreetMap misses. Read my log (get_overview, prepare_dive for the deepest ones) and propose 6 to 12 sites with propose_dive_sites, each with one line on why it suits me, or what it would take, and your notes on the list as a whole (the shop's schedule and my package, the season, what my log says, with sources) in notes_markdown. Then show me the list with the link to choose them in the app, and stop: I choose.
+5. For each chosen site without a profile: research on the web what to expect on the trip's dates (water temperature, visibility, currents, season, closures), the depths and how the dive goes, what it takes (certification, experience, nitrox, SMB, light, suit thickness), boat time from the shop, fees and permits, and the risks. When the dive is within 16 days, add get_site_conditions. Save it with save_site_profile, with your sources as links. Never present a fact without a source.
+6. Save the water at each chosen site with update_kit (sites, usually salt), so my lead estimate fits, and offer to add the chosen sites to the trip in TripDeck as dive cards (add_item) and to prepare them with trip-prep.`;
+
 /** The web app (package.json runs it on this port). */
 export const APP_URL = "http://localhost:3001";
+
+/** Where the diver chooses a trip's dive sites in the app. */
+export function tripSitesUrl(tripId: string): string {
+  return `${APP_URL}/trips/${encodeURIComponent(tripId)}#sites`;
+}
 
 /** A dive card's preparation in the app, for TripDeck to link to. */
 export function tripCardUrl(tripId: string, itemId: string): string {

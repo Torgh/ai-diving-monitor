@@ -8,10 +8,12 @@ import remarkGfm from "remark-gfm";
 import { Findings } from "@/components/Findings";
 import { Icon } from "@/components/Icons";
 import { TripPrepHint } from "@/components/TripPrepHint";
+import { siteFacts, TripSites } from "@/components/TripSites";
 import { useUnits } from "@/components/Units";
 import { api, useLive } from "@/components/useLive";
 import { formatDate, formatDateRange, formatNumber, formatTripWhen } from "@/lib/format";
 import { REFRESHER_DAYS } from "@/lib/prep";
+import type { TripSite } from "@/lib/trip";
 import type { LoggedDiveLink, TripCardView, TripView } from "@/lib/tripViews";
 
 type Data = TripView & { version: string };
@@ -95,6 +97,21 @@ function CardStatus({ card }: { card: TripCardView }) {
 
 const flightTime = (f: { date: string; time?: string }) => `${formatDate(f.date, false)}${f.time ? `, ${f.time}` : ""}`;
 
+/** The proposed site a card is about: its depths and distance, and why it suits you, linked to the site below. */
+function CardSite({ site }: { site: TripSite }) {
+  const { show } = useUnits();
+  const line = siteFacts(site, (m) => show("depth", m));
+  return (
+    <div className="card-site">
+      <a href={`#site-${site.id}`}>
+        <strong>{site.name}</strong>
+      </a>
+      {line && <span className="muted"> · {line}</span>}
+      <p style={{ margin: "0.2rem 0 0" }}>{site.why}</p>
+    </div>
+  );
+}
+
 function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId: string; open: boolean; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -151,6 +168,7 @@ function DayCard({ card, tripId, open, onChange }: { card: TripCardView; tripId:
         <span className="secondary" style={{ fontSize: "0.9rem" }}>
           {plan.join(" · ") || "No depth or gas on the card yet"}
         </span>
+        {card.siteInfo && <CardSite site={card.siteInfo} />}
         {first && <p style={{ margin: 0 }}>{first}</p>}
 
         <details open={open}>
@@ -398,6 +416,8 @@ export default function TripPage() {
         {data.summary ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.summary.markdown}</ReactMarkdown> : <p className="muted">No notes for the whole trip yet.</p>}
         <TripPrepHint trip={data.name} />
       </section>
+
+      <TripSites tripId={data.id} trip={data.name} shop={data.shop} sites={data.sites} notes={data.siteNotes} onChange={reload} />
 
       {data.dives.length ? (
         <DiveDays data={data} onChange={reload} />

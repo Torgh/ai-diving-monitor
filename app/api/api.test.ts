@@ -9,10 +9,12 @@ import { GET as getKit, PUT as putKit } from "./kit/route";
 import { POST as importSamples } from "./import/samples/route";
 import { GET as migrateStatus, POST as migrate } from "./migrate/route";
 import { POST as linkDive } from "./trips/[id]/dives/route";
+import { POST as chooseSite } from "./trips/[id]/sites/route";
 import { DELETE as deleteTrip, GET as getTrip } from "./trips/[id]/route";
 import { GET as getTrips } from "./trips/route";
 import { GET as getVersion } from "./version/route";
 import { TripStore } from "../../lib/server/tripStore";
+import { proposeSites } from "../../lib/trip";
 import { isolateEnv, restoreEnv } from "../../test-env";
 
 /** The route handlers, called as Next.js calls them, against a temporary data folder. */
@@ -172,6 +174,35 @@ describe("API", () => {
     expect((await deleteTrip(req("/api/trips/dahab", { method: "DELETE" }), ctx("dahab"))).status).toBe(415);
     expect(await read(await deleteTrip(json("/api/trips/dahab", "DELETE", {}), ctx("dahab")))).toEqual([200, { deleted: true }]);
     expect((await deleteTrip(json("/api/trips/dahab", "DELETE", {}), ctx("dahab"))).status).toBe(404);
+  });
+
+  it("shows the dive sites proposed for a trip and lets the diver choose them", async () => {
+    const trips = new TripStore();
+    await trips.save({ id: "koh-tao", name: "Koh Tao", dives: [{ itemId: "c1", title: "Chumphon Pinnacle morning" }] });
+    await trips.update("koh-tao", (p) =>
+      proposeSites(p, { name: "Big Blue", lat: 10.095, lng: 99.827 }, [
+        { id: "osm-node-1", name: "Chumphon Pinnacle", maxDepthM: 35, why: "Your deepest dives were 30 m." },
+        { name: "Twins", why: "An easy first day." },
+      ]),
+    );
+    const [, trip] = await read(await getTrip(req("/api/trips/koh-tao"), ctx("koh-tao")));
+    expect(trip.shop).toEqual({ name: "Big Blue", lat: 10.095, lng: 99.827 });
+    expect(trip.sites.map((s: { id: string; status: string }) => [s.id, s.status])).toEqual([
+      ["osm-node-1", "proposed"],
+      ["twins", "proposed"],
+    ]);
+
+    const choose = (siteId: string, status: string, trip = "koh-tao") => chooseSite(json(`/api/trips/${trip}/sites`, "POST", { siteId, status }), ctx(trip));
+    expect(await read(await choose("osm-node-1", "chosen"))).toEqual([200, { status: "chosen" }]);
+    expect(await read(await choose("twins", "dropped"))).toEqual([200, { status: "dropped" }]);
+    expect((await trips.get("koh-tao"))!.sites!.map((s) => s.status)).toEqual(["chosen", "dropped"]);
+    const [, after] = await read(await getTrip(req("/api/trips/koh-tao"), ctx("koh-tao")));
+    expect(after.dives[0].siteInfo).toMatchObject({ name: "Chumphon Pinnacle", maxDepthM: 35, why: "Your deepest dives were 30 m." });
+    const [, list] = await read(await getTrips(req("/api/trips"), {}));
+    expect(list.trips[0].chosenSites).toEqual([{ id: "osm-node-1", name: "Chumphon Pinnacle", maxDepthM: 35 }]);
+    expect((await choose("nope", "chosen")).status).toBe(404);
+    expect((await choose("twins", "chosen", "nope")).status).toBe(404);
+    expect((await choose("twins", "maybe")).status).toBe(400);
   });
 
   it("only answers requests addressed to localhost", async () => {

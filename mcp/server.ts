@@ -28,10 +28,12 @@ import {
   progressTrend,
   resolveDive,
   snakeKeys,
+  SITE_SCOUT_REQUEST,
   SUMMARY_REQUEST,
   TRIP_PREP_REQUEST,
   tripCardUrl,
   tripPlans,
+  tripSitesUrl,
 } from "../lib/coach";
 import { analyzeRecord, chronological, parseGas } from "../lib/record";
 import { findSet, KitInputError } from "../lib/kit";
@@ -40,7 +42,9 @@ import { DiveStore } from "../lib/server/diveStore";
 import { KitStore } from "../lib/server/kitStore";
 import { migrateFromPython } from "../lib/server/migrate";
 import { pythonDbPath } from "../lib/server/paths";
+import { findDiveSites, siteConditions } from "../lib/server/siteSources";
 import { TripStore } from "../lib/server/tripStore";
+import { chooseSites, proposeSites, saveSiteProfile } from "../lib/trip";
 import { UddfParseError } from "../lib/uddf";
 
 /** The log where Settings say it is stored, looked up on every call so a change applies at once. */
@@ -66,6 +70,8 @@ function tool<A>(fn: (args: A) => Promise<unknown>) {
 
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false };
 const WRITES = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+/** Asks a public service on the internet (OpenStreetMap, Open-Meteo). */
+const LOOKS_UP = { readOnlyHint: true, openWorldHint: true };
 const diveRef = z
   .union([z.number().int(), z.string()])
   .describe("The dive's number in the log (1 = the oldest; `seq` in list_dives) or its id.");
@@ -472,6 +478,165 @@ server.registerTool(
   tool(async ({ trip_id }: { trip_id?: string }) => tripPlans(await trips().list(), await store().list(), trip_id?.trim() || undefined)),
 );
 
+const lat = z.number().min(-90).max(90);
+const lng = z.number().min(-180).max(180);
+
+server.registerTool(
+  "find_dive_sites",
+  {
+    title: "Dive sites near a place",
+    description: DESCRIPTIONS.find_dive_sites,
+    inputSchema: {
+      lat: lat.describe("The dive shop's latitude."),
+      lng: lng.describe("The dive shop's longitude."),
+      radius_km: z.number().min(1).max(150).optional().describe("How far the boats go, km (default 30)."),
+      limit: z.number().int().min(1).max(200).optional().describe("At most this many, the nearest first (default 60)."),
+    },
+    annotations: LOOKS_UP,
+  },
+  tool(async (args: { lat: number; lng: number; radius_km?: number; limit?: number }) => {
+    const sites = await findDiveSites(args.lat, args.lng, args.radius_km ?? 30);
+    return {
+      found: sites.length,
+      source: "OpenStreetMap contributors (ODbL), mapped by volunteers: confirm depths with another source.",
+      sites: sites.slice(0, args.limit ?? 60).map((s) => snakeKeys(s)),
+    };
+  }),
+);
+
+const siteProposal = z.object({
+  id: z.string().max(80).optional().describe("The id from find_dive_sites (osm-…); leave out for a site OpenStreetMap doesn't have."),
+  name: z.string().min(1).max(200),
+  lat: lat.optional(),
+  lng: lng.optional(),
+  distance_km: z.number().min(0).max(1000).optional().describe("From the dive shop."),
+  min_depth_m: z.number().min(0).max(200).optional(),
+  max_depth_m: z.number().positive().max(200).optional(),
+  type: z.string().max(40).optional().describe("reef, wreck, wall, pinnacle…"),
+  entry: z.string().max(40).optional().describe("boat or shore."),
+  source: z.string().max(500).optional().describe("Where its facts come from: its OpenStreetMap page or a web page."),
+  why: z.string().min(1).max(400).describe("One line: why it suits the diver, or what it would take."),
+});
+
+server.registerTool(
+  "propose_dive_sites",
+  {
+    title: "Propose dive sites for a trip",
+    description: DESCRIPTIONS.propose_dive_sites,
+    inputSchema: {
+      trip_id: z.string().min(1).max(64).describe("The trip's id in TripDeck."),
+      shop: z.object({ name: z.string().min(1).max(200), lat: lat.optional(), lng: lng.optional() }).describe("The dive shop the trip dives from."),
+      sites: z.array(siteProposal).min(1).max(40),
+      notes_markdown: z
+        .string()
+        .max(20000)
+        .optional()
+        .describe("What you weighed for the list as a whole: the shop's schedule and packages, the season, the diver's log, with sources. Omit to keep the saved notes; \"\" removes them."),
+    },
+    annotations: WRITES,
+  },
+  tool(async (args: { trip_id: string; shop: { name: string; lat?: number; lng?: number }; sites: z.infer<typeof siteProposal>[]; notes_markdown?: string }) => {
+    const plan = await trips().update(args.trip_id, (p) =>
+      proposeSites(
+        p,
+        args.shop,
+        args.sites.map((s) => ({
+          id: s.id,
+          name: s.name,
+          lat: s.lat,
+          lng: s.lng,
+          distanceKm: s.distance_km,
+          minDepthM: s.min_depth_m,
+          maxDepthM: s.max_depth_m,
+          type: s.type,
+          entry: s.entry,
+          source: s.source,
+          why: s.why,
+        })),
+        args.notes_markdown === undefined ? undefined : { markdown: args.notes_markdown, now: new Date().toISOString() },
+      ),
+    );
+    return {
+      saved: true,
+      sites: (plan.sites ?? []).map((s) => ({ id: s.id, name: s.name, status: s.status })),
+      choose_at: tripSitesUrl(plan.id),
+    };
+  }),
+);
+
+server.registerTool(
+  "choose_dive_sites",
+  {
+    title: "Choose dive sites",
+    description: DESCRIPTIONS.choose_dive_sites,
+    inputSchema: {
+      trip_id: z.string().min(1).max(64),
+      chosen: z.array(z.string()).max(40).optional().describe("Site ids the diver chose."),
+      dropped: z.array(z.string()).max(40).optional().describe("Site ids the diver doesn't want."),
+      proposed: z.array(z.string()).max(40).optional().describe("Site ids back to undecided."),
+    },
+    annotations: WRITES,
+  },
+  tool(async (args: { trip_id: string; chosen?: string[]; dropped?: string[]; proposed?: string[] }) => {
+    const plan = await trips().update(args.trip_id, (p) => chooseSites(p, { chosen: args.chosen, dropped: args.dropped, proposed: args.proposed }));
+    const sites = plan.sites ?? [];
+    return {
+      chosen: sites.filter((s) => s.status === "chosen").map((s) => ({ id: s.id, name: s.name, has_profile: !!s.profile })),
+      still_proposed: sites.filter((s) => s.status === "proposed").map((s) => s.id),
+    };
+  }),
+);
+
+server.registerTool(
+  "save_site_profile",
+  {
+    title: "Save a dive site's profile",
+    description: DESCRIPTIONS.save_site_profile,
+    inputSchema: {
+      trip_id: z.string().min(1).max(64),
+      site_id: z.string().min(1).max(80),
+      profile_markdown: z.string().max(20000).describe("The profile with its sources as links."),
+    },
+    annotations: WRITES,
+  },
+  tool(async (args: { trip_id: string; site_id: string; profile_markdown: string }) => {
+    let name = "";
+    const plan = await trips().update(args.trip_id, (p) => {
+      name = saveSiteProfile(p, args.site_id, args.profile_markdown, new Date().toISOString()).name;
+    });
+    return {
+      saved: true,
+      site: name,
+      chosen_without_profile: (plan.sites ?? []).filter((s) => s.status === "chosen" && !s.profile).map((s) => s.id),
+      shown_at: tripSitesUrl(plan.id),
+    };
+  }),
+);
+
+server.registerTool(
+  "get_site_conditions",
+  {
+    title: "The sea at a dive site",
+    description: DESCRIPTIONS.get_site_conditions,
+    inputSchema: {
+      lat,
+      lng,
+      start_date: isoDate.optional().describe("The first day, YYYY-MM-DD (default: today)."),
+      days: z.number().int().min(1).max(16).optional().describe("How many days (default 3)."),
+    },
+    annotations: LOOKS_UP,
+  },
+  tool(async (args: { lat: number; lng: number; start_date?: string; days?: number }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const found = await siteConditions(args.lat, args.lng, args.start_date ?? today, args.days ?? 3, today);
+    return {
+      source: "Open-Meteo marine forecast (surface figures; not the current at depth)",
+      note: found.note,
+      days: found.days.map((d) => snakeKeys(d)),
+    };
+  }),
+);
+
 server.registerTool(
   "migrate_from_python",
   {
@@ -533,6 +698,23 @@ server.registerPrompt(
       {
         role: "user",
         content: { type: "text", text: TRIP_PREP_REQUEST.replace("{trip}", trip?.trim() ? `"${trip.trim()}"` : "(the next one with dives)") },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
+  "site-scout",
+  {
+    title: "Choose dive sites",
+    description: "Dive sites around your trip's dive shop: you choose, then each chosen one is researched",
+    argsSchema: { trip: z.string().optional().describe("The trip's name or id in TripDeck (default: the next trip)") },
+  },
+  ({ trip }) => ({
+    messages: [
+      {
+        role: "user",
+        content: { type: "text", text: SITE_SCOUT_REQUEST.replace("{trip}", trip?.trim() ? `"${trip.trim()}"` : "(the next one)") },
       },
     ],
   }),

@@ -1784,3 +1784,28 @@ ul.balance-rows .value {
     padding-right: 0;
   }
 }
+
+.site-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+
+.site-card.chosen,
+.site-profile {
+  border-color: var(--accent);
+}
+
+.pill.chosen {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.card-site {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  padding: 0.45rem 0.7rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.92rem;
+}

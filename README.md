@@ -73,6 +73,14 @@ seconds on Google Drive).
   and the problems that keep coming back. It gives each card a verdict, *ready* or *check* with one
   line on what to sort out, shown here and on the TripDeck card, with a link back here.
 - After the trip, link each logged dive to its card (or let your companion do it).
+- **Dive sites, chosen by you:** your companion finds the dive shop the trip dives from, lists the
+  sites around it (OpenStreetMap, plus what the shop's own website lists) and proposes the ones that
+  suit your log, each with one line on why. You choose on the trip's page (or tell it); only then
+  does it research the chosen sites: conditions for your dates, depths and how the dive goes, what it
+  takes (certification, nitrox, SMB, suit), boat time, fees and closures, each fact with its source.
+  Within 16 days of the dive it adds the sea's forecast (waves, water temperature, surface current
+  from Open-Meteo). A chosen site keeps what was proposed, the dive cards about it show its depths,
+  distance and why it suits you, and the trip's tile lists the chosen sites.
 
 **The app**
 
@@ -154,6 +162,7 @@ Then ask in plain language, or use the prompts:
 /mcp__divedeck__dive-review 7    # debrief of dive 7 (1 = your oldest dive)
 /mcp__divedeck__sort-out         # go through what your log is still missing, one dive at a time
 /mcp__divedeck__trip-prep Dahab  # get ready for the dives of a TripDeck trip
+/mcp__divedeck__site-scout Koh Tao  # dive sites around the trip's dive shop: you choose, it researches
 > Import my dives from D:\Shearwater\export.uddf
 > Dive 2 was at Koparki with a 12 L tank of EAN32.
 > Is my gas consumption improving? What should I practise before my next deco dive?
@@ -176,7 +185,12 @@ Settings can also install a shorter `/dive-review` command for all Claude Code s
 | `save_dive_summary` | Store the debrief so the app shows it |
 | `prepare_dive` | Get ready for a planned dive (site, depth, gas, date) from the log: experience, gas plan, ppO2/MOD, recurring problems |
 | `save_trip_plan` | Store a TripDeck trip's dive cards with the preparation and verdict for each, the trip's flights, and the logged dives the cards turned into; answers each card's link for TripDeck |
-| `get_trip_plans` | The saved trips; one trip's cards, verdicts and flights, with the dives logged on each card's day |
+| `get_trip_plans` | The saved trips; one trip's cards, verdicts and flights, with the dives logged on each card's day, its dive shop and the sites proposed |
+| `find_dive_sites` | The dive sites OpenStreetMap knows around a place (the dive shop): distance, depths, type, entry, difficulty |
+| `propose_dive_sites` | Store the sites proposed for a trip, each with why it suits you, for you to choose on the trip's page |
+| `choose_dive_sites` | Mark sites chosen or dropped when you tell your companion |
+| `save_site_profile` | Store the research of a chosen site, with its sources, so the trip's page shows it |
+| `get_site_conditions` | The sea at a site from Open-Meteo's forecast, day by day (up to 16 days ahead) |
 | `migrate_from_python` | Copy AI Diving Monitor's log, as `bun run migrate` does |
 
 Dives are referred to by their number in the log (`1` = the oldest) or by their id.
@@ -382,3 +396,6 @@ decompression sickness, contact DAN or the nearest hyperbaric facility immediate
 ## License
 
 [GNU AGPLv3](LICENSE) © 2026 Torgh
+
+Dive sites: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available
+under the Open Database License. Marine forecast: [Open-Meteo](https://open-meteo.com) (CC BY 4.0).
