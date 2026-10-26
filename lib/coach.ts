@@ -12,7 +12,7 @@ import { type PlannedDive, prepareDive } from "./prep";
 import { analyzeRecord, chronological, type DiveRecord, effectiveDive, logTodos } from "./record";
 import type { TripPlan } from "./trip";
 import { findSet, type Kit, KitInputError, WATER_DENSITY, type Water, waterOf } from "./kit";
-import { CHECK_DEPTH_M, estimateWeighting, RESERVE_BAR } from "./weighting";
+import { CHECK_DEPTH_M, estimateWeighting, RENTAL_TANK_IDS, type RentalTank, RESERVE_BAR } from "./weighting";
 
 export const SYSTEM_PROMPT = `You are DiveDeck, the diver's AI dive companion, with the knowledge of an experienced technical diving instructor.
 You review dives recorded by the diver's dive computer (imported from UDDF files) and help them
@@ -84,10 +84,14 @@ export const weightingInput = {
   water: z.enum(["fresh", "brackish", "salt"]).optional().describe("The water; or give a site instead."),
   site: z.string().max(200).optional().describe("A dive site whose water is in the kit."),
   density: z.number().min(0.99).max(1.25).optional().describe("kg/L, when the water is known better (the Red Sea is about 1.03)."),
+  rental_tank: z
+    .enum(RENTAL_TANK_IDS as [RentalTank, ...RentalTank[]])
+    .optional()
+    .describe("A tank rented from the dive centre instead of the set's own: aluminium-11 (AL80, floats when nearly empty) or steel-12. For trips where the diver rents."),
 };
 
 /** The answer of estimate_weighting: the lead for a set in a water, part by part, with what is missing. */
-export function weightingAnswer(kit: Kit, records: DiveRecord[], args: { gearSet?: string; water?: Water; site?: string; density?: number }) {
+export function weightingAnswer(kit: Kit, records: DiveRecord[], args: { gearSet?: string; water?: Water; site?: string; density?: number; rentalTank?: RentalTank }) {
   const set = args.gearSet ? findSet(kit, args.gearSet) : null;
   if (args.gearSet && !set) throw new KitInputError(`No gear set "${args.gearSet}". Sets: ${kit.sets.map((s) => s.name).join(", ") || "none yet (add one with update_kit)"}.`);
   const fromSite = args.site ? waterOf(kit, {}, args.site) : null;
@@ -97,7 +101,8 @@ export function weightingAnswer(kit: Kit, records: DiveRecord[], args: { gearSet
       args.site ? `The water at ${args.site} isn't known: ask (fresh, brackish or salt) and save it with update_kit.` : "Say the water: fresh, brackish or salt (or a site whose water is known).",
     );
   const density = args.density ?? (args.water ? WATER_DENSITY[water] : (fromSite?.density ?? WATER_DENSITY[water]));
-  return { ...(snakeKeys(estimateWeighting(kit, records, set ?? null, water, density)) as object), how_to_check: WEIGHT_CHECK };
+  if (args.rentalTank && !set) throw new KitInputError("A rental tank replaces a set's tank: give the gear set too.");
+  return { ...(snakeKeys(estimateWeighting(kit, records, set ?? null, water, density, args.rentalTank ?? null)) as object), how_to_check: WEIGHT_CHECK };
 }
 
 /** What a dive was dived with: the set and its gear, the lead, the water and how the weighting felt. */
@@ -152,7 +157,8 @@ export const DESCRIPTIONS = {
   estimate_weighting:
     "Estimate the lead the diver needs with a gear set in fresh, brackish or salt water (or at a site whose water is known): neutral at the safety stop " +
     "with an empty BCD and the tank at its reserve. Answers each part's buoyancy (the diver, the suit, the tank with its gas, the plate…), which figures are " +
-    "typical values rather than the diver's own, a correction from the diver's logged dives (lead carried and how it felt), and what would make it better. Read-only.",
+    "typical values rather than the diver's own, a correction from the diver's logged dives (lead carried and how it felt), and what would make it better. " +
+    "For a trip where the diver rents the tank, give rental_tank: an aluminium tank floats when nearly empty, so it takes more lead than a steel one. Read-only.",
   update_kit:
     "Change the diver's kit: the diver's body, gear items (added when the name is new, changed by id or name), gear sets (gear by id or name, " +
     "usual lead in kg), the water at dive sites (null forgets a site), and items or sets to remove. Only what is sent changes; a null field removes it. " +

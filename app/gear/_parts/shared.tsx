@@ -2,9 +2,18 @@ import { useState } from "react";
 import { useUnits } from "@/components/Units";
 import { api } from "@/components/useLive";
 import type { GearKind, Kit, KitChange, Water } from "@/lib/kit";
-import type { Part, WeightingEstimate } from "@/lib/weighting";
+import type { Part, RentalTank, WeightingEstimate } from "@/lib/weighting";
 
-export type Data = Kit & { version: string; siteNames: string[]; estimates: Record<string, Record<Water, WeightingEstimate>> };
+export type Data = Kit & {
+  version: string;
+  siteNames: string[];
+  estimates: Record<string, Record<Water, WeightingEstimate>>;
+  /** The same with a tank rented from the dive centre. */
+  rentalEstimates: Record<string, Record<RentalTank, Record<Water, WeightingEstimate>>>;
+};
+
+/** Your own tank, or one rented from the dive centre. */
+export type TankChoice = "own" | RentalTank;
 
 export const KIND_LABEL: Record<GearKind, string> = {
   suit: "Suit",

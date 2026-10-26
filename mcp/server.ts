@@ -46,6 +46,7 @@ import { findDiveSites, siteConditions } from "../lib/server/siteSources";
 import { TripStore } from "../lib/server/tripStore";
 import { chooseSites, proposeSites, saveSiteProfile } from "../lib/trip";
 import { UddfParseError } from "../lib/uddf";
+import type { RentalTank } from "../lib/weighting";
 
 /** The log where Settings say it is stored, looked up on every call so a change applies at once. */
 const store = () => new DiveStore();
@@ -265,9 +266,9 @@ server.registerTool(
 server.registerTool(
   "estimate_weighting",
   { title: "Estimate the lead", description: DESCRIPTIONS.estimate_weighting, inputSchema: weightingInput, annotations: READ_ONLY },
-  tool(async (args: { gear_set?: string; water?: "fresh" | "brackish" | "salt"; site?: string; density?: number }) => {
+  tool(async (args: { gear_set?: string; water?: "fresh" | "brackish" | "salt"; site?: string; density?: number; rental_tank?: RentalTank }) => {
     const [kit, records] = await Promise.all([kits().get(), store().list()]);
-    return weightingAnswer(kit, records, { gearSet: args.gear_set, water: args.water, site: args.site, density: args.density });
+    return weightingAnswer(kit, records, { gearSet: args.gear_set, water: args.water, site: args.site, density: args.density, rentalTank: args.rental_tank });
   }),
 );
 

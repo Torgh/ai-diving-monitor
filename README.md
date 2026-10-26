@@ -45,8 +45,9 @@ seconds on Google Drive).
   the rest, then corrects it by your dives with the set: the lead you carried and how it felt. The
   Gear page shows it per set as a balance (what floats, what sinks, which figures are typical or
   unknown), the lead with how sure it is, and the few steps that would make it surer (a tank, a
-  camera's buoyancy, dives with the lead logged). Your companion explains it and ends with a weight
-  check in the water.
+  camera's buoyancy, dives with the lead logged). For a trip where you rent the tank, switch to a
+  rental aluminium 11 L (AL80) or steel 12 L: an aluminium tank floats when nearly empty, so it takes
+  more lead. Your companion explains it and ends with a weight check in the water.
 
 **Analysis** (rule-based, offline, no AI needed)
 

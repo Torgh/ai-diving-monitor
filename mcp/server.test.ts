@@ -158,6 +158,10 @@ describe.skipIf(!bun)("MCP server", () => {
     expect(estimate.calibration).toEqual({ dives: 1, offset_kg: expect.any(Number) });
     expect(estimate.how_to_check).toContain("hover");
     expect((await json("estimate_weighting", { gear_set: "jezioro", water: "salt" })).density).toBe(1.025);
+    const rented = await json("estimate_weighting", { gear_set: "Jezioro", water: "salt", rental_tank: "aluminium-11" });
+    expect(rented.rental_tank).toBe("aluminium-11");
+    expect(rented.parts.map((p: { label: string }) => p.label)).toEqual(["You", "Pianka 7 mm", "Rental aluminium 11.1 L (AL80)"]);
+    expect((await call("estimate_weighting", { water: "salt", rental_tank: "steel-12" })).text).toContain("give the gear set too");
     expect((await call("estimate_weighting", { gear_set: "Morze", water: "salt" })).text).toContain('No gear set "Morze"');
     expect((await call("estimate_weighting", { gear_set: "Jezioro", site: "Dahab" })).text).toContain("isn't known");
     expect((await call("estimate_weighting", {})).text).toContain("Say the water");
