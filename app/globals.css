@@ -208,35 +208,128 @@ main.page {
   width: 100%;
 }
 
+/* On a wide screen the More links are simply the rest of the menu. */
+.topbar,
+.nav .more {
+  display: none;
+}
+
+.nav .more-links {
+  display: contents;
+}
+
 @media (max-width: 760px) {
   .app {
     /* minmax(0, …): wide content scrolls in its own box instead of widening the page. */
     grid-template-columns: minmax(0, 1fr);
-    /* The menu keeps its own height; the page takes the rest. */
     grid-template-rows: auto 1fr;
   }
-  .nav {
-    position: static;
-    height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-right: 0;
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 0.4rem 1rem;
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1rem;
-    align-content: flex-start;
   }
-  .nav .brand {
-    padding: 0.4rem 0.5rem;
-    width: 100%;
+  .topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--fg);
+    text-decoration: none;
   }
-  .nav a.link {
-    padding: 0 0.75rem;
+  .topbar .brand img {
+    width: 28px;
+    height: 28px;
   }
+  .topbar .live {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .topbar .live strong {
+    color: var(--good-text);
+  }
+  .topbar .live.offline strong {
+    color: var(--warning-text);
+  }
+  /* The tab bar. */
+  .nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    height: auto;
+    z-index: 30;
+    flex-direction: row;
+    gap: 0;
+    padding: 0.25rem 0.25rem calc(0.25rem + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .nav .brand,
   .nav .live {
     display: none;
   }
+  .nav > a.link,
+  .nav .more {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 56px;
+    padding: 0.25rem 0.1rem;
+    font-size: 0.72rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .nav .more {
+    display: flex;
+    align-items: center;
+    border: 0;
+    background: none;
+    color: var(--fg-2);
+    font: inherit;
+    font-size: 0.72rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .nav .more[aria-current="page"],
+  .nav .more[aria-expanded="true"] {
+    background: var(--accent-wash);
+    color: var(--fg);
+  }
+  /* More: the other pages, in a panel over the tab bar. */
+  .nav .more-links {
+    display: none;
+    position: fixed;
+    right: 0.5rem;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    min-width: 200px;
+    flex-direction: column;
+    padding: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+  .nav.more-open .more-links {
+    display: flex;
+  }
+  .nav .more-links a.link {
+    padding: 0 0.75rem;
+  }
   main.page {
-    padding: 1rem 1rem 2rem;
+    padding: 1rem 1rem calc(5.5rem + env(safe-area-inset-bottom));
   }
 }
 
@@ -1901,6 +1994,11 @@ ul.todos li.done span {
 .card-site-pick select {
   min-height: 32px;
   max-width: 100%;
+}
+
+.chart-tabs {
+  margin: 0;
+  overflow-x: auto;
 }
 
 .tank-choice {

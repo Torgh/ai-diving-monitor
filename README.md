@@ -109,7 +109,9 @@ seconds on Google Drive).
 - **Metric or imperial** (m, bar, °C, L or ft, psi, °F, cu ft) for everything the pages show; the
   log, the analysis and the texts stay metric, and ppO2 stays in bar.
 - A long debrief folds into its sections; saving a tank size or gas for several dives can be undone.
-- Updates live, light and dark mode, works at phone width; every command has a copy button.
+- Updates live, light and dark mode; every command has a copy button.
+- **On a phone:** a tab bar at the bottom (Dashboard, Dive log, Trips, Gear, More for the rest), the
+  live status on top, and a dive's charts as tabs (depth, tank, ppO2, temperature), one at a time.
 - **Offline:** the pages and dives you opened stay readable when your log can't be reached (DiveDeck
   isn't running, or no connection to Google Drive), with a note saying from when; it catches up by
   itself once the log is back.
