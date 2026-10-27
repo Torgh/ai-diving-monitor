@@ -52,12 +52,24 @@ export function Welcome({ onImport }: { onImport: () => void }) {
   );
 }
 
-export function Home({ log, next }: { log: LogView; next: TripRow | null }) {
+/** Dives imported on the phone that the PC doesn't have yet, with the way to send them. */
+function OnPhoneNotice({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <div className="notice">
+      {count} dive{count === 1 ? " is" : "s are"} only on this phone. <a href="#/file">Send to the PC</a> to keep {count === 1 ? "it" : "them"} and get your
+      companion&apos;s debrief.
+    </div>
+  );
+}
+
+export function Home({ log, next, onPhone }: { log: LogView; next: TripRow | null; onPhone: number }) {
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
       <div className="page-head">
         <h1>Dashboard</h1>
       </div>
+      <OnPhoneNotice count={onPhone} />
       {next && <TripCard trip={next} />}
       {log.dives.length ? <SummaryTiles log={log} /> : <div className="notice">No dives in this file yet.</div>}
     </div>
@@ -76,7 +88,7 @@ export function LogScreen({ log }: { log: LogView }) {
 }
 
 /** One dive, as on the PC, without the forms: the phone only shows the log. */
-export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string }) {
+export function DiveScreen({ records, id, onPhone }: { records: DiveRecord[]; id: string; onPhone: boolean }) {
   const { show } = useUnits();
   const [tab, setTab] = useState<"debrief" | "findings">("debrief");
   const data = diveView(records, id);
@@ -116,6 +128,12 @@ export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string 
           )}
         </nav>
       </div>
+
+      {onPhone && (
+        <div className="notice">
+          Imported on this phone. <a href="#/file">Send it to the PC</a> to keep it, fill in its details and get your companion&apos;s debrief.
+        </div>
+      )}
 
       <section className="card verdict" aria-label="Score">
         <ScoreRing score={metrics.score} />
@@ -158,7 +176,7 @@ export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string 
               <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
             </div>
           ) : (
-            <p className="muted">No debrief yet. Ask your companion on the PC, then export again.</p>
+            <p className="muted">No debrief yet. {onPhone ? "Send the dive to the PC, ask your companion there" : "Ask your companion on the PC"}, then export again.</p>
           )}
         </div>
       </section>
@@ -332,8 +350,20 @@ export function GearScreen({ kit, records }: { kit: Kit; records: DiveRecord[] }
   );
 }
 
-/** What was imported, and getting a newer export. */
-export function FileScreen({ log, onImport, onForget }: { log: DiveDeckExport; onImport: () => void; onForget: () => void }) {
+/** What was imported, getting a newer export, and the dives imported here on their way to the PC. */
+export function FileScreen({
+  log,
+  onPhone,
+  onImport,
+  onSend,
+  onForget,
+}: {
+  log: DiveDeckExport;
+  onPhone: number;
+  onImport: () => void;
+  onSend: () => void;
+  onForget: () => void;
+}) {
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
       <div className="page-head">
@@ -356,6 +386,33 @@ export function FileScreen({ log, onImport, onForget }: { log: DiveDeckExport; o
           </button>
         </div>
       </div>
+      <section className="card stack" aria-labelledby="uddf-h">
+        <h2 id="uddf-h" style={{ margin: 0 }}>
+          Dives from your dive computer
+        </h2>
+        <p className="secondary" style={{ margin: 0 }}>
+          Away from the PC, import a .uddf file from your dive computer&apos;s app (Shearwater Cloud, Garmin Dive, Suunto, Subsurface…): its dives show in your log
+          here at once. Then send them to the PC, import that file on its Import page, and they are in your log for good.
+        </p>
+        {onPhone > 0 && (
+          <p style={{ margin: 0 }}>
+            <strong>
+              {onPhone} dive{onPhone === 1 ? "" : "s"}
+            </strong>{" "}
+            only on this phone. They stay here until an export from the PC holds them.
+          </p>
+        )}
+        <div className="row">
+          <button type="button" className={`button ${onPhone ? "" : "primary"}`} onClick={onImport}>
+            Import a UDDF file
+          </button>
+          {onPhone > 0 && (
+            <button type="button" className="button primary" onClick={onSend}>
+              Send to PC
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

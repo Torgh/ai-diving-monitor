@@ -16,6 +16,7 @@ import { DELETE as removeTodo, PATCH as tickTodo, POST as addTodo } from "./trip
 import { DELETE as deleteTrip, GET as getTrip } from "./trips/[id]/route";
 import { GET as getTrips } from "./trips/route";
 import { GET as getVersion } from "./version/route";
+import { buildPhoneDives, phoneFile } from "../../lib/phoneDives";
 import { TripStore } from "../../lib/server/tripStore";
 import { proposeSites } from "../../lib/trip";
 import { isolateEnv, restoreEnv } from "../../test-env";
@@ -69,6 +70,27 @@ describe("API", () => {
       { file: "sw.uddf", added: 1, duplicates: 0 },
       { file: "x.uddf", error: expect.stringContaining("expected <uddf>") },
     ]);
+  });
+
+  it("imports the dives the phone app sends, with the same records as their UDDF files", async () => {
+    const summer = new Uint8Array(fs.readFileSync(path.join(ROOT, "examples", "summer-2026.uddf")));
+    const sent = buildPhoneDives([phoneFile("summer.uddf", summer, "2026-10-27T10:00:00.000Z").file], "2026-10-27T11:00:00.000Z");
+    const [, body] = await read(
+      await importFiles(
+        upload([
+          { name: "DiveDeck from phone 2026-10-27.divedeck.json", data: JSON.stringify(sent) },
+          { name: "export.divedeck.json", data: JSON.stringify({ format: "divedeck/export" }) },
+        ]),
+        {},
+      ),
+    );
+    expect(body.results).toEqual([
+      { file: "summer.uddf (from the phone)", added: expect.any(Number), duplicates: 0 },
+      { file: "export.divedeck.json", error: expect.stringContaining("Send to PC") },
+    ]);
+    // The same file dropped on the PC adds nothing more: the phone's dives got the same ids.
+    const [, again] = await read(await importFiles(upload([{ name: "summer.uddf", data: summer }]), {}));
+    expect(again.results).toEqual([{ file: "summer.uddf", added: 0, duplicates: body.results[0].added }]);
   });
 
   it("refuses uploads from other sites and empty uploads", async () => {

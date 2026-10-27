@@ -8,6 +8,7 @@
 import { analyzeDive, type DiveAnalysis } from "./analysis";
 import { type Dive, type GasMix, gasLabel } from "./dive";
 import type { Water } from "./kit";
+import { PARSER_VERSION } from "./uddf";
 
 export const RECORD_FORMAT = "ai-diving-monitor/dive";
 export const RECORD_VERSION = 1;
@@ -54,6 +55,22 @@ export interface DiveRecord {
   review: Review | null;
   /** The dive's id in the Python version's database, when it was migrated from there. */
   legacyId?: number;
+}
+
+/** A dive just imported from its original file: nothing filled in yet. */
+export function newRecord(id: string, dive: Dive, fileName: string, sha256: string, at: string): DiveRecord {
+  return {
+    format: RECORD_FORMAT,
+    version: RECORD_VERSION,
+    id,
+    importedAt: at,
+    updatedAt: at,
+    source: { fileName, sha256, uddfId: dive.uddfId },
+    parserVersion: PARSER_VERSION,
+    dive,
+    details: {},
+    review: null,
+  };
 }
 
 export const DIVER_GAS_ID = "diver-gas";
