@@ -6,7 +6,7 @@ import { type DiveDeckExport, readExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
 import { tripsView } from "@/lib/tripViews";
 import { logView } from "@/lib/views";
-import { DiveScreen, FileScreen, Home, localTime, LogScreen, TripsScreen, Welcome } from "./screens";
+import { DiveScreen, FileScreen, Home, localTime, LogScreen, TripScreen, TripsScreen, Welcome } from "./screens";
 import { forgetLog, loadLog, saveLog } from "./storage";
 import { go, useHashPath } from "./useHashPath";
 
@@ -47,6 +47,23 @@ export function App() {
     };
   }, []);
 
+  // A new screen starts at its top.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [path]);
+
+  // Links within a screen ("#card-…", "#todos") scroll to it instead of changing the screen.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const href = (e.target as Element).closest?.("a")?.getAttribute("href");
+      if (!href?.startsWith("#") || href.startsWith("#/")) return;
+      e.preventDefault();
+      document.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), 3500);
@@ -81,6 +98,7 @@ export function App() {
   if (!log || !views) screen = <Welcome onImport={pickFile} />;
   else if (path.startsWith("/dives/")) screen = <DiveScreen records={log.dives} id={decodeURIComponent(path.slice("/dives/".length))} />;
   else if (path === "/dives") screen = <LogScreen log={views.log} />;
+  else if (path.startsWith("/trips/")) screen = <TripScreen plans={log.trips} records={log.dives} id={decodeURIComponent(path.slice("/trips/".length))} now={now} />;
   else if (path === "/trips") screen = <TripsScreen trips={views.trips.trips} />;
   else if (path === "/file") screen = <FileScreen log={log} onImport={pickFile} onForget={forget} />;
   else screen = <Home log={views.log} next={views.trips.next} />;
