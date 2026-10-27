@@ -4,10 +4,12 @@ import { Glyph } from "@/components/NavIcons";
 import { UnitsProvider } from "@/components/Units";
 import { type DiveDeckExport, readExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
+import { buildPhoneDives, isPhoneDives, type PhoneFile, phoneDivesFileName, phoneFile, stillOnPhone, withPhoneDives } from "@/lib/phoneDives";
 import { tripsView } from "@/lib/tripViews";
 import { logView } from "@/lib/views";
 import { DiveScreen, FileScreen, GearScreen, Home, localTime, LogScreen, TripScreen, TripsScreen, Welcome } from "./screens";
-import { forgetLog, loadLog, saveLog } from "./storage";
+import { shareFile } from "./share";
+import { forgetLog, loadLog, loadPhoneFiles, saveLog, savePhoneFiles } from "./storage";
 import { go, useHashPath } from "./useHashPath";
 
 const TABS = [
@@ -21,6 +23,8 @@ const TABS = [
 export function App() {
   // undefined while the stored log is read, null when nothing is imported yet.
   const [log, setLog] = useState<DiveDeckExport | null | undefined>(undefined);
+  // UDDF files imported on the phone, shown with the log until an export from the PC holds them.
+  const [phoneFiles, setPhoneFiles] = useState<PhoneFile[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   // Re-read on resume so "in 3 days" moves on when the app was left open overnight.
   const [now, setNow] = useState(() => new Date());
@@ -28,7 +32,10 @@ export function App() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadLog().then(setLog);
+    void Promise.all([loadLog(), loadPhoneFiles()]).then(([stored, files]) => {
+      setPhoneFiles(files);
+      setLog(stored);
+    });
   }, []);
 
   // Android back button: back through the screens opened, out of the app from the dashboard.
@@ -71,23 +78,60 @@ export function App() {
     return () => clearTimeout(t);
   }, [notice]);
 
-  const views = useMemo(() => (log ? { log: logView(log.dives), trips: tripsView(log.trips, now) } : null), [log, now]);
+  const merged = useMemo(() => (log ? withPhoneDives(log.dives, phoneFiles) : null), [log, phoneFiles]);
+  const views = useMemo(() => (log && merged ? { log: logView(merged.dives), trips: tripsView(log.trips, now) } : null), [log, merged, now]);
+  const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
 
+  // One picker for both: the export from the PC (JSON), or a UDDF file from the dive computer's app.
   async function importFile(file: File) {
     try {
-      const next = readExport(JSON.parse(await file.text()));
-      await saveLog(next);
-      setLog(next);
-      setNotice(`Imported ${next.dives.length} dive${next.dives.length === 1 ? "" : "s"} and ${next.trips.length} trip${next.trips.length === 1 ? "" : "s"}`);
-      go("/");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const text = new TextDecoder().decode(bytes);
+      if (text.trimStart().startsWith("{")) {
+        const json = JSON.parse(text);
+        if (isPhoneDives(json)) throw new Error("This is the file for the PC: import it on the PC's Import page.");
+        const next = readExport(json);
+        const kept = stillOnPhone(phoneFiles, next.dives);
+        await saveLog(next);
+        await savePhoneFiles(kept);
+        setLog(next);
+        setPhoneFiles(kept);
+        setNotice(`Imported ${plural(next.dives.length, "dive")} and ${plural(next.trips.length, "trip")}`);
+        go("/");
+        return;
+      }
+      if (!log || !merged) throw new Error("Import your DiveDeck file from the PC first, then add dives here.");
+      const { file: added, records } = phoneFile(file.name, bytes, new Date().toISOString());
+      const known = new Set(merged.dives.map((d) => d.id));
+      const fresh = records.filter((r) => !known.has(r.id));
+      if (!fresh.length) {
+        setNotice(records.length ? "These dives are already in your log." : "No dives in this file.");
+        return;
+      }
+      const files = [...phoneFiles, added];
+      await savePhoneFiles(files);
+      setPhoneFiles(files);
+      setNotice(`Added ${plural(fresh.length, "dive")}. Send them to the PC from Your file.`);
+      go(fresh.length === 1 ? `/dives/${fresh[0].id}` : "/dives");
     } catch (e) {
       setNotice(e instanceof SyntaxError ? "This file is not valid JSON." : (e as Error).message);
     }
   }
 
+  async function sendToPc() {
+    const at = new Date().toISOString();
+    try {
+      await shareFile(phoneDivesFileName(at), JSON.stringify(buildPhoneDives(phoneFiles, at)));
+    } catch (e) {
+      setNotice((e as Error).message);
+    }
+  }
+
   async function forget() {
+    if (merged?.phoneOnly.size && !window.confirm(`${plural(merged.phoneOnly.size, "dive")} imported on this phone aren't on the PC yet. Remove them too?`)) return;
     await forgetLog();
     setLog(null);
+    setPhoneFiles([]);
     go("/");
   }
 
@@ -96,14 +140,17 @@ export function App() {
   const current = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   let screen: React.ReactNode;
-  if (!log || !views) screen = <Welcome onImport={pickFile} />;
-  else if (path.startsWith("/dives/")) screen = <DiveScreen records={log.dives} id={decodeURIComponent(path.slice("/dives/".length))} />;
+  if (!log || !views || !merged) screen = <Welcome onImport={pickFile} />;
+  else if (path.startsWith("/dives/")) {
+    const id = decodeURIComponent(path.slice("/dives/".length));
+    screen = <DiveScreen records={merged.dives} id={id} onPhone={merged.phoneOnly.has(id)} />;
+  }
   else if (path === "/dives") screen = <LogScreen log={views.log} />;
-  else if (path.startsWith("/trips/")) screen = <TripScreen plans={log.trips} records={log.dives} id={decodeURIComponent(path.slice("/trips/".length))} now={now} />;
+  else if (path.startsWith("/trips/")) screen = <TripScreen plans={log.trips} records={merged.dives} id={decodeURIComponent(path.slice("/trips/".length))} now={now} />;
   else if (path === "/trips") screen = <TripsScreen trips={views.trips.trips} />;
-  else if (path === "/gear") screen = <GearScreen kit={log.kit} records={log.dives} />;
-  else if (path === "/file") screen = <FileScreen log={log} onImport={pickFile} onForget={forget} />;
-  else screen = <Home log={views.log} next={views.trips.next} />;
+  else if (path === "/gear") screen = <GearScreen kit={log.kit} records={merged.dives} />;
+  else if (path === "/file") screen = <FileScreen log={log} onPhone={merged.phoneOnly.size} onImport={pickFile} onSend={sendToPc} onForget={forget} />;
+  else screen = <Home log={views.log} next={views.trips.next} onPhone={merged.phoneOnly.size} />;
 
   return (
     <UnitsProvider fixed={log?.units ?? "metric"}>

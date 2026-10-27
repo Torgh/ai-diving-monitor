@@ -148,10 +148,13 @@ export default function ImportPage() {
         onDragLeave={() => setOver(false)}
         onDrop={drop}
       >
-        <p>Drop .uddf files here, exported from Subsurface, Shearwater Cloud, Garmin Dive, Suunto DM5, MacDive or DiveMate.</p>
+        <p>
+          Drop .uddf files here, exported from Subsurface, Shearwater Cloud, Garmin Dive, Suunto DM5, MacDive or DiveMate, or the .divedeck.json file the phone app sends
+          with the dives imported there.
+        </p>
         <label className="button primary">
           {busy ? "Importing…" : "Choose files"}
-          <input type="file" accept=".uddf,.xml" multiple hidden disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} />
+          <input type="file" accept=".uddf,.xml,.json" multiple hidden disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} />
         </label>
         <p className="muted">Dives already in your log are skipped. The original files are kept, so dives are parsed again when the parser improves.</p>
       </div>

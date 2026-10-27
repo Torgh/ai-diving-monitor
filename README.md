@@ -279,8 +279,14 @@ so a dive looks the same on both.
 - **Keep the app and the file in step:** an export from a newer DiveDeck asks for the newer app. After
   updating DiveDeck, build and install the phone app again.
 
-The phone app only reads your log; you still import dives, talk to your companion, tick off to-dos,
-choose dive sites, link logged dives to a trip and change your gear on the PC.
+- **Dives on the road:** in *Your file*, import a `.uddf` file from your dive computer's app; its dives
+  show in the log at once, with their score, findings and charts. **Send to PC** shares one
+  `.divedeck.json` file (Google Drive, Gmail, Quick Share…) holding the original UDDF files: drop it on
+  the PC's Import page and the dives are in your log, the same as if you had imported the UDDF there.
+  The phone keeps them until an export from the PC holds them.
+
+Otherwise the phone app only reads your log; you still talk to your companion, fill in a dive's
+details, tick off to-dos, choose dive sites, link logged dives to a trip and change your gear on the PC.
 
 To build it you need JDK 21 and Android Studio (SDK and emulator). Start an emulator or connect a phone
 with USB debugging, then:

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { type Dive, fingerprint } from "../dive";
-import { chronological, type DiveDetails, type DiveRecord, RECORD_FORMAT, RECORD_VERSION, recordFileName, type Review } from "../record";
+import { chronological, type DiveDetails, type DiveRecord, newRecord, RECORD_FORMAT, recordFileName, type Review } from "../record";
 import { PARSER_VERSION, parseUddf } from "../uddf";
 import { activeBackend, type Backend, type StoredFile } from "./backends";
 import { withLock } from "./files";
@@ -145,7 +145,7 @@ export class DiveStore {
       const id = fingerprint(dive);
       const added = await withLock(id, async () => {
         if (await this.read(id)) return false;
-        const record = this.newRecord(id, dive, fileName, hash);
+        const record = newRecord(id, dive, fileName, hash, now());
         const legacyId = options.legacyIds?.get(id);
         if (legacyId !== undefined) record.legacyId = legacyId;
         await this.write(record);
@@ -156,22 +156,6 @@ export class DiveStore {
     // Nothing new in this file: don't keep a redundant copy.
     if (!result.added.length && !hadOriginal) await this.backend.remove("originals", originalName(hash));
     return result;
-  }
-
-  private newRecord(id: string, dive: Dive, fileName: string, hash: string): DiveRecord {
-    const at = now();
-    return {
-      format: RECORD_FORMAT,
-      version: RECORD_VERSION,
-      id,
-      importedAt: at,
-      updatedAt: at,
-      source: { fileName, sha256: hash, uddfId: dive.uddfId },
-      parserVersion: PARSER_VERSION,
-      dive,
-      details: {},
-      review: null,
-    };
   }
 
   /** The original UDDF file a dive came from. */
