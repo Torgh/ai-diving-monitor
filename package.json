@@ -9,6 +9,10 @@
     "dev": "next dev -H 127.0.0.1 -p 3001",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3001",
+    "dev:mobile": "vite --config mobile/vite.config.mts",
+    "build:mobile": "vite build --config mobile/vite.config.mts",
+    "android": "bun run build:mobile && cap sync android && cap run android",
+    "icons:mobile": "node mobile/scripts/icons.mjs",
     "mcp": "bun mcp/server.ts",
     "migrate": "bun scripts/migrate-from-python.ts",
     "golden": "bun scripts/export-golden.ts",
@@ -16,13 +20,17 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "check": "bun run typecheck && bun run lint && bun run test:coverage && bun run build"
+    "check": "bun run typecheck && bun run lint && bun run test:coverage && bun run build && bun run build:mobile"
   },
   "engines": {
     "node": ">=20.9"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "fast-xml-parser": "^5.11.2",
     "next": "^16.4.2",
@@ -34,14 +42,18 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "^10",
     "eslint-config-next": "16.4.2",
+    "sharp": "^0.35.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   }
 }

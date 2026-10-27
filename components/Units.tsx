@@ -20,15 +20,18 @@ interface UnitsContext {
 
 const Context = createContext<UnitsContext | null>(null);
 
-export function UnitsProvider({ children }: { children: React.ReactNode }) {
-  const [system, setLocal] = useState<UnitSystem>("metric");
+/** Reads the units from Settings, or uses `fixed` ones (the phone app, from its export file). */
+export function UnitsProvider({ children, fixed }: { children: React.ReactNode; fixed?: UnitSystem }) {
+  const [saved, setLocal] = useState<UnitSystem>("metric");
+  const system = fixed ?? saved;
 
   useEffect(() => {
+    if (fixed) return;
     fetch("/api/settings/units", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => body?.units && setLocal(body.units))
       .catch(() => undefined);
-  }, []);
+  }, [fixed]);
 
   const setSystem = useCallback(async (next: UnitSystem) => {
     await api("/api/settings", "PUT", { units: next });

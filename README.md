@@ -32,7 +32,7 @@ seconds on Google Drive).
 - **Export for phone.** *Settings → Export for phone* saves the whole log in one
   `DiveDeck <date>.divedeck.json` file: the dives with what you filled in and their debriefs, the trips
   with their preparation, your kit and the units you chose (not the original UDDF files). It is the
-  file the phone app imports.
+  file the [phone app](#divedeck-on-your-android-phone) imports.
 
 **Your gear**
 
@@ -260,6 +260,35 @@ with the newer changes wins); the old place keeps its copy. The MCP server follo
 Settings, API keys, the Google sign-in and the locks always stay in the data folder on this computer.
 The phone export never includes them.
 
+## DiveDeck on your Android phone
+
+`mobile/` is a small Android app for the road: your log, debriefs and the trips' preparation, offline,
+with nothing to host and no account. It runs the same `lib/` and the same components as the web app,
+so a dive looks the same on both.
+
+- **Getting your log onto the phone:** on the PC choose *Settings → Export for phone*, put the
+  `.divedeck.json` file where the phone can open it (Google Drive, OneDrive, Downloads, an email) and
+  tap **Import your DiveDeck file** on the phone. A newer export replaces the one on the phone; *Your
+  file* says when it was made.
+- **What it shows:** the dashboard with the next trip and your totals, the dive log with search and
+  filters, and each dive with its score, findings, profile charts, metrics, debrief and details, in the
+  units you chose on the PC.
+- **Keep the app and the file in step:** an export from a newer DiveDeck asks for the newer app. After
+  updating DiveDeck, build and install the phone app again.
+
+The phone app only reads your log; you still import dives and talk to your companion on the PC.
+
+To build it you need JDK 21 and Android Studio (SDK and emulator). Start an emulator or connect a phone
+with USB debugging, then:
+
+```bash
+bun run android    # build the web part, copy it into mobile/android, ask which device, install and start
+```
+
+`bun run dev:mobile` serves the same UI on http://localhost:5173 for quick work in a desktop browser
+(device mode in DevTools). The APK for sideloading is at
+`mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ## Configuration
 
 Everything is set in **Settings**; environment variables still work, and a saved setting wins.
@@ -341,9 +370,14 @@ mcp/server.ts    the MCP server (stdio, run by Bun)
 proxy.ts         the localhost and same-origin guard in front of the API
 app/             the web app (Next.js): dashboard, dive log, a dive, trips, a trip, gear, import,
                  companion, settings; api/
+mobile/
+  src/           the Android app's screens (Vite + React), reading an imported export file
+  android/       Capacitor's Android project (capacitor.config.ts at the repo root)
+  scripts/icons.mjs   launcher icons and splash screens from the logo (public/icon.svg)
 components/      Nav, LineChart (SVG, shared crosshair, keyboard, table view), ProfileCharts,
                  Sparkline, TripCard, Findings, Icons, Command (copy button), DetailsForm, StorageSettings,
-                 Units (the chosen units), FoldedMarkdown, GetStarted
+                 Units (the chosen units), FoldedMarkdown, GetStarted; DiveList, DiveSummary, SummaryTiles,
+                 TripCard and NavIcons are shared with the phone app
 scripts/         migrate-from-python.ts, export-golden.ts
 ```
 
@@ -358,7 +392,10 @@ bun run dev          # development server on http://localhost:3001
 bun run typecheck    # TypeScript (tsc)
 bun run lint         # ESLint, no warnings allowed
 bun run test         # Vitest
-bun run check        # everything CI runs: typecheck, lint, tests with coverage, build
+bun run check        # everything CI runs: typecheck, lint, tests with coverage, both builds
+bun run dev:mobile   # the phone app in a desktop browser on http://localhost:5173
+bun run android      # build the phone app and run it on the emulator or a connected phone
+bun run icons:mobile # Android icons and splash screens again, after changing public/icon.svg
 bun run mcp          # the MCP server by hand (normally Claude Code or Codex starts it)
 bun run migrate      # copy AI Diving Monitor's log into dive files (safe to run again)
 bun run golden       # rewrite fixtures/golden/ (see below)

@@ -746,7 +746,7 @@ details.table-view .table-scroll {
   gap: 1rem;
 }
 
-a.trip-card {
+.trip-card {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
