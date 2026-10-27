@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Command } from "@/components/Command";
 import { FoldedMarkdown } from "@/components/FoldedMarkdown";
+import type { TripEdit } from "@/components/TripPrep";
 import { useUnits } from "@/components/Units";
 import { api } from "@/components/useLive";
 import { formatDate } from "@/lib/format";
@@ -28,7 +29,7 @@ function SourceLink({ site }: { site: TripSite }) {
   );
 }
 
-function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onChoose: (status: SiteStatus) => void }) {
+function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onChoose?: (status: SiteStatus) => void }) {
   const { range } = useUnits();
   const line = siteFacts(site, (min, max) => range("depth", min, max));
   return (
@@ -46,17 +47,17 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
       </div>
       <p style={{ margin: 0 }}>{site.why}</p>
       <div className="row" style={{ gap: "0.4rem", marginTop: "auto" }}>
-        {site.status !== "chosen" && (
+        {onChoose && site.status !== "chosen" && (
           <button className="button small primary" type="button" disabled={busy} onClick={() => onChoose("chosen")}>
             Choose
           </button>
         )}
-        {site.status === "proposed" && (
+        {onChoose && site.status === "proposed" && (
           <button className="button small" type="button" disabled={busy} onClick={() => onChoose("dropped")}>
             Not this one
           </button>
         )}
-        {site.status === "chosen" && (
+        {onChoose && site.status === "chosen" && (
           <button className="button small" type="button" disabled={busy} onClick={() => onChoose("proposed")}>
             Undo
           </button>
@@ -68,7 +69,7 @@ function SiteCard({ site, busy, onChoose }: { site: TripSite; busy: boolean; onC
 }
 
 /** A chosen site: what was proposed (facts, why it suits you, source) stays, and the profile follows. */
-function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onUndo: () => void }) {
+function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onUndo?: () => void }) {
   const { range } = useUnits();
   const line = siteFacts(site, (min, max) => range("depth", min, max));
   return (
@@ -84,9 +85,11 @@ function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onU
             </div>
           )}
         </div>
-        <button className="button small" type="button" disabled={busy} onClick={onUndo}>
-          Undo choice
-        </button>
+        {onUndo && (
+          <button className="button small" type="button" disabled={busy} onClick={onUndo}>
+            Undo choice
+          </button>
+        )}
       </div>
       <div className="row" style={{ gap: "0.5rem", alignItems: "baseline" }}>
         <p style={{ margin: 0, flex: "1 1 260px" }}>{site.why}</p>
@@ -108,33 +111,20 @@ function ChosenSite({ site, busy, onUndo }: { site: TripSite; busy: boolean; onU
 
 /**
  * The dive sites your companion proposed around the trip's dive shop. You choose; it then researches
- * only the chosen ones, and their profiles show here.
+ * only the chosen ones, and their profiles show here. Without `edit` (the phone) the sites are only shown.
  */
-export function TripSites({
-  tripId,
-  trip,
-  shop,
-  sites,
-  notes,
-  onChange,
-}: {
-  tripId: string;
-  trip: string;
-  shop: TripShop | null;
-  sites: TripSite[];
-  notes: SavedText | null;
-  onChange: () => void;
-}) {
+export function TripSites({ trip, shop, sites, notes, edit }: { trip: string; shop: TripShop | null; sites: TripSite[]; notes: SavedText | null; edit?: TripEdit }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const scout = <Command text={`/mcp__divedeck__site-scout ${trip}`} />;
 
   async function choose(siteId: string, status: SiteStatus) {
+    if (!edit) return;
     setBusy(true);
     setFailure(null);
     try {
-      await api(`/api/trips/${tripId}/sites`, "POST", { siteId, status });
-      onChange();
+      await api(`/api/trips/${edit.tripId}/sites`, "POST", { siteId, status });
+      edit.onChange();
     } catch (err) {
       setFailure((err as Error).message);
     } finally {
@@ -150,7 +140,7 @@ export function TripSites({
         </h2>
         <p className="muted" style={{ margin: 0 }}>
           Your companion can propose the dive sites around your dive shop that suit your log; you choose, and it then finds out what each chosen one takes. Ask it in Claude
-          Code or Codex: {scout}.
+          Code or Codex{edit ? <>: {scout}</> : " on the PC"}.
         </p>
       </section>
     );
@@ -179,22 +169,22 @@ export function TripSites({
       )}
 
       {chosen.map((site) => (
-        <ChosenSite key={site.id} site={site} busy={busy} onUndo={() => choose(site.id, "proposed")} />
+        <ChosenSite key={site.id} site={site} busy={busy} onUndo={edit && (() => choose(site.id, "proposed"))} />
       ))}
 
       {waiting.length > 0 && (
         <div className="notice">
           {waiting.length === 1 ? `${waiting[0].name} is` : `${waiting.length} chosen sites are`} waiting for your companion to find out the conditions and what it
-          takes: {scout}.
+          takes{edit ? <>: {scout}</> : " (on the PC)"}.
         </div>
       )}
 
       {proposed.length > 0 && (
         <>
-          <h3 className="group-title">{chosen.length ? "More proposals" : "Proposed for you: choose the ones you want to dive"}</h3>
+          <h3 className="group-title">{chosen.length ? "More proposals" : edit ? "Proposed for you: choose the ones you want to dive" : "Proposed for you: choose on the PC"}</h3>
           <div className="gear-grid">
             {proposed.map((site) => (
-              <SiteCard key={site.id} site={site} busy={busy} onChoose={(status) => choose(site.id, status)} />
+              <SiteCard key={site.id} site={site} busy={busy} onChoose={edit && ((status) => choose(site.id, status))} />
             ))}
           </div>
         </>
@@ -207,7 +197,7 @@ export function TripSites({
           </summary>
           <div className="gear-grid" style={{ marginTop: "0.6rem" }}>
             {dropped.map((site) => (
-              <SiteCard key={site.id} site={site} busy={busy} onChoose={(status) => choose(site.id, status)} />
+              <SiteCard key={site.id} site={site} busy={busy} onChoose={edit && ((status) => choose(site.id, status))} />
             ))}
           </div>
         </details>

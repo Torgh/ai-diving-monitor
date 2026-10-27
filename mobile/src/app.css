@@ -33,3 +33,8 @@
   color: var(--bg);
   text-align: center;
 }
+
+/* A link within a screen ("#card-…") stops below the sticky top bar. */
+.page [id] {
+  scroll-margin-top: calc(4.5rem + env(safe-area-inset-top, 0px));
+}

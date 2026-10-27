@@ -6,15 +6,15 @@ import { useUnits } from "./Units";
 
 /**
  * A trip as a card: when, where, and how far its preparation is (or, once past, the dives logged).
- * Opens the trip, unless `link` is false (the phone app, until it has a trip page).
+ * Opens the trip.
  */
-export function TripCard({ trip: t, link = true }: { trip: TripRow; link?: boolean }) {
+export function TripCard({ trip: t }: { trip: TripRow }) {
   const { range } = useUnits();
   const left = t.cards - t.prepared;
   const depth = (s: TripRow["chosenSites"][number]) => range("depth", s.minDepthM, s.maxDepthM);
   const past = t.when === "past";
-  const content = (
-    <>
+  return (
+    <Link href={`/trips/${t.id}`} className="card trip-card">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <span className="eyebrow">{formatTripWhen(t)}</span>
         {past ? (
@@ -63,13 +63,6 @@ export function TripCard({ trip: t, link = true }: { trip: TripRow; link?: boole
           </span>
         </div>
       )}
-    </>
-  );
-  return link ? (
-    <Link href={`/trips/${t.id}`} className="card trip-card">
-      {content}
     </Link>
-  ) : (
-    <div className="card trip-card">{content}</div>
   );
 }

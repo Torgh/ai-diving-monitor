@@ -1,25 +1,28 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import type { TripEdit } from "@/components/TripPrep";
 import { api } from "@/components/useLive";
 import type { TripTodo } from "@/lib/trip";
 
 /**
  * What is still to sort out before the trip: your companion's list (questions for the dive centre,
- * gear, a course) and your own. Tick them off here; the next preparation sees what you did.
+ * gear, a course) and your own. Tick them off here; the next preparation sees what you did. Without
+ * `edit` (the phone) the list is only shown.
  */
-export function TripTodos({ tripId, todos, cards, onChange }: { tripId: string; todos: TripTodo[]; cards: { itemId: string; title: string }[]; onChange: () => void }) {
+export function TripTodos({ todos, cards, edit }: { todos: TripTodo[]; cards: { itemId: string; title: string }[]; edit?: TripEdit }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [card, setCard] = useState("");
 
   async function call(method: string, body: unknown) {
+    if (!edit) return false;
     setBusy(true);
     setFailure(null);
     try {
-      await api(`/api/trips/${tripId}/todos`, method, body);
-      onChange();
+      await api(`/api/trips/${edit.tripId}/todos`, method, body);
+      edit.onChange();
       return true;
     } catch (err) {
       setFailure((err as Error).message);
@@ -43,7 +46,7 @@ export function TripTodos({ tripId, todos, cards, onChange }: { tripId: string; 
   const item = (t: TripTodo) => (
     <li key={t.id} className={t.done ? "done" : undefined}>
       <label>
-        <input type="checkbox" checked={t.done} disabled={busy} onChange={(e) => call("PATCH", { id: t.id, done: e.target.checked })} />
+        <input type="checkbox" checked={t.done} disabled={busy || !edit} onChange={(e) => call("PATCH", { id: t.id, done: e.target.checked })} />
         <span>{t.text}</span>
       </label>
       {t.itemId && title(t.itemId) && (
@@ -51,7 +54,7 @@ export function TripTodos({ tripId, todos, cards, onChange }: { tripId: string; 
           {title(t.itemId)}
         </a>
       )}
-      {t.by === "diver" && (
+      {edit && t.by === "diver" && (
         <button type="button" className="todo-remove" aria-label={`Remove "${t.text}"`} disabled={busy} onClick={() => call("DELETE", { id: t.id })}>
           ×
         </button>
@@ -69,7 +72,7 @@ export function TripTodos({ tripId, todos, cards, onChange }: { tripId: string; 
       </div>
       {todos.length === 0 && (
         <p className="muted" style={{ margin: 0 }}>
-          Nothing yet. Your companion adds what to ask the dive centre or bring when it prepares the trip; add your own below.
+          Nothing yet. Your companion adds what to ask the dive centre or bring when it prepares the trip{edit ? "; add your own below" : ""}.
         </p>
       )}
       {open.length > 0 && <ul className="todos">{open.map(item)}</ul>}
@@ -79,22 +82,24 @@ export function TripTodos({ tripId, todos, cards, onChange }: { tripId: string; 
           <ul className="todos">{done.map(item)}</ul>
         </details>
       )}
-      <form className="row todo-add" onSubmit={add}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a to-do, e.g. Buy a new SMB" aria-label="New to-do" maxLength={300} />
-        {cards.length > 0 && (
-          <select value={card} onChange={(e) => setCard(e.target.value)} aria-label="About a dive card">
-            <option value="">Whole trip</option>
-            {cards.map((c) => (
-              <option key={c.itemId} value={c.itemId}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        )}
-        <button className="button" type="submit" disabled={busy || !text.trim()}>
-          Add
-        </button>
-      </form>
+      {edit && (
+        <form className="row todo-add" onSubmit={add}>
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a to-do, e.g. Buy a new SMB" aria-label="New to-do" maxLength={300} />
+          {cards.length > 0 && (
+            <select value={card} onChange={(e) => setCard(e.target.value)} aria-label="About a dive card">
+              <option value="">Whole trip</option>
+              {cards.map((c) => (
+                <option key={c.itemId} value={c.itemId}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          )}
+          <button className="button" type="submit" disabled={busy || !text.trim()}>
+            Add
+          </button>
+        </form>
+      )}
       {failure && <div className="error">{failure}</div>}
     </section>
   );

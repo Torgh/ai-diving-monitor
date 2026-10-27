@@ -271,12 +271,14 @@ so a dive looks the same on both.
   tap **Import your DiveDeck file** on the phone. A newer export replaces the one on the phone; *Your
   file* says when it was made.
 - **What it shows:** the dashboard with the next trip and your totals, the dive log with search and
-  filters, and each dive with its score, findings, profile charts, metrics, debrief and details, in the
-  units you chose on the PC.
+  filters, each dive with its score, findings, profile charts, metrics, debrief and details, and each
+  trip with what is left to sort out, the checks before you go (break, flying after diving, gas plan),
+  the trip notes, the dive sites and every dive day's preparation, in the units you chose on the PC.
 - **Keep the app and the file in step:** an export from a newer DiveDeck asks for the newer app. After
   updating DiveDeck, build and install the phone app again.
 
-The phone app only reads your log; you still import dives and talk to your companion on the PC.
+The phone app only reads your log; you still import dives, talk to your companion, tick off to-dos,
+choose dive sites and link logged dives to a trip on the PC.
 
 To build it you need JDK 21 and Android Studio (SDK and emulator). Start an emulator or connect a phone
 with USB debugging, then:

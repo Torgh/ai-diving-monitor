@@ -5,12 +5,16 @@ import { FindingBadge, Findings } from "@/components/Findings";
 import { FoldedMarkdown } from "@/components/FoldedMarkdown";
 import { ProfileCharts } from "@/components/ProfileCharts";
 import { SummaryTiles } from "@/components/SummaryTiles";
+import { BeforeYouGo, DiveDays, RecurringIssues, tripLine } from "@/components/TripPrep";
+import { TripSites } from "@/components/TripSites";
+import { TripTodos } from "@/components/TripTodos";
 import { TripCard } from "@/components/TripCard";
 import { useUnits } from "@/components/Units";
 import type { DiveDeckExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
 import type { DiveRecord } from "@/lib/record";
-import type { TripRow } from "@/lib/tripViews";
+import type { TripPlan } from "@/lib/trip";
+import { type TripRow, tripView } from "@/lib/tripViews";
 import { diveView, type LogView } from "@/lib/views";
 
 /** "2026-10-26T21:31:00" in the phone's time zone, for formatDate (the export's time is UTC). */
@@ -47,7 +51,7 @@ export function Home({ log, next }: { log: LogView; next: TripRow | null }) {
       <div className="page-head">
         <h1>Dashboard</h1>
       </div>
-      {next && <TripCard trip={next} link={false} />}
+      {next && <TripCard trip={next} />}
       {log.dives.length ? <SummaryTiles log={log} /> : <div className="notice">No dives in this file yet.</div>}
     </div>
   );
@@ -174,7 +178,7 @@ function Group({ title, trips }: { title: string; trips: TripRow[] }) {
       <h2 style={{ margin: 0 }}>{title}</h2>
       <div className="trip-cards">
         {trips.map((t) => (
-          <TripCard key={t.id} trip={t} link={false} />
+          <TripCard key={t.id} trip={t} />
         ))}
       </div>
     </section>
@@ -197,6 +201,40 @@ export function TripsScreen({ trips }: { trips: TripRow[] }) {
           <Group title="Past" trips={of("past")} />
         </>
       )}
+    </div>
+  );
+}
+
+/** One trip's preparation, as on the PC; the to-dos, sites and logged dives are changed there. */
+export function TripScreen({ plans, records, id, now }: { plans: TripPlan[]; records: DiveRecord[]; id: string; now: Date }) {
+  const data = tripView(plans, records, id, now);
+  if (!data) return <div className="notice">This trip isn&apos;t in the file. <a href="#/trips">Back to the trips</a>.</div>;
+  return (
+    <div className="stack" style={{ gap: "1.25rem" }}>
+      <div className="dive-head">
+        <div>
+          <a className="back" href="#/trips">
+            ‹ Trips
+          </a>
+          <h1>{data.name}</h1>
+          <div className="secondary">{tripLine(data)}</div>
+        </div>
+      </div>
+
+      <TripTodos todos={data.todos} cards={data.dives.map((d) => ({ itemId: d.itemId, title: d.date ? `${d.title} (${formatDate(d.date, false)})` : d.title }))} />
+
+      <BeforeYouGo data={data} />
+
+      <RecurringIssues data={data} />
+
+      <section className="card review" aria-labelledby="notes-h">
+        <h2 id="notes-h">Trip notes</h2>
+        {data.summary ? <FoldedMarkdown markdown={data.summary.markdown} /> : <p className="muted">No notes for the whole trip yet. Ask your companion on the PC, then export again.</p>}
+      </section>
+
+      <TripSites trip={data.name} shop={data.shop} sites={data.sites} notes={data.siteNotes} />
+
+      <DiveDays data={data} />
     </div>
   );
 }
