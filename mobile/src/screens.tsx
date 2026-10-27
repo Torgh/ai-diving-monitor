@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { headline, MetricCards, ScoreRing } from "@/components/DiveSummary";
 import { DiveList } from "@/components/DiveList";
 import { FindingBadge, Findings } from "@/components/Findings";
 import { FoldedMarkdown } from "@/components/FoldedMarkdown";
+import { BalanceCard } from "@/components/gear/BalanceCard";
+import { GearCard } from "@/components/gear/GearCard";
+import { ResultCard } from "@/components/gear/ResultCard";
+import { GROUPS, type TankChoice } from "@/components/gear/shared";
+import { YouStrip } from "@/components/gear/YouStrip";
 import { ProfileCharts } from "@/components/ProfileCharts";
 import { SummaryTiles } from "@/components/SummaryTiles";
 import { BeforeYouGo, DiveDays, RecurringIssues, tripLine } from "@/components/TripPrep";
@@ -12,10 +17,12 @@ import { TripCard } from "@/components/TripCard";
 import { useUnits } from "@/components/Units";
 import type { DiveDeckExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
+import type { Kit, Water } from "@/lib/kit";
 import type { DiveRecord } from "@/lib/record";
 import type { TripPlan } from "@/lib/trip";
 import { type TripRow, tripView } from "@/lib/tripViews";
 import { diveView, type LogView } from "@/lib/views";
+import { estimateWeighting } from "@/lib/weighting";
 
 /** "2026-10-26T21:31:00" in the phone's time zone, for formatDate (the export's time is UTC). */
 export function localTime(iso: string): string | null {
@@ -45,12 +52,24 @@ export function Welcome({ onImport }: { onImport: () => void }) {
   );
 }
 
-export function Home({ log, next }: { log: LogView; next: TripRow | null }) {
+/** Dives imported on the phone that the PC doesn't have yet, with the way to send them. */
+function OnPhoneNotice({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <div className="notice">
+      {count} dive{count === 1 ? " is" : "s are"} only on this phone. <a href="#/file">Send to the PC</a> to keep {count === 1 ? "it" : "them"} and get your
+      companion&apos;s debrief.
+    </div>
+  );
+}
+
+export function Home({ log, next, onPhone }: { log: LogView; next: TripRow | null; onPhone: number }) {
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
       <div className="page-head">
         <h1>Dashboard</h1>
       </div>
+      <OnPhoneNotice count={onPhone} />
       {next && <TripCard trip={next} />}
       {log.dives.length ? <SummaryTiles log={log} /> : <div className="notice">No dives in this file yet.</div>}
     </div>
@@ -69,7 +88,7 @@ export function LogScreen({ log }: { log: LogView }) {
 }
 
 /** One dive, as on the PC, without the forms: the phone only shows the log. */
-export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string }) {
+export function DiveScreen({ records, id, onPhone }: { records: DiveRecord[]; id: string; onPhone: boolean }) {
   const { show } = useUnits();
   const [tab, setTab] = useState<"debrief" | "findings">("debrief");
   const data = diveView(records, id);
@@ -109,6 +128,12 @@ export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string 
           )}
         </nav>
       </div>
+
+      {onPhone && (
+        <div className="notice">
+          Imported on this phone. <a href="#/file">Send it to the PC</a> to keep it, fill in its details and get your companion&apos;s debrief.
+        </div>
+      )}
 
       <section className="card verdict" aria-label="Score">
         <ScoreRing score={metrics.score} />
@@ -151,7 +176,7 @@ export function DiveScreen({ records, id }: { records: DiveRecord[]; id: string 
               <p className="muted">Saved {formatDate(data.review.savedAt.slice(0, 19))}</p>
             </div>
           ) : (
-            <p className="muted">No debrief yet. Ask your companion on the PC, then export again.</p>
+            <p className="muted">No debrief yet. {onPhone ? "Send the dive to the PC, ask your companion there" : "Ask your companion on the PC"}, then export again.</p>
           )}
         </div>
       </section>
@@ -239,8 +264,106 @@ export function TripScreen({ plans, records, id, now }: { plans: TripPlan[]; rec
   );
 }
 
-/** What was imported, and getting a newer export. */
-export function FileScreen({ log, onImport, onForget }: { log: DiveDeckExport; onImport: () => void; onForget: () => void }) {
+/** Your sets and the lead each needs, worked out on the phone as on the PC; the gear is changed there. */
+export function GearScreen({ kit, records }: { kit: Kit; records: DiveRecord[] }) {
+  const [setId, setSetId] = useState<string | null>(null);
+  const [waterChoice, setWaterChoice] = useState<Water | null>(null);
+  const [tank, setTank] = useState<TankChoice>("own");
+  const set = kit.sets.find((s) => s.id === setId) ?? kit.sets[0] ?? null;
+  const water = waterChoice ?? set?.water ?? "salt";
+  const estimate = useMemo(() => (set ? estimateWeighting(kit, records, set, water, undefined, tank === "own" ? null : tank) : undefined), [kit, records, set, water, tank]);
+  const ownTank = set ? kit.items.find((i) => i.kind === "tank" && set.itemIds.includes(i.id)) : undefined;
+  const hasTank = tank !== "own" || !!ownTank;
+  const inSet = set ? kit.items.filter((i) => set.itemIds.includes(i.id)) : kit.items;
+  const parts = estimate?.parts ?? [];
+
+  return (
+    <div className="stack" style={{ gap: "1.25rem" }}>
+      <div className="page-head">
+        <h1>Gear</h1>
+      </div>
+
+      <YouStrip kit={kit} you={parts.find((p) => p.label === "You")} water={water} />
+
+      {kit.sets.length > 1 && (
+        <div className="tabs set-tabs" role="tablist" aria-label="Sets">
+          {kit.sets.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === set?.id}
+              onClick={() => {
+                setSetId(s.id);
+                setWaterChoice(null);
+              }}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {set ? (
+        <span className="secondary">
+          <strong>{set.name}</strong>
+          {[set.ballastKg !== undefined ? `usually ${set.ballastKg} kg of lead` : null, set.water ? `meant for ${set.water} water` : null, set.notes]
+            .filter(Boolean)
+            .map((t) => ` · ${t}`)
+            .join("")}
+        </span>
+      ) : (
+        <div className="notice">No gear sets in this file. Put your gear together in a set on the PC, then export again.</div>
+      )}
+
+      {set && estimate && (
+        <div className="balance-grid">
+          <ResultCard estimate={estimate} hasTank={hasTank} />
+          <BalanceCard estimate={estimate} hasTank={hasTank} water={water} setWater={setWaterChoice} tank={tank} setTank={setTank} ownTank={ownTank} />
+        </div>
+      )}
+
+      <section className="stack" style={{ gap: "0.75rem" }} aria-labelledby="items-h">
+        <h2 id="items-h" style={{ margin: 0 }}>
+          {set ? "In this set" : "Your gear"}
+        </h2>
+        {!kit.items.length && <p className="muted">No gear in this file yet.</p>}
+        {GROUPS.map((g) => {
+          const items = inSet.filter((i) => g.kinds.includes(i.kind));
+          return items.length ? (
+            <div key={g.title} className="stack" style={{ gap: "0.5rem" }}>
+              <h3 className="group-title">{g.title}</h3>
+              <div className="gear-grid">
+                {items.map((item) => (
+                  <GearCard key={item.id} item={item} part={parts.find((p) => p.itemId === item.id)} />
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })}
+      </section>
+
+      <p className="muted" style={{ margin: 0 }}>
+        An estimate: the weight check in the water decides. Change your gear, sets and the water at your sites on the PC, then export again.
+      </p>
+    </div>
+  );
+}
+
+/** What was imported, getting a newer export, and the dives imported here on their way to the PC. */
+export function FileScreen({
+  log,
+  onPhone,
+  onImport,
+  onSend,
+  onForget,
+}: {
+  log: DiveDeckExport;
+  onPhone: number;
+  onImport: () => void;
+  onSend: () => void;
+  onForget: () => void;
+}) {
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
       <div className="page-head">
@@ -263,6 +386,33 @@ export function FileScreen({ log, onImport, onForget }: { log: DiveDeckExport; o
           </button>
         </div>
       </div>
+      <section className="card stack" aria-labelledby="uddf-h">
+        <h2 id="uddf-h" style={{ margin: 0 }}>
+          Dives from your dive computer
+        </h2>
+        <p className="secondary" style={{ margin: 0 }}>
+          Away from the PC, import a .uddf file from your dive computer&apos;s app (Shearwater Cloud, Garmin Dive, Suunto, Subsurface…): its dives show in your log
+          here at once. Then send them to the PC, import that file on its Import page, and they are in your log for good.
+        </p>
+        {onPhone > 0 && (
+          <p style={{ margin: 0 }}>
+            <strong>
+              {onPhone} dive{onPhone === 1 ? "" : "s"}
+            </strong>{" "}
+            only on this phone. They stay here until an export from the PC holds them.
+          </p>
+        )}
+        <div className="row">
+          <button type="button" className={`button ${onPhone ? "" : "primary"}`} onClick={onImport}>
+            Import a UDDF file
+          </button>
+          {onPhone > 0 && (
+            <button type="button" className="button primary" onClick={onSend}>
+              Send to PC
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { GearSet, Kit } from "@/lib/kit";
 import type { WeightingEstimate } from "@/lib/weighting";
-import { Failure, num, useSave } from "./shared";
+import { Failure, num, useSave } from "@/components/gear/shared";
 
 /** The few things that would make the estimate sure, each with a way to do it here. */
 export function MakeItSure({

@@ -2011,3 +2011,18 @@ ul.todos li.done span {
 .tank-choice .segmented {
   flex-wrap: wrap;
 }
+
+/* On a phone the three tanks don't fit in a row: one under the other, full width. */
+@media (max-width: 760px) {
+  .tank-choice .segmented {
+    flex-direction: column;
+    width: 100%;
+  }
+  .tank-choice .segmented button {
+    text-align: left;
+  }
+  .tank-choice .segmented button + button {
+    border-left: 0;
+    border-top: 1px solid var(--axis);
+  }
+}

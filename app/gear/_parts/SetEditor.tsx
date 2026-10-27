@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { type GearSet, type Kit, type Water, WATERS } from "@/lib/kit";
-import { Failure, num, str, useSave, WATER_LABEL } from "./shared";
+import { Failure, num, str, useSave, WATER_LABEL } from "@/components/gear/shared";
 
 export function SetEditor({ kit, initial, onDone }: { kit: Kit; initial: GearSet | null; onDone: (setId?: string) => void }) {
   const [name, setName] = useState(initial?.name ?? "");

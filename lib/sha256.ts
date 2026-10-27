@@ -18,7 +18,11 @@ const K = new Uint32Array([
 const rotr = (x: number, n: number) => (x >>> n) | (x << (32 - n));
 
 export function sha256Hex(text: string): string {
-  const data = new TextEncoder().encode(text);
+  return sha256Bytes(new TextEncoder().encode(text));
+}
+
+/** SHA-256 of bytes, as lowercase hex: the hash of an original UDDF file, the same as Node's crypto gives. */
+export function sha256Bytes(data: Uint8Array): string {
   // Message + 0x80 + zero padding + 64-bit big-endian bit length, to a multiple of 64 bytes.
   const blocks = Math.ceil((data.length + 9) / 64);
   const bytes = new Uint8Array(blocks * 64);

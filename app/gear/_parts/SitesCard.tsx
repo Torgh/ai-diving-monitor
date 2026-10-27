@@ -1,5 +1,5 @@
 import { type Water, WATERS } from "@/lib/kit";
-import { type Data, Failure, useSave, WATER_LABEL } from "./shared";
+import { type Data, Failure, useSave, WATER_LABEL } from "@/components/gear/shared";
 
 export function SitesCard({ data, onSaved }: { data: Data; onSaved: () => void }) {
   const { save, failure } = useSave();
