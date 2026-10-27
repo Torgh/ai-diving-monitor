@@ -1,9 +1,9 @@
 import { useUnits } from "@/components/Units";
 import type { GearItem, GearSet, Kit } from "@/lib/kit";
 import type { Part } from "@/lib/weighting";
-import { GearCard } from "./GearCard";
+import { GearCard } from "@/components/gear/GearCard";
 import { ItemEditor, type ItemForm, toForm } from "./ItemEditor";
-import { Failure, GROUPS, useSave } from "./shared";
+import { Failure, GROUPS, useSave } from "@/components/gear/shared";
 
 export function ItemsSection({
   kit,

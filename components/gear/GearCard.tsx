@@ -27,7 +27,8 @@ function typeLine(item: GearItem): string {
   return [kind, extra, item.brand && item.brand !== item.name ? item.brand : null].filter(Boolean).join(" · ");
 }
 
-export function GearCard({ item, part, onEdit, action }: { item: GearItem; part: Part | undefined; onEdit: () => void; action?: React.ReactNode }) {
+/** A piece of gear; without `onEdit` (the phone) only shown. */
+export function GearCard({ item, part, onEdit, action }: { item: GearItem; part: Part | undefined; onEdit?: () => void; action?: React.ReactNode }) {
   const { show } = useUnits();
   const list = chips(item, (kg) => show("weight", kg));
   return (
@@ -54,12 +55,16 @@ export function GearCard({ item, part, onEdit, action }: { item: GearItem; part:
           {item.notes}
         </p>
       )}
-      <div className="row" style={{ gap: "0.4rem", marginTop: "auto" }}>
-        <button className="button small" type="button" onClick={onEdit}>
-          Edit
-        </button>
-        {action}
-      </div>
+      {(onEdit || action) && (
+        <div className="row" style={{ gap: "0.4rem", marginTop: "auto" }}>
+          {onEdit && (
+            <button className="button small" type="button" onClick={onEdit}>
+              Edit
+            </button>
+          )}
+          {action}
+        </div>
+      )}
     </article>
   );
 }

@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { headline, MetricCards, ScoreRing } from "@/components/DiveSummary";
 import { DiveList } from "@/components/DiveList";
 import { FindingBadge, Findings } from "@/components/Findings";
 import { FoldedMarkdown } from "@/components/FoldedMarkdown";
+import { BalanceCard } from "@/components/gear/BalanceCard";
+import { GearCard } from "@/components/gear/GearCard";
+import { ResultCard } from "@/components/gear/ResultCard";
+import { GROUPS, type TankChoice } from "@/components/gear/shared";
+import { YouStrip } from "@/components/gear/YouStrip";
 import { ProfileCharts } from "@/components/ProfileCharts";
 import { SummaryTiles } from "@/components/SummaryTiles";
 import { BeforeYouGo, DiveDays, RecurringIssues, tripLine } from "@/components/TripPrep";
@@ -12,10 +17,12 @@ import { TripCard } from "@/components/TripCard";
 import { useUnits } from "@/components/Units";
 import type { DiveDeckExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
+import type { Kit, Water } from "@/lib/kit";
 import type { DiveRecord } from "@/lib/record";
 import type { TripPlan } from "@/lib/trip";
 import { type TripRow, tripView } from "@/lib/tripViews";
 import { diveView, type LogView } from "@/lib/views";
+import { estimateWeighting } from "@/lib/weighting";
 
 /** "2026-10-26T21:31:00" in the phone's time zone, for formatDate (the export's time is UTC). */
 export function localTime(iso: string): string | null {
@@ -235,6 +242,92 @@ export function TripScreen({ plans, records, id, now }: { plans: TripPlan[]; rec
       <TripSites trip={data.name} shop={data.shop} sites={data.sites} notes={data.siteNotes} />
 
       <DiveDays data={data} />
+    </div>
+  );
+}
+
+/** Your sets and the lead each needs, worked out on the phone as on the PC; the gear is changed there. */
+export function GearScreen({ kit, records }: { kit: Kit; records: DiveRecord[] }) {
+  const [setId, setSetId] = useState<string | null>(null);
+  const [waterChoice, setWaterChoice] = useState<Water | null>(null);
+  const [tank, setTank] = useState<TankChoice>("own");
+  const set = kit.sets.find((s) => s.id === setId) ?? kit.sets[0] ?? null;
+  const water = waterChoice ?? set?.water ?? "salt";
+  const estimate = useMemo(() => (set ? estimateWeighting(kit, records, set, water, undefined, tank === "own" ? null : tank) : undefined), [kit, records, set, water, tank]);
+  const ownTank = set ? kit.items.find((i) => i.kind === "tank" && set.itemIds.includes(i.id)) : undefined;
+  const hasTank = tank !== "own" || !!ownTank;
+  const inSet = set ? kit.items.filter((i) => set.itemIds.includes(i.id)) : kit.items;
+  const parts = estimate?.parts ?? [];
+
+  return (
+    <div className="stack" style={{ gap: "1.25rem" }}>
+      <div className="page-head">
+        <h1>Gear</h1>
+      </div>
+
+      <YouStrip kit={kit} you={parts.find((p) => p.label === "You")} water={water} />
+
+      {kit.sets.length > 1 && (
+        <div className="tabs set-tabs" role="tablist" aria-label="Sets">
+          {kit.sets.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === set?.id}
+              onClick={() => {
+                setSetId(s.id);
+                setWaterChoice(null);
+              }}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {set ? (
+        <span className="secondary">
+          <strong>{set.name}</strong>
+          {[set.ballastKg !== undefined ? `usually ${set.ballastKg} kg of lead` : null, set.water ? `meant for ${set.water} water` : null, set.notes]
+            .filter(Boolean)
+            .map((t) => ` · ${t}`)
+            .join("")}
+        </span>
+      ) : (
+        <div className="notice">No gear sets in this file. Put your gear together in a set on the PC, then export again.</div>
+      )}
+
+      {set && estimate && (
+        <div className="balance-grid">
+          <ResultCard estimate={estimate} hasTank={hasTank} />
+          <BalanceCard estimate={estimate} hasTank={hasTank} water={water} setWater={setWaterChoice} tank={tank} setTank={setTank} ownTank={ownTank} />
+        </div>
+      )}
+
+      <section className="stack" style={{ gap: "0.75rem" }} aria-labelledby="items-h">
+        <h2 id="items-h" style={{ margin: 0 }}>
+          {set ? "In this set" : "Your gear"}
+        </h2>
+        {!kit.items.length && <p className="muted">No gear in this file yet.</p>}
+        {GROUPS.map((g) => {
+          const items = inSet.filter((i) => g.kinds.includes(i.kind));
+          return items.length ? (
+            <div key={g.title} className="stack" style={{ gap: "0.5rem" }}>
+              <h3 className="group-title">{g.title}</h3>
+              <div className="gear-grid">
+                {items.map((item) => (
+                  <GearCard key={item.id} item={item} part={parts.find((p) => p.itemId === item.id)} />
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })}
+      </section>
+
+      <p className="muted" style={{ margin: 0 }}>
+        An estimate: the weight check in the water decides. Change your gear, sets and the water at your sites on the PC, then export again.
+      </p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { GEAR_KINDS, type GearItem, type GearKind, type GearSet, type KitChange } from "@/lib/kit";
-import { Failure, KIND_LABEL, num, str, useSave } from "./shared";
+import { Failure, KIND_LABEL, num, str, useSave } from "@/components/gear/shared";
 
 export const EMPTY_ITEM = {
   id: "",

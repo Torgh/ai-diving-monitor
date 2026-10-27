@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { useLive } from "@/components/useLive";
 import type { GearKind, GearSet, Water } from "@/lib/kit";
-import { BalanceCard } from "./_parts/BalanceCard";
+import { BalanceCard } from "@/components/gear/BalanceCard";
 import { EMPTY_ITEM, type ItemForm } from "./_parts/ItemEditor";
 import { ItemsSection } from "./_parts/ItemsSection";
 import { MakeItSure } from "./_parts/MakeItSure";
-import { ResultCard } from "./_parts/ResultCard";
+import { ResultCard } from "@/components/gear/ResultCard";
 import { SetEditor } from "./_parts/SetEditor";
 import { SitesCard } from "./_parts/SitesCard";
-import type { Data, TankChoice } from "./_parts/shared";
-import { YouStrip } from "./_parts/YouStrip";
+import type { Data, TankChoice } from "@/components/gear/shared";
+import { YouStrip } from "@/components/gear/YouStrip";
 
 export default function GearPage() {
   const { data, error, loading, reload } = useLive<Data>("/api/kit");

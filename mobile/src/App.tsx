@@ -6,7 +6,7 @@ import { type DiveDeckExport, readExport } from "@/lib/exportFile";
 import { formatDate } from "@/lib/format";
 import { tripsView } from "@/lib/tripViews";
 import { logView } from "@/lib/views";
-import { DiveScreen, FileScreen, Home, localTime, LogScreen, TripScreen, TripsScreen, Welcome } from "./screens";
+import { DiveScreen, FileScreen, GearScreen, Home, localTime, LogScreen, TripScreen, TripsScreen, Welcome } from "./screens";
 import { forgetLog, loadLog, saveLog } from "./storage";
 import { go, useHashPath } from "./useHashPath";
 
@@ -14,6 +14,7 @@ const TABS = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
   { href: "/dives", label: "Dive log", icon: "log" },
   { href: "/trips", label: "Trips", icon: "trips" },
+  { href: "/gear", label: "Gear", icon: "gear" },
   { href: "/file", label: "Your file", icon: "import" },
 ];
 
@@ -100,6 +101,7 @@ export function App() {
   else if (path === "/dives") screen = <LogScreen log={views.log} />;
   else if (path.startsWith("/trips/")) screen = <TripScreen plans={log.trips} records={log.dives} id={decodeURIComponent(path.slice("/trips/".length))} now={now} />;
   else if (path === "/trips") screen = <TripsScreen trips={views.trips.trips} />;
+  else if (path === "/gear") screen = <GearScreen kit={log.kit} records={log.dives} />;
   else if (path === "/file") screen = <FileScreen log={log} onImport={pickFile} onForget={forget} />;
   else screen = <Home log={views.log} next={views.trips.next} />;
 

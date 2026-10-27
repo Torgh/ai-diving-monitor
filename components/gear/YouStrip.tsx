@@ -39,7 +39,8 @@ function DiverForm({ kit, onDone }: { kit: Kit; onDone: () => void }) {
   );
 }
 
-export function YouStrip({ kit, you, water, startEditing, onSaved }: { kit: Kit; you: Part | undefined; water: Water; startEditing: boolean; onSaved: () => void }) {
+/** Your body and your own buoyancy; without `onSaved` (the phone) only shown. */
+export function YouStrip({ kit, you, water, startEditing = false, onSaved }: { kit: Kit; you: Part | undefined; water: Water; startEditing?: boolean; onSaved?: () => void }) {
   const [editing, setEditing] = useState(startEditing);
   const { show } = useUnits();
   const d = kit.diver;
@@ -68,12 +69,12 @@ export function YouStrip({ kit, you, water, startEditing, onSaved }: { kit: Kit;
           </div>
         </div>
       )}
-      {!editing && (
+      {onSaved && !editing && (
         <button className="button" type="button" onClick={() => setEditing(true)}>
           Edit
         </button>
       )}
-      {editing && (
+      {onSaved && editing && (
         <DiverForm
           kit={kit}
           onDone={() => {
