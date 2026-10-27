@@ -292,12 +292,27 @@ To build it you need JDK 21 and Android Studio (SDK and emulator). Start an emul
 with USB debugging, then:
 
 ```bash
-bun run android    # build the web part, copy it into mobile/android, ask which device, install and start
+bun run android    # build the web part, copy it into mobile/android, install and start a debug build
 ```
 
+With several devices attached, `ANDROID_SERIAL` picks one (`adb devices` lists them).
 `bun run dev:mobile` serves the same UI on http://localhost:5173 for quick work in a desktop browser
-(device mode in DevTools). The APK for sideloading is at
-`mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
+(device mode in DevTools).
+
+**A release for your own phone.** Create the release key once, then build:
+
+```bash
+bun run android:keystore   # the key and its passwords, in ~/.android (never in the repository)
+bun run android:release    # signed APK and App Bundle, with the key's SHA-1
+```
+
+The key lives in `~/.android/divedeck-release.jks`, its passwords in
+`~/.android/divedeck-release.properties` (`DIVEDECK_SIGNING` points elsewhere). **Back both up**: a
+phone only takes updates signed with the same key. Install
+`mobile/android/app/build/outputs/apk/release/app-release.apk` on the phone (allow installing from
+that source when Android asks); the `.aab` is for Google Play. A debug build and a release can't
+replace each other on one phone: uninstall one (which removes its imported log) to install the other.
+The app's version is DiveDeck's, from `package.json`.
 
 ## Configuration
 
@@ -384,6 +399,7 @@ mobile/
   src/           the Android app's screens (Vite + React), reading an imported export file
   android/       Capacitor's Android project (capacitor.config.ts at the repo root)
   scripts/icons.mjs   launcher icons and splash screens from the logo (public/icon.svg)
+  scripts/android.mjs debug install, signed release and the release key, with the Gradle wrapper
 components/      Nav, LineChart (SVG, shared crosshair, keyboard, table view), ProfileCharts,
                  Sparkline, TripCard, Findings, Icons, Command (copy button), DetailsForm, StorageSettings,
                  Units (the chosen units), FoldedMarkdown, GetStarted; DiveList, DiveSummary, SummaryTiles,
@@ -405,6 +421,7 @@ bun run test         # Vitest
 bun run check        # everything CI runs: typecheck, lint, tests with coverage, both builds
 bun run dev:mobile   # the phone app in a desktop browser on http://localhost:5173
 bun run android      # build the phone app and run it on the emulator or a connected phone
+bun run android:release   # signed release APK and App Bundle (bun run android:keystore once first)
 bun run icons:mobile # Android icons and splash screens again, after changing public/icon.svg
 bun run mcp          # the MCP server by hand (normally Claude Code or Codex starts it)
 bun run migrate      # copy AI Diving Monitor's log into dive files (safe to run again)

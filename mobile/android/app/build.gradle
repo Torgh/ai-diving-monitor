@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// The app's version is DiveDeck's (package.json): 0.4.1 becomes versionName 0.4.1 and versionCode 401.
+def appVersion = new groovy.json.JsonSlurper().parse(file('../../../package.json')).version
+def (major, minor, patch) = appVersion.split('-')[0].tokenize('.')*.toInteger()
+
+// The release key stays outside the repository (bun run android:keystore creates it).
+def signingFile = file(System.getenv('DIVEDECK_SIGNING') ?: "${System.getProperty('user.home')}/.android/divedeck-release.properties")
+def signing = new Properties()
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+
 android {
     namespace = "io.github.torgh.divedeck"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +16,8 @@ android {
         applicationId "io.github.torgh.divedeck"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode major * 10000 + minor * 100 + patch
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +25,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (signing.storeFile) {
+            release {
+                storeFile file(signing.storeFile)
+                storePassword signing.storePassword
+                keyAlias signing.keyAlias
+                keyPassword signing.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (signing.storeFile) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
